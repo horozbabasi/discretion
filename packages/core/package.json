@@ -1,0 +1,18 @@
+{
+  "name": "@privacyshield/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "PrivacyShield detection pipeline — environment-agnostic TypeScript library (no DOM, no Node built-ins)",
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    }
+  },
+  "dependencies": {
+    "@privacyshield/data": "*"
+  }
+}

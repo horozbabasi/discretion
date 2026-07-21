@@ -1,0 +1,7 @@
+{
+  "name": "@privacyshield/eval",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "PrivacyShield evaluation harness — empty placeholder workspace until its milestone"
+}

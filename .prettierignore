@@ -1,0 +1,8 @@
+node_modules
+dist
+build
+coverage
+package-lock.json
+
+# Generated Unicode data — formatting is owned by the generator script.
+packages/data/src/confusables.ts

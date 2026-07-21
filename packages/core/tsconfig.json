@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": ".",
+    // No ambient type packages: keeps Node globals out of src so the library
+    // stays environment-agnostic (lib is ES2022 only — no DOM either).
+    "types": []
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts"],
+  "references": [{ "path": "../data" }]
+}

@@ -1,0 +1,18 @@
+{
+  "name": "@privacyshield/data",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "PrivacyShield generated Unicode data (confusables table). The generated module is committed; regeneration needs network access.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "generate": "node scripts/build-confusables.ts"
+  }
+}

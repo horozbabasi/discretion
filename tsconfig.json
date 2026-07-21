@@ -1,0 +1,12 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/data" },
+    { "path": "packages/data/scripts" },
+    { "path": "packages/core" },
+    { "path": "packages/core/bench" },
+    { "path": "packages/eval" },
+    { "path": "packages/extension" },
+    { "path": "packages/web" }
+  ]
+}

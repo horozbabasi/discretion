@@ -1,0 +1,7 @@
+{
+  "name": "@privacyshield/extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "PrivacyShield browser extension — empty placeholder workspace until its milestone"
+}

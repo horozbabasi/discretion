@@ -76,13 +76,26 @@ export function normalize(text: string, options?: NormalizationOptions): Normali
     return true;
   };
 
+  // Per-cluster NFKC must run to a FIXPOINT: one pass's output can contain
+  // clusters that only became composable by being placed next to each other
+  // (the canonical case is Hangul compatibility jamo — ㅍ and ㅓ are separate
+  // clusters, normalize to the conjoining jamo ᄑ + ᅥ, and only THOSE form a
+  // single cluster that composes to 퍼 on the next look). One extra pass
+  // settles it in practice; the cap is a defensive bound, and the fuzz suite
+  // asserts both termination and idempotency.
+  const applyNfkcToFixpoint = (): void => {
+    for (let i = 0; i < 8 && apply(nfkcByGrapheme); i++) {
+      // apply() advanced the pipeline; loop until it reports no change.
+    }
+  };
+
   if (opts.stripInvisibles) apply(stripInvisibles);
-  if (opts.nfkc) apply(nfkcByGrapheme);
+  if (opts.nfkc) applyNfkcToFixpoint();
   if (opts.homoglyphFold) {
     const folded = apply(foldHomoglyphs);
     // 3b — see the file header. Only needed when a fold actually happened,
     // and only meaningful when the NFKC step is enabled at all.
-    if (folded && opts.nfkc) apply(nfkcByGrapheme);
+    if (folded && opts.nfkc) applyNfkcToFixpoint();
   }
   if (opts.whitespacePunct) apply(normalizeWhitespacePunct);
 

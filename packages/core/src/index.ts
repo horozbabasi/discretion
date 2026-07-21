@@ -6,7 +6,7 @@
  */
 export type * from './types.js';
 
-export { detectScripts, getCharScript, classifyCodePoint } from './scripts.js';
+export { detectScripts, getCharScript, classifyCodePoint, scriptsCompatible } from './scripts.js';
 export type { CodePointClass } from './scripts.js';
 
 export { normalize } from './normalization.js';

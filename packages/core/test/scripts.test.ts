@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { detectScripts, getCharScript } from '../src/scripts.js';
+import { detectScripts, getCharScript, scriptsCompatible } from '../src/scripts.js';
 import type { ScriptName } from '../src/types.js';
 
 describe('getCharScript', () => {
@@ -124,5 +124,32 @@ describe('detectScripts', () => {
     const info = detectScripts('');
     expect(info.dominant).toBeNull();
     expect(info.mixed).toBe(false);
+  });
+});
+
+describe('scriptsCompatible', () => {
+  it('treats Han, Kana, and Latin as one compatible group (Japanese)', () => {
+    expect(scriptsCompatible('han', 'kana')).toBe(true);
+    expect(scriptsCompatible('kana', 'latin')).toBe(true);
+    expect(scriptsCompatible('latin', 'han')).toBe(true);
+  });
+
+  it('treats Hangul and Han as compatible (Korean hanja)', () => {
+    expect(scriptsCompatible('hangul', 'han')).toBe(true);
+    expect(scriptsCompatible('han', 'hangul')).toBe(true);
+  });
+
+  it('keeps unrelated scripts incompatible', () => {
+    expect(scriptsCompatible('hangul', 'latin')).toBe(false);
+    expect(scriptsCompatible('hangul', 'kana')).toBe(false);
+    expect(scriptsCompatible('latin', 'cyrillic')).toBe(false);
+    expect(scriptsCompatible('greek', 'latin')).toBe(false);
+    expect(scriptsCompatible('arabic', 'hebrew')).toBe(false);
+  });
+
+  it('is reflexive, and other never matches a real script', () => {
+    expect(scriptsCompatible('thai', 'thai')).toBe(true);
+    expect(scriptsCompatible('other', 'latin')).toBe(false);
+    expect(scriptsCompatible('han', 'other')).toBe(false);
   });
 });

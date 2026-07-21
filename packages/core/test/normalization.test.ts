@@ -80,7 +80,7 @@ describe('strip invisibles', () => {
     ]);
   });
 
-  it('removes every listed invisible', () => {
+  it('removes every listed invisible (in Latin context)', () => {
     for (const invisible of [SHY, ZWSP, ZWNJ, ZWJ, RLM, RLO, PDF_CTRL, WJ, BOM, chr(0x2064)]) {
       const r = norm(`a${invisible}b`);
       expect(r.normalizedText).toBe('ab');
@@ -107,6 +107,92 @@ describe('strip invisibles', () => {
   it('strips a soft hyphen inside a word', () => {
     const r = norm(`ex${SHY}ample`);
     expect(r.normalizedText).toBe('example');
+  });
+});
+
+describe('ZWNJ in joining scripts is structural, not noise', () => {
+  it('preserves ZWNJ in Persian text (می‌خواهم)', () => {
+    const input = `می${ZWNJ}خواهم`; // "I want" — ZWNJ controls letter shaping
+    const r = norm(input);
+    expect(r.normalizedText).toBe(input);
+    expect(r.transformations).toEqual([]);
+  });
+
+  it('preserves ZWNJ in a Persian sentence with several ZWNJ words', () => {
+    const input = `آن${ZWNJ}ها می${ZWNJ}روند و نمی${ZWNJ}دانند.`;
+    const r = norm(input);
+    expect(r.normalizedText).toBe(input);
+    expect(r.transformations).toEqual([]);
+  });
+
+  it('preserves ZWNJ in Hindi after a virama (क्‌ष)', () => {
+    // Dead consonant + ZWNJ + ssa: the canonical conjunct-suppression use.
+    const input = 'क' + chr(0x094d) + ZWNJ + 'ष';
+    const r = norm(input);
+    expect(r.normalizedText).toBe(input);
+    expect(r.transformations).toEqual([]);
+  });
+
+  it('preserves ZWNJ across intervening Arabic harakat', () => {
+    const input = 'ب' + chr(0x064e) + ZWNJ + 'ت'; // beh + fatha + ZWNJ + teh
+    const r = norm(input);
+    expect(r.normalizedText).toBe(input);
+  });
+
+  it('still strips other invisibles next to a preserved ZWNJ, with exact offsets', () => {
+    const input = `می${ZWSP}${ZWNJ}خواهم`;
+    const r = norm(input);
+    expect(r.normalizedText).toBe(`می${ZWNJ}خواهم`);
+    expect(r.transformations).toEqual([
+      {
+        kind: 'strip-invisibles',
+        originalStart: 2,
+        originalEnd: 3,
+        original: ZWSP,
+        replacement: '',
+      },
+    ]);
+  });
+
+  it('still strips ZWNJ outside joining scripts (Latin ligature suppression)', () => {
+    const r = norm(`Auf${ZWNJ}lage`);
+    expect(r.normalizedText).toBe('Auflage');
+  });
+
+  it('strips ZWNJ at a text edge or against non-joining neighbors', () => {
+    expect(norm(`${ZWNJ}خواهم`).normalizedText).toBe('خواهم'); // nothing before
+    expect(norm(`می${ZWNJ}`).normalizedText).toBe('می'); // nothing after
+    expect(norm(`می${ZWNJ}abc`).normalizedText).toBe('میabc'); // Latin after
+  });
+
+  it('never folds inside a token that carries a preserved ZWNJ', () => {
+    // Latin o planted in a Persian word: without the guard the fold stage
+    // might rewrite a ZWNJ neighbor and flip the preservation decision on
+    // the next pass. The whole token is exempt from folding instead.
+    const input = `می${ZWNJ}خ` + 'o' + 'اهم';
+    const r = norm(input);
+    expect(r.normalizedText).toBe(input);
+    expect(r.transformations).toEqual([]);
+    expect(normalize(r.normalizedText).normalizedText).toBe(r.normalizedText);
+  });
+});
+
+describe('compatible script groups (Japanese / Korean)', () => {
+  const untouched = [
+    '東京タワーTokyo2026', // Han + Katakana + Latin in one token
+    'アプリのUpdate情報です', // kana + Latin + Han
+    'ウェブサイト', // pure Katakana
+    '한국어漢字교육', // Hangul + Han in one token
+  ];
+  it.each(untouched)('never folds ordinary CJK mixing: %s', (input) => {
+    const r = norm(input);
+    expect(r.normalizedText).toBe(input);
+    expect(r.transformations).toEqual([]);
+  });
+
+  it('still folds a true confusable inside a Latin token (regression)', () => {
+    const r = norm(`p${CYR_A}ssword`);
+    expect(r.normalizedText).toBe('password');
   });
 });
 
@@ -165,6 +251,20 @@ describe('NFKC', () => {
     const r = norm(input);
     expect(r.normalizedText).toBe('한');
     expect([...r.offsetMap]).toEqual([0, 3]);
+  });
+
+  it('runs per-cluster NFKC to its fixpoint (fuzz regression: compatibility jamo)', () => {
+    // ㅍ (U+314D) and ㅓ (U+3153) are separate clusters; NFKC turns them into
+    // the conjoining jamo ᄑ + ᅥ, which only THEN form one cluster composing
+    // to 퍼 (U+D37C). A single per-cluster pass stopped halfway and broke
+    // idempotency.
+    const input = chr(0x314d) + chr(0x3153);
+    const r = norm(input);
+    expect(r.normalizedText).toBe(chr(0xd37c));
+    expect([...r.offsetMap]).toEqual([0, 2]);
+    const again = normalize(r.normalizedText);
+    expect(again.normalizedText).toBe(r.normalizedText);
+    expect(again.transformations).toEqual([]);
   });
 });
 

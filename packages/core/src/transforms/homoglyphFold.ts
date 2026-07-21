@@ -36,7 +36,7 @@
  * with a following combining mark exactly as it would have in pass one.
  */
 import { CONFUSABLES, type ConfusableEntry } from '@privacyshield/data';
-import { classifyCodePoint } from '../scripts.js';
+import { classifyCodePoint, scriptsCompatible } from '../scripts.js';
 import type { ScriptName } from '../types.js';
 import { MappedTextBuilder, type TransformStepResult, type StepChange } from '../offsetMap.js';
 
@@ -130,8 +130,16 @@ interface Fold {
   after: string;
 }
 
+const ZWNJ = String.fromCharCode(0x200c);
+
 /** Compute the folds for one token; empty when the token is not mixed-script. */
 function computeFolds(token: string): Fold[] {
+  // A ZWNJ surviving the strip stage marks joining-script morphology
+  // (Persian, Hindi, …). Folding inside such a token could change the script
+  // of a ZWNJ neighbor and flip the preservation decision on the next pass —
+  // so these tokens are never folding candidates.
+  if (token.includes(ZWNJ)) return [];
+
   // First pass: per-script letter counts to find the token's dominant script.
   const counts = new Map<ScriptName, number>();
   for (const char of token) {
@@ -152,7 +160,8 @@ function computeFolds(token: string): Fold[] {
     }
   }
   // No dominant script (all-neutral, unsupported-script, or tied token):
-  // be conservative and leave the token alone.
+  // be conservative and leave the token alone. The tie rule is ratified —
+  // an evenly split token gives no evidence of which script is "home".
   if (dominant === null || tied) return [];
 
   // Second pass: fold script-anomalous characters that can map into `dominant`.
@@ -162,10 +171,11 @@ function computeFolds(token: string): Fold[] {
     const cp = char.codePointAt(0)!;
     const cls = classifyCodePoint(cp);
     // Neutral characters (digits, marks) are never anomalous. Letters of the
-    // dominant script are at home. Everything else — including letters of
-    // unsupported scripts like Cherokee, which classify as 'other' — is
-    // anomalous here and folds if the table can map it.
-    if (cls !== 'neutral' && cls !== dominant) {
+    // dominant script — or of a script COMPATIBLE with it (Han/Kana/Latin in
+    // Japanese text, Hangul/Han in Korean; see scriptsCompatible) — are at
+    // home. Everything else, including letters of unsupported scripts like
+    // Cherokee (classified 'other'), is anomalous and folds if mappable.
+    if (cls !== 'neutral' && !scriptsCompatible(cls, dominant)) {
       const after = foldTarget(cp, dominant);
       if (after !== null) {
         folds.push({ offset, length: char.length, before: char, after });

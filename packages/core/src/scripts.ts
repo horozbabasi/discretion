@@ -19,8 +19,14 @@ const SCRIPT_PATTERNS: ReadonlyArray<readonly [ScriptName, RegExp]> = [
   ['greek', /\p{Script=Greek}/u],
   ['arabic', /\p{Script=Arabic}/u],
   ['hebrew', /\p{Script=Hebrew}/u],
-  ['han', /\p{Script=Han}/u],
-  ['kana', /[\p{Script=Hiragana}\p{Script=Katakana}]/u],
+  // Han and Kana use Script_Extensions, not Script: CJK letters like ー
+  // (U+30FC, the prolonged sound mark) and 々 (U+3005, the iteration mark)
+  // have Script=Common but scx of {Hiragana,Katakana} / {Han}. Classifying
+  // them 'other' made them look script-anomalous inside ordinary Japanese
+  // words — and anomalous letters are folding candidates, which is exactly
+  // wrong for these.
+  ['han', /\p{Script_Extensions=Han}/u],
+  ['kana', /[\p{Script_Extensions=Hiragana}\p{Script_Extensions=Katakana}]/u],
   ['hangul', /\p{Script=Hangul}/u],
   ['devanagari', /\p{Script=Devanagari}/u],
   ['thai', /\p{Script=Thai}/u],
@@ -88,6 +94,29 @@ export function getCharScript(char: string): ScriptName {
   if (cp === undefined) return 'other';
   const cls = classifyCodePoint(cp);
   return cls === 'neutral' ? 'other' : cls;
+}
+
+/**
+ * Script compatibility groups for token-level dominance decisions (ratified):
+ * ordinary Japanese prose freely mixes Han, Hiragana/Katakana, and embedded
+ * Latin (acronyms, romaji), and Korean prose mixes Hangul with Han (hanja).
+ * Characters of co-occurring scripts within one group are NEVER treated as
+ * script-anomalous with respect to each other, so such text is never a
+ * homoglyph-folding candidate.
+ */
+const COMPATIBLE_GROUPS: ReadonlyArray<ReadonlySet<ScriptName>> = [
+  new Set<ScriptName>(['han', 'kana', 'latin']),
+  new Set<ScriptName>(['hangul', 'han']),
+];
+
+/**
+ * Whether two scripts may legitimately co-occur in one token (same script,
+ * or both members of a compatibility group).
+ */
+export function scriptsCompatible(a: ScriptName, b: ScriptName): boolean {
+  if (a === b) return true;
+  if (a === 'other' || b === 'other') return false;
+  return COMPATIBLE_GROUPS.some((group) => group.has(a) && group.has(b));
 }
 
 function emptyCounts(): Record<ScriptName, number> {

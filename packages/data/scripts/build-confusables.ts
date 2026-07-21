@@ -50,8 +50,11 @@ const SCRIPT_PATTERNS: ReadonlyArray<readonly [ScriptName, RegExp]> = [
   ['greek', /\p{Script=Greek}/u],
   ['arabic', /\p{Script=Arabic}/u],
   ['hebrew', /\p{Script=Hebrew}/u],
-  ['han', /\p{Script=Han}/u],
-  ['kana', /[\p{Script=Hiragana}\p{Script=Katakana}]/u],
+  // Script_Extensions (not Script) for Han/Kana — matches the runtime
+  // classifier in @privacyshield/core: shared CJK letters like U+30FC and
+  // U+3005 are Script=Common but belong to these scripts in practice.
+  ['han', /\p{Script_Extensions=Han}/u],
+  ['kana', /[\p{Script_Extensions=Hiragana}\p{Script_Extensions=Katakana}]/u],
   ['hangul', /\p{Script=Hangul}/u],
   ['devanagari', /\p{Script=Devanagari}/u],
   ['thai', /\p{Script=Thai}/u],

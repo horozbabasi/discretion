@@ -12,9 +12,23 @@ coverage/
 # Environment
 .env
 .env.*
+!.env.example
 
 # OS noise
 .DS_Store
+._*
+Thumbs.db
+ehthumbs.db
+# Windows/OneDrive folder metadata — this checkout can live inside a synced
+# folder, where Explorer creates these automatically.
+[Dd]esktop.ini
+$RECYCLE.BIN/
+
+# Editor local state
+.idea/
+.vscode/*
+!.vscode/extensions.json
 
 # Logs
 *.log
+npm-debug.log*

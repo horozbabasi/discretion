@@ -6,3 +6,6 @@ package-lock.json
 
 # Generated Unicode data — formatting is owned by the generator script.
 packages/data/src/confusables.ts
+
+# Specification text is authoritative and must stay verbatim.
+SPEC.md

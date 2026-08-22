@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "description": "PrivacyShield monorepo — local-first PII detection and masking",
+  "license": "MIT",
   "engines": {
     "node": ">=20"
   },

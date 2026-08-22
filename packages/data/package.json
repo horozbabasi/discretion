@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "description": "PrivacyShield generated Unicode data (confusables table). The generated module is committed; regeneration needs network access.",
+  "license": "MIT",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {

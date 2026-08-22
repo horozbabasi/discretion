@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "description": "PrivacyShield detection pipeline — environment-agnostic TypeScript library (no DOM, no Node built-ins)",
+  "license": "MIT",
   "main": "./dist/src/index.js",
   "types": "./dist/src/index.d.ts",
   "exports": {

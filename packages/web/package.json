@@ -3,5 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "PrivacyShield web playground — empty placeholder workspace until its milestone"
+  "description": "PrivacyShield web playground — empty placeholder workspace until its milestone",
+  "license": "MIT"
 }

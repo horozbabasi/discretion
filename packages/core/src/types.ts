@@ -5,61 +5,99 @@
  * substitution, egress guard, extension, playground) depend on. This file
  * defines TYPES ONLY — no logic, no constants with behavior.
  *
- * NOTE: SPEC.md was not available when this file was written (see the M1
- * report). The EntityType membership below reconstructs the Stage 1 / Stage 2
- * families named in the milestone instructions: contact, financial, national
- * identifiers (as one family), documents, health, secrets, location, and the
- * Stage 2 NER types PERSON / ORG / LOCATION. Adjust member names here — in one
- * place — if SPEC.md names them differently.
+ * EntityType membership comes directly from SPEC.md: the Stage 1 "Validated
+ * identifier detection" detector list and the Stage 2 NER types. Names use
+ * the spec's own SCREAMING_SNAKE_CASE spelling so a detector's declared
+ * entity type reads identically in the spec and in the code.
  */
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Entities
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Every entity type the pipeline can detect (Stage 1 pattern/validator types + Stage 2 NER types). */
+/**
+ * Every entity type the pipeline can detect, grouped as SPEC.md groups them.
+ *
+ * Three deliberate design choices, each recorded in ARCHITECTURE.md:
+ *
+ *  1. National identifiers are FAMILIES, not one member per country. SPEC.md
+ *     requires that "adding a new national identifier must require touching
+ *     exactly one new file" — a per-country union member would force every
+ *     new scheme to edit this file too, breaking that requirement. The
+ *     concrete scheme (SSN, TCKN, PESEL, Aadhaar, …) and its country travel
+ *     in Candidate.metadata. The substitution section's singular
+ *     "NATIONAL_ID → a value passing that country's checksum" confirms the
+ *     family reading.
+ *  2. Tax and VAT registrations are split out from NATIONAL_ID because their
+ *     sensitivity genuinely differs — a company VAT number is often public
+ *     registry data, a personal national ID never is — so the sensitivity
+ *     profiles must be able to threshold them independently.
+ *  3. PEM private keys get their own member rather than sharing API_KEY.
+ *     SPEC.md lists them in the same bullet, but a leaked private key and a
+ *     leaked API key differ in blast radius and in how each is surrogated.
+ */
 export type EntityType =
-  // ── Contact ──
-  | 'email'
-  | 'phone'
-  | 'handle' // social / messaging handle, e.g. @username
-  | 'url' // URLs that identify a person (profile links, tracking links)
-  | 'ip_address'
+  // ── Contact and network ──
+  | 'EMAIL'
+  | 'PHONE'
+  | 'IP_ADDRESS'
+  | 'MAC_ADDRESS'
+  | 'URL_WITH_CREDENTIALS'
   // ── Financial ──
-  | 'credit_card'
-  | 'iban'
-  | 'bank_account'
-  | 'swift_bic'
-  | 'crypto_wallet'
-  // ── National identifiers (one family; the concrete scheme — SSN, NINO, TCKN, … —
-  //    goes in Candidate.metadata so new countries don't grow this union) ──
-  | 'national_id'
+  | 'CREDIT_CARD'
+  | 'IBAN'
+  | 'SWIFT_BIC'
+  | 'US_ROUTING_NUMBER'
+  | 'UK_SORT_CODE'
+  | 'CA_TRANSIT_NUMBER'
+  | 'AU_BSB'
+  | 'IN_IFSC'
+  | 'BR_AGENCIA'
+  | 'CRYPTO_WALLET'
+  // ── National and tax identifiers (families — see note 1 above) ──
+  | 'NATIONAL_ID'
+  | 'TAX_ID'
+  | 'VAT_NUMBER'
   // ── Documents ──
-  | 'passport'
-  | 'drivers_license'
-  | 'vehicle_id' // VIN / license plate
-  // ── Health ──
-  | 'health_id' // medical record number, health insurance ID
-  // ── Secrets ──
-  | 'api_key'
-  | 'private_key'
-  | 'jwt'
-  | 'password'
+  | 'PASSPORT_MRZ'
+  | 'DRIVERS_LICENSE'
+  | 'VIN'
+  | 'US_NPI'
+  // ── Health (ICD-10/ICD-11, SNOMED, lab results) ──
+  | 'HEALTH_DATA'
+  // ── Secrets and credentials ──
+  | 'API_KEY'
+  | 'PRIVATE_KEY'
+  | 'JWT'
+  | 'GENERIC_SECRET'
+  | 'CONNECTION_STRING'
   // ── Location ──
-  | 'street_address'
-  | 'postal_code'
-  | 'geo_coordinate'
-  // ── Stage 2 NER (uppercase by NER-label convention) ──
+  | 'POSTAL_CODE'
+  | 'STREET_ADDRESS'
+  | 'COORDINATES'
+  // ── Stage 2: named-entity recognition ──
   | 'PERSON'
   | 'ORG'
-  | 'LOCATION';
+  | 'LOCATION'
+  // ── Dates ──
+  // Absent from the Stage 1 detector list, but required by two other SPEC.md
+  // sections: the Strict profile ("adds ... dates of birth") and the
+  // substitution table ("DATE → a shifted date preserving relative ordering
+  // across the document"). Carried here so both stay implementable.
+  | 'DATE_OF_BIRTH';
 
-/** Which pipeline stage produced a candidate / contributed to an entity. */
+/**
+ * Which pipeline stage produced a candidate, or contributed to an entity.
+ * One member per stage of SPEC.md's core detection pipeline.
+ */
 export type DetectionStage =
-  | 'stage0-normalization' // text canonicalization (this milestone)
-  | 'stage1-pattern' // deterministic detectors: regex triggers + validators
-  | 'stage2-ner' // ML named-entity recognition
-  | 'fusion'; // candidate merging / calibration
+  | 'stage0-normalization' // text canonicalization (M1)
+  | 'stage1-validated-identifier' // regex candidate generation + validator
+  | 'stage2-ner' // multilingual ONNX token classification
+  | 'stage2b-gazetteer' // bundled name / place / org lookup sets
+  | 'stage2c-verification' // second opinion over the ambiguous band
+  | 'stage3-context' // trigger proximity, structural and negative context
+  | 'stage4-fusion'; // calibration, overlap resolution, profile thresholds
 
 /**
  * A pre-fusion detection produced by a single detector.

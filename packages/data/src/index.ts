@@ -5,16 +5,26 @@
  * security data by scripts/build-confusables.ts (see that file for
  * provenance and post-processing). The generated module is committed, so
  * consumers never need network access.
+ *
+ * The Unicode data is redistributed under the Unicode License v3; the
+ * required copyright and permission notice is in THIRD_PARTY_NOTICES.md at
+ * the repository root.
  */
 import {
   CONFUSABLES_RAW,
   CONFUSABLES_UNICODE_VERSION,
   CONFUSABLES_SOURCE_URL,
+  CONFUSABLES_SOURCE_SHA256,
   type ScriptName,
 } from './confusables.js';
 
 export type { ScriptName };
-export { CONFUSABLES_RAW, CONFUSABLES_UNICODE_VERSION, CONFUSABLES_SOURCE_URL };
+export {
+  CONFUSABLES_RAW,
+  CONFUSABLES_UNICODE_VERSION,
+  CONFUSABLES_SOURCE_URL,
+  CONFUSABLES_SOURCE_SHA256,
+};
 
 /** One confusable mapping: a character, its skeleton, and both scripts. */
 export interface ConfusableEntry {

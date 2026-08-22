@@ -8,7 +8,8 @@
  * Source:          https://www.unicode.org/Public/security/latest/confusables.txt
  * Unicode version: 17.0.0
  * Source dated:    2025-07-22, 05:49:37 GMT
- * Generated:       2026-07-21T02:05:14.190Z
+ * Source SHA-256:  091c7f82fc39ef208faf8f94d29c244de99254675e09de163160c810d13ef22a
+ * Generated:       2026-08-22T00:04:54.555Z
  * Entries:         6565
  *   (from 6565 data lines; dropped 0 identity mappings
  *   after NFKC-normalizing skeletons, 0 empty skeletons;
@@ -16,6 +17,13 @@
  *
  * Format: [source code point, source script, skeleton (NFKC), skeleton script].
  * Script names mirror ScriptName in @privacyshield/core.
+ *
+ * ── ATTRIBUTION ──────────────────────────────────────────────────────
+ * Derived from Unicode Character Database security data.
+ * Copyright © 1991-2026 Unicode, Inc. Distributed under the Unicode
+ * License v3 / Terms of Use: https://www.unicode.org/copyright.html
+ * The full copyright and permission notice this license requires is
+ * reproduced in THIRD_PARTY_NOTICES.md at the repository root.
  */
 
 export type ScriptName =
@@ -36,6 +44,8 @@ export type ScriptName =
 
 export const CONFUSABLES_UNICODE_VERSION = '17.0.0';
 export const CONFUSABLES_SOURCE_URL = 'https://www.unicode.org/Public/security/latest/confusables.txt';
+/** SHA-256 of the exact source bytes this table was generated from. */
+export const CONFUSABLES_SOURCE_SHA256 = '091c7f82fc39ef208faf8f94d29c244de99254675e09de163160c810d13ef22a';
 
 export const CONFUSABLES_RAW: ReadonlyArray<
   readonly [number, ScriptName, string, ScriptName]

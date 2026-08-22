@@ -22,10 +22,27 @@
  *      it would be folding into. Script names mirror ScriptName in
  *      @privacyshield/core (kept in sync by convention; the unions are
  *      structurally identical).
+ *
+ * REPRODUCIBILITY: the emitted module records the Unicode version AND the
+ * SHA-256 of the exact source bytes this run consumed. Unicode publishes the
+ * security data under numbered directories only after the fact — at the time
+ * of writing, 17.0.0 is served from `latest/` while the newest numbered
+ * directory is 16.0.0 — so there is no stable versioned URL to pin to. The
+ * digest is the pin: re-running the generator and diffing the recorded hash
+ * tells you whether upstream changed under you. Set CONFUSABLES_URL to
+ * override the source (e.g. a numbered directory once one exists, or a local
+ * copy for offline regeneration).
+ *
+ * ATTRIBUTION: the Unicode License v3 requires its copyright and permission
+ * notice to accompany copies of the data or appear in associated
+ * documentation. The full notice lives in THIRD_PARTY_NOTICES.md at the repo
+ * root, and the generated module's header points at it.
  */
 import { writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 
-const SOURCE_URL = 'https://www.unicode.org/Public/security/latest/confusables.txt';
+const SOURCE_URL =
+  process.env.CONFUSABLES_URL ?? 'https://www.unicode.org/Public/security/latest/confusables.txt';
 const OUTPUT_URL = new URL('../src/confusables.ts', import.meta.url);
 
 type ScriptName =
@@ -109,6 +126,9 @@ if (!response.ok) {
 }
 const rawText = await response.text();
 
+// Digest the exact bytes consumed — this is the reproducibility pin (see header).
+const sourceSha256 = createHash('sha256').update(rawText, 'utf8').digest('hex');
+
 const version = rawText.match(/^#\s*Version:\s*(\S+)/m)?.[1] ?? 'unknown';
 const dateLine = rawText.match(/^#\s*Date:\s*(.+)$/m)?.[1]?.trim() ?? 'unknown';
 
@@ -179,6 +199,7 @@ lines.push(' *');
 lines.push(` * Source:          ${SOURCE_URL}`);
 lines.push(` * Unicode version: ${version}`);
 lines.push(` * Source dated:    ${dateLine}`);
+lines.push(` * Source SHA-256:  ${sourceSha256}`);
 lines.push(` * Generated:       ${new Date().toISOString()}`);
 lines.push(` * Entries:         ${entries.length}`);
 lines.push(` *   (from ${parsed} data lines; dropped ${droppedIdentity} identity mappings`);
@@ -187,6 +208,13 @@ lines.push(` *   ${skippedLines} non-matching lines skipped)`);
 lines.push(' *');
 lines.push(' * Format: [source code point, source script, skeleton (NFKC), skeleton script].');
 lines.push(' * Script names mirror ScriptName in @privacyshield/core.');
+lines.push(' *');
+lines.push(' * ── ATTRIBUTION ──────────────────────────────────────────────────────');
+lines.push(' * Derived from Unicode Character Database security data.');
+lines.push(' * Copyright © 1991-2026 Unicode, Inc. Distributed under the Unicode');
+lines.push(' * License v3 / Terms of Use: https://www.unicode.org/copyright.html');
+lines.push(' * The full copyright and permission notice this license requires is');
+lines.push(' * reproduced in THIRD_PARTY_NOTICES.md at the repository root.');
 lines.push(' */');
 lines.push('');
 lines.push('export type ScriptName =');
@@ -207,6 +235,8 @@ lines.push("  | 'other';");
 lines.push('');
 lines.push(`export const CONFUSABLES_UNICODE_VERSION = ${tsLiteral(version)};`);
 lines.push(`export const CONFUSABLES_SOURCE_URL = ${tsLiteral(SOURCE_URL)};`);
+lines.push('/** SHA-256 of the exact source bytes this table was generated from. */');
+lines.push(`export const CONFUSABLES_SOURCE_SHA256 = ${tsLiteral(sourceSha256)};`);
 lines.push('');
 lines.push('export const CONFUSABLES_RAW: ReadonlyArray<');
 lines.push('  readonly [number, ScriptName, string, ScriptName]');

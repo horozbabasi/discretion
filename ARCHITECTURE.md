@@ -114,6 +114,28 @@ conjunct-control purposes. Preserving more is the safe direction: a
 wrongly-kept ZWNJ is invisible noise, a wrongly-stripped one corrupts the
 user's words. Every script the spec names is covered by a test.
 
+### D6 — `.claude/` is local agent tooling, not project content
+
+The repository briefly tracked `.claude/skills/` — three Claude Code skills
+used while working on this project. They are now ignored and untracked.
+
+**Reasoning.** Skills are tooling for whoever happens to be editing the code,
+not part of the product: nothing in the build, the workspace globs, or any
+package entry point reads them. Tracking them bought nothing and created a
+licensing complication. Two of the three vendor third-party Apache-2.0 works,
+each carrying its own `LICENSE.txt` (one reading "Copyright 2026 Anthropic,
+PBC."), and the third has no license file or attribution of any kind and is
+demonstrably not this project's original work. Redistributing all of it under
+a blanket root MIT `LICENSE` would assert a grant over code this project does
+not own, and keeping it would additionally require an Apache-2.0 section in
+THIRD_PARTY_NOTICES.md to be correct.
+
+Untracking removes the problem at its source instead of documenting around
+it. The skills stay on disk and keep working exactly as before; they simply
+stop being redistributed as part of this repository.
+
+Code: `.gitignore` (`.claude/`).
+
 ## Standing contracts (established in M1)
 
 - **Offset map:** `offsetMap[i]` is the original index of the cluster that

@@ -44,7 +44,7 @@ Commands, from repo root:
 
 ## Skills in `.claude/skills/`
 
-Only three remain, kept deliberately — use each only in its stated scope, not incidentally:
+Developer-local tooling: `.claude/` is gitignored and not part of the repo (ARCHITECTURE.md D6), so a fresh clone will not have these. Where present, use each only in its stated scope, not incidentally:
 
 - **`clean-code`** — active on all code work, every milestone.
 - **`frontend-design`** — M5 playground, M9 review panel, M10 popup/options only.

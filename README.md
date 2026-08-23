@@ -50,8 +50,9 @@ compare `CONFUSABLES_SOURCE_SHA256` to detect upstream drift.
 
 ## Licensing
 
-No project license has been chosen yet — the packages are marked
-`"private": true`.
+MIT — see [LICENSE](LICENSE). The workspace packages are marked
+`"private": true` because they are not published to npm, which is independent
+of the project's license.
 
 The bundled Unicode data is redistributed under the Unicode License v3; the
 required copyright and permission notice is reproduced in

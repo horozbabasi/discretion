@@ -29,6 +29,9 @@ $RECYCLE.BIN/
 .vscode/*
 !.vscode/extensions.json
 
+# Local agent tooling — developer-local, not project content (ARCHITECTURE.md D6)
+.claude/
+
 # Logs
 *.log
 npm-debug.log*

@@ -310,6 +310,59 @@ Idempotency is structural (rendered text is never revisited) and semantic
 
 Code: `packages/core/src/mask/restorer.ts`; `test/restorer.test.ts`.
 
+### D14 — The playground: rendering decisions (M5)
+
+**Vanilla TypeScript + Vite, no framework.** SPEC.md's tooling list names
+Vite/Vitest/ESLint/Prettier and no UI framework; the app is two panes and
+a rail, and the extension's security rule — no innerHTML with untrusted
+content, construct nodes programmatically — is adopted wholesale (the
+`el()` helper renders strings as Text nodes only, so user and corpus text
+can never be parsed as markup). Fonts are bundled via @fontsource; the
+built page requests nothing from any other origin, verified against the
+production bundle's CSS/JS.
+
+**Live, debounced detection.** M3 measured Stage 0+1 at p50 0.14 ms /
+p99 1.05 ms per document — orders of magnitude under a keystroke — so
+detection re-runs 180 ms after typing pauses. The visible glyph layer is
+NOT debounced: the textarea's text is transparent and the backdrop clone
+behind it carries the visible glyphs, so every input event mirrors plain
+text into the backdrop synchronously and only the highlight marks wait
+for analysis (the review property that found this: with a debounced-only
+backdrop, the visible text freezes while the user types). The mirror also
+runs during IME composition; analysis waits for compositionend.
+
+**Textarea + backdrop clone, not contenteditable.** A native textarea
+keeps undo, IME, paste, and selection semantics for free;
+contenteditable requires caret management under programmatic re-render.
+The cost is layout-identity discipline: both layers share one metrics
+class, `scrollbar-gutter: stable` keeps wrap widths equal when the
+scrollbar appears, `dir=auto` on both layers resolves the same base
+direction for RTL, and scroll positions re-sync after every render.
+Hover hit-testing uses `document.elementsFromPoint`, which sees through
+the transparent textarea to the marks beneath it.
+
+**Display set === mask set.** The input pane highlights exactly what
+masking used: `resolveForDisplay` seeds from core's `resolveForMasking`
+(the same function `maskOriginal` calls) and only adds non-sensitive
+test-value candidates that fit without overlap — so the two panes cannot
+disagree about what was masked. Output rendering rebuilds the masked text
+from segments, and a test pins joined-segments === maskedText.
+
+**Examples are generated, not written.** `buildExamples()` runs the M3
+corpus generator client-side at startup with a pinned seed and selects by
+criteria (language sets × doc types) for script/document breadth — the
+curation is code, the content is the generator's, and the examples can
+never drift from what the eval corpus actually produces. Masking every
+sensitive candidate regardless of confidence tier is deliberate: that IS
+Stage 1 alone, the milestone's fixed sensitivity; thresholds arrive with
+M8 calibration.
+
+**Fail-closed, demonstrated.** A pipeline error blocks the OUTPUT pane
+with an alert; the user's own text stays visible in the input pane —
+fail-closed guards what leaves, not what the user sees.
+
+Code: `packages/web/src/`; `packages/web/test/`.
+
 ## Status after M2
 
 Stage 1 is complete: 113 registered detectors — 57 NATIONAL_ID and 19
@@ -371,6 +424,26 @@ PERSON/ORG/LOCATION handling (M6/M7), calibrated overlap resolution and
 the MaskResult/DetectedEntity reconciliation (M8), and per-tab vault
 lifecycle — the vault is an injectable store; wiring it to tab sessions is
 extension work (M9).
+
+## Status after M5
+
+The playground (packages/web) is the first end-to-end surface: live
+Stage 0–1 detection with per-family highlights and hover cards (type,
+raw confidence labeled uncalibrated, detector, validator), masked output
+with surrogate/token toggle, summary counts, eight corpus-generated
+examples across five scripts including RTL, and a demonstrated
+fail-closed error state. 35 package tests (610 total). Verified against
+the production bundle in a real browser (Playwright + Edge): 12-check
+smoke including tooltip hover, RTL rendering, and zero console errors;
+the bundle makes no external request (603 KB / 156 KB gzip — dominated
+by libphonenumber's full metadata, the accuracy-first choice SPEC
+mandates). An adversarial review pass caught and fixed: a placeholder-
+select bug that overwrote user text, the frozen-glyph-layer typing bug,
+RTL base-direction and scrollbar-width parity between the editor layers,
+and zero-coverage on IME and hover flows. Deviations from SPEC's web
+section, by milestone design: no sensitivity profile switcher and no
+calibrated confidence or explanations until M8; names/addresses absent
+until M6/M7 — the UI says so rather than faking them.
 
 ## Standing contracts (established in M1)
 

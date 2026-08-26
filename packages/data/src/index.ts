@@ -46,3 +46,7 @@ export const CONFUSABLES: ReadonlyMap<number, ConfusableEntry> = (() => {
 })();
 
 export const CONFUSABLES_ENTRY_COUNT = CONFUSABLES_RAW.length;
+
+// ── Stage 1 secret provider table (M2) ──
+export { SECRET_PROVIDERS, SECRET_CHARSET_PATTERN } from './secretProviders.js';
+export type { SecretProvider } from './secretProviders.js';

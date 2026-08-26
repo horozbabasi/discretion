@@ -13,3 +13,6 @@ export { generateCorpus } from './corpus/builder.js';
 export type { CorpusOptions } from './corpus/builder.js';
 export { generateHardNegatives, HARD_NEGATIVE_CATEGORIES } from './corpus/hardNegatives.js';
 export type { HardNegativeOptions } from './corpus/hardNegatives.js';
+export { runEval } from './metrics.js';
+export type { EvalResult, EvalOptions, TypeMetrics, FalsePositiveRecord, FalseNegativeRecord } from './metrics.js';
+export { renderReport } from './report.js';

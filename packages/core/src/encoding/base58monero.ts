@@ -60,3 +60,31 @@ export function moneroBase58Decode(s: string): Uint8Array | null {
   }
   return out;
 }
+
+/** Encoded char count for a partial block, indexed by decoded length. */
+const PARTIAL_ENCODED: readonly number[] = [0, 2, 3, 5, 6, 7, 9, 10];
+
+function encodeBlock(bytes: Uint8Array, encodedSize: number): string {
+  let acc = 0n;
+  for (const b of bytes) acc = (acc << 8n) | BigInt(b);
+  let out = '';
+  for (let i = 0; i < encodedSize; i++) {
+    out = ALPHABET[Number(acc % 58n)]! + out;
+    acc /= 58n;
+  }
+  return out;
+}
+
+/** Encode bytes in Monero's block-wise base58. */
+export function moneroBase58Encode(bytes: Uint8Array): string {
+  const fullBlocks = Math.floor(bytes.length / FULL_DECODED);
+  const tail = bytes.length % FULL_DECODED;
+  let out = '';
+  for (let i = 0; i < fullBlocks; i++) {
+    out += encodeBlock(bytes.slice(i * FULL_DECODED, (i + 1) * FULL_DECODED), FULL_ENCODED);
+  }
+  if (tail > 0) {
+    out += encodeBlock(bytes.slice(fullBlocks * FULL_DECODED), PARTIAL_ENCODED[tail]!);
+  }
+  return out;
+}

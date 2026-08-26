@@ -6,3 +6,4 @@
 import './contact/index.js';
 import './financial/index.js';
 import './bankcodes/index.js';
+import './crypto/index.js';

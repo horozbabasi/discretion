@@ -185,6 +185,28 @@ that justifies it.
 
 Code: `packages/core/src/checksums/weighted.ts` and siblings.
 
+### D9 — Polkadot SS58 validates structurally; blake2b is not bundled
+
+Every other wallet checksum in the crypto family reuses a primitive that
+more than one chain needs: SHA-256d covers Bitcoin, Litecoin and Tron;
+Keccak-256 covers Ethereum's EIP-55 and Monero; bech32/bech32m cover
+Bitcoin segwit and Cardano Shelley. Polkadot's SS58 alone requires
+blake2b-512, and a 64-bit hash built from paired 32-bit halves is exactly
+the kind of code where a subtle carry bug survives casual review.
+
+**Rule.** The DOT detector validates structure only — base58 to exactly 35
+bytes with the 0x00 network prefix — at MEDIUM confidence, with
+`checksum: 'unverified'` in its metadata. If a second consumer of blake2b
+ever appears, implement the primitive with pinned official vectors and
+upgrade the detector to HIGH.
+
+A parallel small asymmetry, recorded in the ADA detector itself: Cardano
+Shelley addresses are fully checksum-verified (bech32) at HIGH, while
+Byron-era addresses would need a CBOR parse to reach their CRC and validate
+structurally at MEDIUM instead.
+
+Code: `packages/core/src/detect/detectors/crypto/dot.ts`, `ada.ts`.
+
 ## Standing contracts (established in M1)
 
 - **Offset map:** `offsetMap[i]` is the original index of the cluster that

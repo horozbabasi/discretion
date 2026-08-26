@@ -12,6 +12,9 @@ export default defineConfig({
       '@privacyshield/core': fileURLToPath(
         new URL('./packages/core/src/index.ts', import.meta.url),
       ),
+      '@privacyshield/eval': fileURLToPath(
+        new URL('./packages/eval/src/index.ts', import.meta.url),
+      ),
     },
   },
   test: {

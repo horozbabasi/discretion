@@ -3,6 +3,21 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "PrivacyShield web playground — empty placeholder workspace until its milestone",
-  "license": "MIT"
+  "description": "PrivacyShield playground — standalone client-side demo of detection and masking (Stages 0–1 + substitution)",
+  "license": "MIT",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@privacyshield/core": "*",
+    "@privacyshield/eval": "*"
+  },
+  "devDependencies": {
+    "@fontsource/fraunces": "^5.1.0",
+    "@fontsource/ibm-plex-mono": "^5.1.0",
+    "@fontsource/ibm-plex-sans": "^5.1.0",
+    "vite": "^6.0.0"
+  }
 }

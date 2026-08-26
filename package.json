@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "PrivacyShield monorepo \u2014 local-first PII detection and masking",
+  "description": "PrivacyShield monorepo — local-first PII detection and masking",
   "license": "MIT",
   "engines": {
     "node": ">=20"
@@ -19,7 +19,10 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "bench": "tsc -b && node packages/core/dist/bench/normalization.bench.js",
-    "eval": "tsc -b && node packages/eval/dist/cli.js"
+    "eval": "tsc -b && node packages/eval/dist/cli.js",
+    "web:dev": "npm run dev --workspace @privacyshield/web",
+    "web:build": "npm run build --workspace @privacyshield/web",
+    "web:preview": "npm run preview --workspace @privacyshield/web"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
@@ -27,9 +30,14 @@
     "eslint": "^9.0.0",
     "eslint-config-prettier": "^10.0.0",
     "fast-check": "^3.23.0",
+    "jsdom": "^25.0.0",
     "prettier": "^3.0.0",
     "typescript": "^5.9.0",
     "typescript-eslint": "^8.0.0",
     "vitest": "^3.2.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true,
+    "esbuild@0.25.12": true
   }
 }

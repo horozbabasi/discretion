@@ -16,5 +16,7 @@ export default defineConfig({
   },
   test: {
     include: ['packages/*/test/**/*.test.ts'],
+    // Deterministic property tests: see packages/core/test/setup.fastcheck.ts.
+    setupFiles: ['packages/core/test/setup.fastcheck.ts'],
   },
 });

@@ -17,6 +17,8 @@ import type { EntityKind } from './entityBank.js';
 import { ENTITY_BANK, kindsForLanguage } from './entityBank.js';
 import type { LanguageBank } from './languages.js';
 import { LANGUAGES } from './languages.js';
+import type { NerBank } from './nerBank.js';
+import { nerBankFor } from './nerBank.js';
 
 const ZWSP = '​';
 
@@ -90,6 +92,19 @@ class DocBuilder {
     this.append(value);
   }
 
+  /** Append a literal value (an NER name/org/place), recording its span. */
+  appendSpan(type: GroundTruthEntity['type'], scheme: string, value: string): void {
+    this.entities.push({
+      type,
+      scheme,
+      text: value,
+      start: this.length,
+      end: this.length + value.length,
+      obfuscated: false,
+    });
+    this.append(value);
+  }
+
   build(id: string, language: string, docType: DocType, hardNegative = false): LabeledDocument {
     return {
       id,
@@ -116,6 +131,40 @@ interface BuildContext {
   readonly lang: LanguageBank;
   readonly kinds: readonly EntityKind[];
   readonly obfuscationRate: number;
+  /**
+   * NER planting (people/orgs/locations) draws from its OWN rng stream so
+   * that, for a given seed, the Stage 1 value draws are byte-identical to
+   * the pre-M6 corpus — the M3 regression gates keep measuring the same
+   * identifiers, just in documents that now also contain named entities.
+   */
+  readonly ner?: { readonly bank: NerBank; readonly rng: () => number };
+}
+
+type NerSlot = 'P' | 'O' | 'L';
+
+const NER_TYPE: Readonly<Record<NerSlot, { type: 'PERSON' | 'ORG' | 'LOCATION'; scheme: string }>> = {
+  P: { type: 'PERSON', scheme: 'ner-person' },
+  O: { type: 'ORG', scheme: 'ner-org' },
+  L: { type: 'LOCATION', scheme: 'ner-location' },
+};
+
+/** Append one NER carrier sentence with its entity planted in the slot. */
+function nerLine(b: DocBuilder, ctx: BuildContext, slot: NerSlot): void {
+  if (ctx.ner === undefined) return;
+  const { bank, rng } = ctx.ner;
+  const carriers = slot === 'P' ? bank.personCarriers : slot === 'O' ? bank.orgCarriers : bank.locationCarriers;
+  const values = slot === 'P' ? bank.people : slot === 'O' ? bank.orgs : bank.locations;
+  const carrier = pick(rng, carriers);
+  const at = carrier.indexOf(`{${slot}}`);
+  b.append(carrier.slice(0, at));
+  b.appendSpan(NER_TYPE[slot].type, NER_TYPE[slot].scheme, pick(rng, values));
+  b.append(carrier.slice(at + 3));
+}
+
+/** A random NER slot, weighted toward PERSON (the hardest, commonest type). */
+function pickNerSlot(rng: () => number): NerSlot {
+  const roll = rng();
+  return roll < 0.5 ? 'P' : roll < 0.75 ? 'O' : 'L';
 }
 
 const inlineOnly = (kinds: readonly EntityKind[]): readonly EntityKind[] =>
@@ -137,6 +186,13 @@ function buildProse(b: DocBuilder, ctx: BuildContext): void {
     }
     b.append(' ');
   }
+  if (ctx.ner !== undefined) {
+    const m = int(ctx.ner.rng, 1, 2);
+    for (let i = 0; i < m; i++) {
+      nerLine(b, ctx, pickNerSlot(ctx.ner.rng));
+      b.append(' ');
+    }
+  }
 }
 
 function buildEmail(b: DocBuilder, ctx: BuildContext): void {
@@ -146,8 +202,17 @@ function buildEmail(b: DocBuilder, ctx: BuildContext): void {
     carrierLine(b, ctx.lang, pickKind(ctx.rng, inlineOnly(ctx.kinds)), ctx.rng, obf(ctx));
     b.append('\n');
   }
+  if (ctx.ner !== undefined && ctx.ner.rng() < 0.5) {
+    nerLine(b, ctx, pickNerSlot(ctx.ner.rng));
+    b.append('\n');
+  }
   b.append(`${pick(ctx.rng, ctx.lang.fillers)}\n\n${ctx.lang.signoff}\n`);
-  // Signature block: a phone and an email, the way real signatures leak.
+  // Signature block: the sender's name, a phone, and an email — the way
+  // real signatures leak.
+  if (ctx.ner !== undefined) {
+    b.appendSpan('PERSON', 'ner-person', pick(ctx.ner.rng, ctx.ner.bank.people));
+    b.append('\n');
+  }
   const phone = ctx.kinds.find((k) => k.kind === 'phone');
   const email = ctx.kinds.find((k) => k.kind === 'email');
   if (phone !== undefined) {
@@ -246,6 +311,10 @@ function buildMedical(b: DocBuilder, ctx: BuildContext): void {
     b.appendEntity(sctid, ctx.rng, false);
     b.append('\n');
   }
+  if (ctx.ner !== undefined) {
+    nerLine(b, ctx, 'P');
+    b.append('\n');
+  }
   b.append(`${pick(ctx.rng, ctx.lang.fillers)}\n`);
 }
 
@@ -256,6 +325,13 @@ function buildContract(b: DocBuilder, ctx: BuildContext): void {
   b.append('\n3. ');
   carrierLine(b, ctx.lang, pickKind(ctx.rng, kinds), ctx.rng, false);
   b.append('\n');
+  if (ctx.ner !== undefined) {
+    b.append('4. ');
+    nerLine(b, ctx, 'O');
+    b.append('\n5. ');
+    nerLine(b, ctx, 'P');
+    b.append('\n');
+  }
 }
 
 function buildCv(b: DocBuilder, ctx: BuildContext): void {
@@ -263,6 +339,14 @@ function buildCv(b: DocBuilder, ctx: BuildContext): void {
   const phone = ctx.kinds.find((k) => k.kind === 'phone');
   const street = ctx.kinds.find((k) => k.kind === 'street');
   b.append('Curriculum Vitae\n');
+  if (ctx.ner !== undefined) {
+    b.appendSpan('PERSON', 'ner-person', pick(ctx.ner.rng, ctx.ner.bank.people));
+    b.append('\n');
+    if (ctx.ner.rng() < 0.6) {
+      nerLine(b, ctx, 'L');
+      b.append('\n');
+    }
+  }
   if (email !== undefined) {
     b.append('Email: ');
     b.appendEntity(email, ctx.rng, false);
@@ -330,6 +414,9 @@ export interface CorpusOptions {
  */
 export function generateCorpus(options: CorpusOptions): LabeledDocument[] {
   const rng = generate.mulberry32(options.seed);
+  // Forked stream for NER planting (see BuildContext.ner): keeps the Stage 1
+  // value draws for a given seed identical to the pre-M6 corpus.
+  const nerRng = generate.mulberry32(options.seed ^ 0x4e4552);
   const obfuscationRate = options.obfuscationRate ?? 0.08;
   const docs: LabeledDocument[] = [];
   const kindCounts = new Map<string, number>();
@@ -343,7 +430,14 @@ export function generateCorpus(options: CorpusOptions): LabeledDocument[] {
     const lang = pick(rng, LANGUAGES);
     const docType = pick(rng, DOC_TYPES);
     const b = new DocBuilder();
-    BUILDERS[docType](b, { rng, lang, kinds: kindsForLanguage(lang.code), obfuscationRate });
+    const bank = nerBankFor(lang.code);
+    BUILDERS[docType](b, {
+      rng,
+      lang,
+      kinds: kindsForLanguage(lang.code),
+      obfuscationRate,
+      ...(bank !== undefined ? { ner: { bank, rng: nerRng } } : {}),
+    });
     record(b.build(`doc-${options.seed}-${i}`, lang.code, docType));
   }
 

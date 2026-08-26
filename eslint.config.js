@@ -12,6 +12,7 @@ export default tseslint.config(
       '**/build/**',
       '**/node_modules/**',
       '**/coverage/**',
+      '.hf-cache/**',
       // Generated Unicode data (large; owned by the generator script).
       'packages/data/src/confusables.ts',
     ],

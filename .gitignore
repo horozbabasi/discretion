@@ -35,3 +35,4 @@ $RECYCLE.BIN/
 # Logs
 *.log
 npm-debug.log*
+.hf-cache/

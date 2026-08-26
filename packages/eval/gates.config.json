@@ -1,5 +1,5 @@
 {
-  "$comment": "Regression gates for Stage 1 accuracy. Floors sit BELOW the measured 2026-08 baseline (small-sample margin included) so that a future change which regresses accuracy fails the build. The low floors on GENERIC_SECRET, POSTAL_CODE, URL_WITH_CREDENTIALS, DRIVERS_LICENSE, NATIONAL_ID and TAX_ID reflect measured, documented Stage-1-alone weaknesses awaiting Stage 3 context (M7) and Stage 4 overlap resolution (M8) - they are regression floors, not quality targets. Corpus shape is pinned here so the gate is reproducible.",
+  "$comment": "Regression gates for Stage 1 accuracy. Floors sit BELOW the measured 2026-08 baseline (small-sample margin included) so that a future change which regresses accuracy fails the build. The low floors on GENERIC_SECRET, POSTAL_CODE, URL_WITH_CREDENTIALS, DRIVERS_LICENSE, NATIONAL_ID and TAX_ID reflect measured, documented Stage-1-alone weaknesses awaiting Stage 3 context (M7) and Stage 4 overlap resolution (M8) - they are regression floors, not quality targets. Corpus shape is pinned here so the gate is reproducible. PERSON/ORG/LOCATION are Stage 2 (M6) types: this vitest gate runs Stage 1 only (the unit-test path carries no model), so their floors HERE are 0 by construction; the Stage-2-inclusive gate is the eval CLI's --ner run, with floors in nerPerType.",
   "corpus": {
     "positiveDocuments": 400,
     "negativeDocuments": 150,
@@ -26,8 +26,11 @@
     "IN_IFSC": { "minPrecision": 0.8, "minRecallPartial": 0.9 },
     "IP_ADDRESS": { "minPrecision": 0.85, "minRecallPartial": 0.97 },
     "JWT": { "minPrecision": 0.95, "minRecallPartial": 0.97 },
+    "LOCATION": { "minPrecision": 0, "minRecallPartial": 0 },
     "MAC_ADDRESS": { "minPrecision": 0.9, "minRecallPartial": 0.9 },
     "NATIONAL_ID": { "minPrecision": 0.62, "minRecallPartial": 0.97 },
+    "ORG": { "minPrecision": 0, "minRecallPartial": 0 },
+    "PERSON": { "minPrecision": 0, "minRecallPartial": 0 },
     "PASSPORT_MRZ": { "minPrecision": 0.95, "minRecallPartial": 0.9 },
     "PHONE": { "minPrecision": 0.95, "minRecallPartial": 0.97 },
     "POSTAL_CODE": { "minPrecision": 0.02, "minRecallPartial": 0.35 },

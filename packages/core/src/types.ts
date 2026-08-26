@@ -173,12 +173,26 @@ export interface VaultEntry {
   /** Stable unique id of this entry. */
   id: string;
   type: EntityType;
-  /** The original text that was masked. */
+  /** The original text that was masked (first-seen writing). */
   original: string;
   /** What it was replaced with (a surrogate value or an opaque token). */
   replacement: string;
   /** Epoch milliseconds when the entry was created. */
   createdAt: number;
+  /**
+   * Canonical form of the original (separators stripped, case-normalized by
+   * the detector) — the consistency key that makes "4111 1111…" and
+   * "4111-1111…" share one entry, and the egress guard's
+   * separator-insensitive search term. Added in M4; optional because token
+   * bracket entries for unknown shapes have no canonical beyond the text.
+   */
+  canonical?: string;
+  /**
+   * True when no sensible surrogate could be produced and a bracket token
+   * was used instead — SPEC.md requires the fallback be recorded in the
+   * session record. Added in M4.
+   */
+  fallback?: boolean;
 }
 
 /** Result of masking a piece of text. */

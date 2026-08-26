@@ -55,6 +55,8 @@ Developer-local tooling: `.claude/` is gitignored and not part of the repo (ARCH
 - Read SPEC.md before starting any milestone.
 - Record every non-obvious judgement call in ARCHITECTURE.md with reasoning, not just the decision.
 - Commit at the end of each milestone with a descriptive summary of what was built and measured.
+- **Within a large milestone, commit and push at every clean batch boundary** (full suite green), not only at milestone end. During M2, a session limit killed a 7-agent fan-out with 1,300+ lines of passing, uncommitted work in the tree — batch commits are the guard against repeating that.
+- Detector authoring is done in **serial batches in the main session**, not parallel agent fan-outs. Batch authors read `packages/core/src/detect/AUTHORING.md` (the 2KB contract), not all of SPEC.md.
 - Report deviations from instructions explicitly — don't silently adapt.
 - If SPEC.md contradicts itself, flag it and ask rather than quietly picking a reading. This has already caught two real issues.
 

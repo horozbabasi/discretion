@@ -9,3 +9,4 @@ import './bankcodes/index.js';
 import './crypto/index.js';
 import './secrets/index.js';
 import './documents/index.js';
+import './location/index.js';

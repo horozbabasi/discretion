@@ -4,9 +4,10 @@ Working notes on ratified design decisions. SPEC.md is the product
 specification; this file records the _why_ behind decisions the spec states
 tersely, with pointers into the code.
 
-SPEC.md is present and authoritative. Every decision below is implemented and
+SPEC.md is present and authoritative. The Stage 0 decisions (D1-D5) are
 pinned by `packages/core/test/spec-conformance.test.ts`, which quotes the
-governing SPEC.md rule in each test so drift fails the build.
+governing SPEC.md rule in each test so drift fails the build; later decisions
+name the suite that pins them inline.
 
 ## Ratified decisions
 
@@ -206,6 +207,55 @@ Byron-era addresses would need a CBOR parse to reach their CRC and validate
 structurally at MEDIUM instead.
 
 Code: `packages/core/src/detect/detectors/crypto/dot.ts`, `ada.ts`.
+
+### D10 — Mutation properties follow the checksum's real guarantees
+
+Every Stage 1 detector with a checksum has a property test that generates
+valid identifiers and asserts detection. Whether the property ALSO asserts
+that a single-digit mutation is rejected depends on the scheme's arithmetic,
+established case by case during M2:
+
+**Hard mutation** applies only when the remainder→check mapping is bijective
+and every weight·delta is nonzero modulo the modulus — Luhn and Verhoeff
+schemes, prime-modulus weighted sums with unissuable remainders rejected
+(NHS, CUIT, RUT, NRIC, HKID, Kuwait), divisibility tests (TFN, ABN, rodné
+číslo), ISO 7064, and the ICAO 7-3-1 digits.
+
+**Validation-only, with the fold named at the call site** where the scheme
+itself cannot promise detection: check mappings that FOLD two remainders
+onto one digit (REGON 10→0, PT NIF r<2→0, CPF/CNPJ, AFM's mod-10, CNP
+10→1, EGN, EMŠO, JP/KR/TH), two-phase retry schemes that give a second
+chance (KZ IIN, NZ IRD, LT), mod-10 checks with even weights where delta 5
+aliases (Taiwan), multi-century acceptance (Belgian RRN, ~1/97 escape), and
+transforms with aliasing factors (Turkish VKN's 2^k mod 9).
+
+Asserting hard mutation on a folded scheme is asserting something the
+identifier's designers never promised; the suites document the exact fold
+instead. Property runs discovered every one of these — the policy is
+empirical, not assumed.
+
+Code: the `hardMutationProperty` / fold-documented helpers in
+`packages/core/test/detectors-natid-*.test.ts`.
+
+## Status after M2
+
+Stage 1 is complete: 113 registered detectors — 57 NATIONAL_ID and 19
+TAX_ID schemes across 47 countries, the 27-state EU VAT table, 8 crypto
+chains, and 28 detectors across contact/financial/secrets/documents/
+location — on the registry/runner infrastructure, with the shared checksum
+library (Luhn, Verhoeff, mod-97, ISO 7064, ABA, ICAO 9303, weighted-mod
+core) and pure-TS crypto primitives (SHA-256, Keccak-256, base58check,
+bech32/bech32m, Monero base58) each pinned to published vectors.
+
+Deliberately structural-only (no verifiable public checksum exists; each
+detector states it): IN PAN, QA QID, DK CPR (check abolished 2007), MX RFC,
+PK CNIC, BD NID, MY MyKad, ID NIK, VN CCCD, PH PCN, EG National ID, US
+SSN/ITIN/EIN, GB NINO, UK sort code, AU BSB, CA transit, SWIFT BIC's
+all-letter form, ETH uncased addresses, SOL, ADA Byron, DOT SS58 (D9),
+drivers' licences, and the labeled forms (AR/PE DNI, NG NIN, KE ID, MA
+CNIE). Awaiting Stage 3 (M7): GENERIC_SECRET, POSTAL_CODE and
+STREET_ADDRESS are runner-capped at LOW. Awaiting M3: the eval corpus,
+measured precision/recall, and the GENERIC_SECRET entropy threshold tuning.
 
 ## Standing contracts (established in M1)
 

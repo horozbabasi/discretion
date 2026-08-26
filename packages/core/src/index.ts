@@ -69,3 +69,5 @@ export type { SurrogateRequest } from './mask/surrogates.js';
 export { PERSON_POOLS, ORG_POOL, LOCATION_POOL } from './mask/surrogatePools.js';
 export { mask, maskOriginal, resolveForMasking } from './mask/masker.js';
 export type { MaskOptions, MaskResult, MaskedEntity } from './mask/masker.js';
+export { Restorer, restore } from './mask/restorer.js';
+export type { RestorerOptions } from './mask/restorer.js';

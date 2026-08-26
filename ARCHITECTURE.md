@@ -237,6 +237,79 @@ empirical, not assumed.
 Code: the `hardMutationProperty` / fold-documented helpers in
 `packages/core/test/detectors-natid-*.test.ts`.
 
+### D11 — Vault plaintext containment is enforced by shape (M4)
+
+SPEC.md: no vault method exposes the full plaintext set except the egress
+guard. TypeScript cannot verify a caller's identity, so the design makes
+misuse structurally visible instead: the ONLY bulk accessor is
+`createEgressAuditor()`, a loudly-named capability factory whose sole
+intended consumer is `guardEgress`; `replacements()` carries no originals;
+no iteration API exists; and a test pins the class's public surface by
+name, so adding a method is a reviewable event, not an accident. The leak
+REPORT itself carries vault ids and types only — reports get logged and
+displayed and must never become a second leak (also pinned by test).
+
+Code: `packages/core/src/mask/vault.ts`, `mask/egressGuard.ts`;
+`test/vault.test.ts`, `test/egressGuard.test.ts`.
+
+### D12 — Surrogate policy: generators as the source, and its edges (M4)
+
+Surrogates reuse the M2/M3 generators, so a surrogate for a checksummed
+type is itself checksum-valid — masked text re-validates under Stage 1 as
+the same entity type (pinned by test), which is what "format-preserving"
+means here. Same country (IBAN), issuer (card), scheme (national id), and
+chain (crypto) are honored via detector metadata. Judgement calls:
+
+- **"Clearly non-functional" secrets are satisfied by randomness** — a JWT
+  with a random signature authenticates nothing — not by a visible marker.
+  Swapping to visibly-marked dummies later is a pool change only.
+- **PERSON/ORG/LOCATION pools** are small, hand-picked, script-grouped
+  starters (family-first order for Han/Kana/Hangul), enough for the M4
+  contract; M6/M7's NER-and-gazetteer work replaces them.
+- **DATE_OF_BIRTH has no surrogate strategy yet** — an ordering-preserving
+  date shift needs a session-scoped offset and interacts with ages in
+  surrounding text. It takes the recorded bracket-token fallback.
+- **Overlap resolution in the masker is a pre-fusion stopgap** (confidence
+  desc, span length desc, detector id) purely so masking is well-defined;
+  Stage 4 (M8) owns real resolution. Similarly, the masker ships its own
+  `MaskResult` typed over `Stage1Candidate` rather than mislabeling raw
+  confidences as the calibrated `DetectedEntity` M1's types envisioned;
+  M8 reconciles.
+- **Masker and guard share one comparison space.** The M4 integration
+  property found a phone surrogate that WAS the original number in
+  different formatting (small pool; the literal-string collision check
+  passed) — so the masked text failed its own egress guard. The collision
+  check now rejects any surrogate containing one of the document's
+  sensitive values under the guard's own comparisons (exported
+  `comparisonForm` / `separatorFree`: normalized case-folded substring,
+  and the ≥6-char separator-free canonical pass). One comparison space,
+  used by both sides, is the invariant that keeps masked text guaranteed
+  to pass the guard.
+
+Code: `packages/core/src/mask/surrogates.ts`, `mask/surrogatePools.ts`,
+`mask/masker.ts`; `test/masker.test.ts`, `test/mask-integration.test.ts`.
+
+### D13 — Restoration: holdback, boundaries, and the exactly-one rule (M4)
+
+The restorer works on ACCUMULATED text and holds back any buffer suffix
+that is (a) a proper prefix of a known surrogate, or (b) with fuzzy
+enabled, a trailing unterminated token — released on whitespace or
+`finish()` — because a token mid-stream may still be growing. Exact
+replacement is longest-match with word-boundary semantics on
+word-character edges: without it a short surrogate ('Cat') corrupts
+ordinary words ('Catalog'), a bug this milestone's own tests caught. The
+fuzzy pass restores a settled token only when EXACTLY ONE original is
+reachable under case-fold plus possessive/plural stripping; zero or two
+reachable originals leave the token as the model wrote it (SPEC.md's hard
+rule), and a stripped affix is re-attached to the original unless the
+original already ends with the same letters (avoiding 'Holdingss').
+Cross-script "translation" of a surrogate is deliberately not attempted —
+an untranslatable mention stays visible rather than being guessed at.
+Idempotency is structural (rendered text is never revisited) and semantic
+(collision safety guarantees no original contains a surrogate).
+
+Code: `packages/core/src/mask/restorer.ts`; `test/restorer.test.ts`.
+
 ## Status after M2
 
 Stage 1 is complete: 113 registered detectors — 57 NATIONAL_ID and 19
@@ -280,6 +353,24 @@ suppressing values inside CSV fields, which document-type awareness (M7)
 addresses. Regression floors in packages/eval/gates.config.json sit below
 the measured baseline and fail the build on regression; raising a floor
 after a genuine improvement is the intended workflow.
+
+## Status after M4
+
+The masking layer is complete: session-scoped vault (D11), surrogate
+substitution with generator reuse and recorded bracket-token fallback
+(D12), streaming-safe restoration (D13), and the egress guard. 40 new
+tests bring the suite to 571, including the character-at-a-time streaming
+test with a no-surrogate-visible-mid-stream invariant, a 400-run
+chunk-boundary fuzz, the guard's raw/zero-width/homoglyph/case/separator
+leak coverage with plaintext-free reports, and a 150-run end-to-end
+property (detect → mask → guard → fuzzed-chunk stream → restore) that
+found and now pins the masker/guard comparison-space bug recorded in D12.
+
+Deferred by design: DATE_OF_BIRTH surrogates (D12), NER-scale
+PERSON/ORG/LOCATION handling (M6/M7), calibrated overlap resolution and
+the MaskResult/DetectedEntity reconciliation (M8), and per-tab vault
+lifecycle — the vault is an injectable store; wiring it to tab sessions is
+extension work (M9).
 
 ## Standing contracts (established in M1)
 

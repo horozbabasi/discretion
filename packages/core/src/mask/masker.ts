@@ -32,6 +32,7 @@ import type { SubstitutionMode, VaultEntry } from '../types.js';
 import type { Stage1Candidate } from '../detect/types.js';
 import type { Vault } from './vault.js';
 import { chooseSurrogate } from './surrogates.js';
+import { comparisonForm, separatorFree } from './egressGuard.js';
 
 const MAX_SURROGATE_ATTEMPTS = 24;
 
@@ -101,6 +102,21 @@ export function maskOriginal(
   const baseSeed = options.seed ?? 0x5eed;
   const resolved = resolveForMasking(candidates);
 
+  // The collision check must run in the EGRESS GUARD'S comparison space:
+  // the guard scans in normalized+case-folded form plus a separator-free
+  // canonical pass, so a surrogate is acceptable only if none of this
+  // document's sensitive values would be found inside it under those same
+  // comparisons. The bug this prevents was found by the integration
+  // property: a phone surrogate drawn from the same small pool was the SAME
+  // number as the original in different formatting — the literal string
+  // check passed, and the masked text then failed its own guard.
+  const forbiddenNeedles = resolved.map((c) => {
+    const value = original.slice(c.originalStart, c.originalEnd);
+    const form = comparisonForm(value);
+    const strip = separatorFree(separatorFreeCanonical(c, value));
+    return { form, strip };
+  });
+
   const entities: MaskedEntity[] = [];
   const vaultEntries: VaultEntry[] = [];
   const tokenOrdinals = new Map<string, number>();
@@ -125,7 +141,9 @@ export function maskOriginal(
       continue;
     }
 
-    const { replacement, fallback } = selectReplacement(c, value, original, vault, mode, baseSeed, tokenOrdinals);
+    const { replacement, fallback } = selectReplacement(
+      c, value, original, vault, mode, baseSeed, tokenOrdinals, forbiddenNeedles,
+    );
     const entry = vault.register({
       type: c.type,
       original: value,
@@ -162,6 +180,16 @@ export function mask(text: string, vault: Vault, options: MaskOptions & Stage1Op
   );
 }
 
+interface ForbiddenNeedle {
+  readonly form: string;
+  readonly strip: string;
+}
+
+/** The candidate's canonical in comparison form (falls back to the value). */
+function separatorFreeCanonical(c: Stage1Candidate, value: string): string {
+  return comparisonForm(c.canonical ?? value);
+}
+
 /** Pick a collision-free, consistent replacement for one value. */
 function selectReplacement(
   c: Stage1Candidate,
@@ -171,6 +199,7 @@ function selectReplacement(
   mode: SubstitutionMode,
   baseSeed: number,
   tokenOrdinals: Map<string, number>,
+  forbiddenNeedles: readonly ForbiddenNeedle[],
 ): { replacement: string; fallback: boolean } {
   if (mode === 'token') {
     return { replacement: nextToken(c.type, vault, sourceDoc, tokenOrdinals), fallback: false };
@@ -183,7 +212,7 @@ function selectReplacement(
       (seedBase + attempt * 0x9e37) & 0x7fffffff,
     );
     if (surrogate === null) break; // no surrogate for this type → token
-    if (!collides(surrogate, sourceDoc, vault)) {
+    if (!collides(surrogate, sourceDoc, vault, forbiddenNeedles)) {
       return { replacement: surrogate, fallback: false };
     }
   }
@@ -191,12 +220,31 @@ function selectReplacement(
   return { replacement: nextToken(c.type, vault, sourceDoc, tokenOrdinals), fallback: true };
 }
 
-/** A surrogate collides if it appears in the source text or the vault. */
-function collides(surrogate: string, sourceDoc: string, vault: Vault): boolean {
+/**
+ * A surrogate collides if it appears in the source text or the vault — or
+ * if any of this document's sensitive values would be FOUND WITHIN IT under
+ * the egress guard's comparisons (normalized case-folded substring, or the
+ * ≥6-char separator-free canonical pass). Masker and guard sharing one
+ * comparison space is what guarantees masked text passes its own guard.
+ */
+function collides(
+  surrogate: string,
+  sourceDoc: string,
+  vault: Vault,
+  forbiddenNeedles: readonly ForbiddenNeedle[],
+): boolean {
   if (vault.wouldCollide(surrogate)) return true;
   // Case-insensitive appearance in the source, so the restorer's fuzzy pass
   // cannot later confuse the surrogate with pre-existing text.
-  return sourceDoc.toLowerCase().includes(surrogate.toLowerCase());
+  if (sourceDoc.toLowerCase().includes(surrogate.toLowerCase())) return true;
+
+  const surrogateForm = comparisonForm(surrogate);
+  const surrogateStrip = separatorFree(surrogateForm);
+  for (const needle of forbiddenNeedles) {
+    if (needle.form.length > 0 && surrogateForm.includes(needle.form)) return true;
+    if (needle.strip.length >= 6 && surrogateStrip.includes(needle.strip)) return true;
+  }
+  return false;
 }
 
 /** The next unused bracket token for a type (unique in source and vault). */

@@ -44,13 +44,15 @@ export interface EgressVerdict {
   readonly leaks: readonly EgressLeak[];
 }
 
-/** Case-folded Stage 0 normalization — the guard's comparison space. */
-function comparisonForm(text: string): string {
+/** Case-folded Stage 0 normalization — the guard's comparison space.
+ *  Exported so the MASKER's collision check runs in the same space: a
+ *  surrogate that would trip this guard must never be chosen at all. */
+export function comparisonForm(text: string): string {
   return normalize(text).normalizedText.toLowerCase();
 }
 
 /** Additionally remove the separators identifiers are grouped with. */
-function separatorFree(text: string): string {
+export function separatorFree(text: string): string {
   return text.replace(/[ \t.\-/]/g, '');
 }
 

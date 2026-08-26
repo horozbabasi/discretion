@@ -8,7 +8,7 @@ privacyshield is a browser extension that detects and redacts sensitive informat
 - **ARCHITECTURE.md** records decisions made while implementing SPEC.md and the reasoning behind them — append to it, don't just read it.
 - **CLAUDE.md** (this file) is working conventions only. It does not restate SPEC.md.
 
-**Milestones are built strictly one at a time**, tests passing, before the next starts. Currently: **M1 and M2 complete** (Stage 0 normalization with offset maps; Stage 1 with 113 registered detectors, the shared checksum library, and pure-TS crypto primitives — 510 tests). M3 (eval package) is next and has not started — `packages/eval`, `packages/extension`, `packages/web` are still placeholder workspaces.
+**Milestones are built strictly one at a time**, tests passing, before the next starts. Currently: **M1-M3 complete** (Stage 0 normalization; Stage 1 with 113 detectors; the eval package with seeded corpus, hard negatives, metrics, error analysis, and regression gates — baseline published in `packages/eval/reports/baseline.md`, floors in `packages/eval/gates.config.json` enforced by `npm test`). M4 (vault, substitution, restoration, egress guard) is next and has not started — `packages/extension` and `packages/web` are still placeholders. `npm.cmd run eval` regenerates the baseline report.
 
 ## Environment (this machine)
 

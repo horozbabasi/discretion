@@ -257,6 +257,30 @@ CNIE). Awaiting Stage 3 (M7): GENERIC_SECRET, POSTAL_CODE and
 STREET_ADDRESS are runner-capped at LOW. Awaiting M3: the eval corpus,
 measured precision/recall, and the GENERIC_SECRET entropy threshold tuning.
 
+## Status after M3
+
+The eval harness exists and has produced the first honest baseline
+(packages/eval/reports/baseline.md, seeds pinned): 2,618 documents, 5,338
+ground-truth entities. Headline Stage-1-alone results: checksummed types are
+excellent (IBAN, VAT, JWT, PEM, MRZ, PHONE, VIN, crypto at 98-100%
+precision, ~100% recall); the honest weak tier is exactly the predicted
+one - GENERIC_SECRET 3% and POSTAL_CODE 6% precision (context-awaiting,
+runner-capped at LOW: the LOW confidence bucket measures 9.6% precision vs
+85.3% at HIGH and 100% at MAXIMUM, so the cap machinery does its job),
+NATIONAL_ID 67% / TAX_ID 55% (cross-scheme digit collisions),
+URL_WITH_CREDENTIALS 38% and EMAIL 81% (overlap shadowing: connection
+strings re-detected as EMAIL/URL over the same span). Latency p50 0.14ms,
+p99 1.05ms per document.
+
+Known issues recorded for later milestones, deliberately NOT patched to
+improve these numbers: overlap shadowing and cross-scheme collisions are
+Stage 4 overlap-resolution work (M8); context-free FP floods are Stage 3
+(M7); POSTAL_CODE's 72% recall traces to its comma fragment-guard
+suppressing values inside CSV fields, which document-type awareness (M7)
+addresses. Regression floors in packages/eval/gates.config.json sit below
+the measured baseline and fail the build on regression; raising a floor
+after a genuine improvement is the intended workflow.
+
 ## Standing contracts (established in M1)
 
 - **Offset map:** `offsetMap[i]` is the original index of the cluster that

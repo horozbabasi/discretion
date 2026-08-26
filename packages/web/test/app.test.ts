@@ -150,4 +150,108 @@ describe('playground app', () => {
     const output = mount.querySelector('.output-pane')!;
     expect(output.textContent).toContain('support@example.com');
   });
+
+  it('REGRESSION: re-selecting the placeholder option leaves the text alone', () => {
+    const { mount } = mountApp();
+    const select = mount.querySelector<HTMLSelectElement>('.example-select')!;
+    select.value = '1';
+    select.dispatchEvent(new Event('change'));
+    const textarea = textareaOf(mount);
+
+    const draft = textarea.value + ' — my own edits';
+    textarea.value = draft;
+    // Number('') === 0 would load example 0 here without the guard.
+    select.value = '';
+    select.dispatchEvent(new Event('change'));
+    expect(textarea.value).toBe(draft);
+  });
+
+  it('mirrors typed text into the backdrop synchronously, before the debounce', () => {
+    vi.useFakeTimers();
+    const { mount } = mountApp();
+    const textarea = textareaOf(mount);
+    textarea.value = SAMPLE;
+    textarea.dispatchEvent(new Event('input'));
+
+    // Visible immediately (the backdrop is the glyph layer)…
+    const backdrop = mount.querySelector('.editor-backdrop')!;
+    expect(backdrop.textContent!.replace(/\u200B$/, '')).toBe(SAMPLE);
+    // …while highlights wait for the debounced analysis.
+    expect(mount.querySelectorAll('.editor-backdrop mark')).toHaveLength(0);
+    vi.advanceTimersByTime(250);
+    expect(mount.querySelectorAll('.editor-backdrop mark').length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('IME: composition gates analysis but not visibility; compositionend resumes', () => {
+    vi.useFakeTimers();
+    const { mount } = mountApp();
+    const textarea = textareaOf(mount);
+    const backdrop = mount.querySelector('.editor-backdrop')!;
+
+    textarea.dispatchEvent(new Event('compositionstart'));
+    textarea.value = SAMPLE;
+    textarea.dispatchEvent(new Event('input'));
+
+    // The in-progress composition is visible…
+    expect(backdrop.textContent!.replace(/\u200B$/, '')).toBe(SAMPLE);
+    // …but analysis stays gated for as long as the composition runs.
+    vi.advanceTimersByTime(1000);
+    expect(mount.querySelectorAll('.editor-backdrop mark')).toHaveLength(0);
+
+    textarea.dispatchEvent(new Event('compositionend'));
+    vi.advanceTimersByTime(250);
+    expect(mount.querySelectorAll('.editor-backdrop mark').length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('fail-closed keeps the typed text visible in the input pane', () => {
+    const { app, mount } = mountApp({
+      analyze: () => {
+        throw new Error('detector exploded');
+      },
+    });
+    typeText(mount, app, SAMPLE);
+
+    expect(mount.querySelector('[role="alert"]')).not.toBeNull();
+    const backdrop = mount.querySelector('.editor-backdrop')!;
+    expect(backdrop.textContent!.replace(/\u200B$/, '')).toBe(SAMPLE);
+  });
+
+  it('output-pane hover shows a replacement card; plain text hides it', () => {
+    const { app, mount } = mountApp();
+    typeText(mount, app, SAMPLE);
+
+    const mark = mount.querySelector<HTMLElement>('.output-pane mark[data-o]')!;
+    mark.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 20, clientY: 20 }));
+    const tooltip = mount.querySelector<HTMLElement>('.tooltip')!;
+    expect(tooltip.hidden).toBe(false);
+    expect(tooltip.textContent).toContain('replaced with');
+
+    const pane = mount.querySelector<HTMLElement>('.output-pane')!;
+    pane.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 5, clientY: 5 }));
+    expect(tooltip.hidden).toBe(true);
+  });
+
+  it('input-pane hover resolves the mark under the textarea to a candidate card', () => {
+    const { app, mount } = mountApp();
+    typeText(mount, app, SAMPLE);
+    const textarea = textareaOf(mount);
+    const mark = mount.querySelector<HTMLElement>('.editor-backdrop mark[data-i]')!;
+
+    // jsdom has no elementsFromPoint; the app reads it off `document`.
+    const doc = document as Document & { elementsFromPoint?: (x: number, y: number) => Element[] };
+    doc.elementsFromPoint = () => [textarea, mark];
+    try {
+      textarea.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 30, clientY: 30 }));
+      const tooltip = mount.querySelector<HTMLElement>('.tooltip')!;
+      expect(tooltip.hidden).toBe(false);
+      expect(tooltip.textContent).toContain('confidence');
+      expect(tooltip.textContent).toContain('detector');
+
+      doc.elementsFromPoint = () => [textarea];
+      textarea.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 1, clientY: 1 }));
+      expect(tooltip.hidden).toBe(true);
+    } finally {
+      delete doc.elementsFromPoint;
+    }
+  });
 });

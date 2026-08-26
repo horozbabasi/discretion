@@ -115,8 +115,9 @@ body {
 
 .toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 22px;
+  gap: 12px 22px;
   padding: 10px 2px;
   border-bottom: 1px solid var(--rule);
 }
@@ -232,6 +233,10 @@ body {
   inset: 0;
   margin: 0;
   border: 0;
+  /* Both layers reserve the scrollbar gutter, so the textarea's scrollbar
+     appearing (overflow: auto) cannot change its wrap width relative to the
+     backdrop (overflow: hidden) — a mismatch would drift every highlight. */
+  scrollbar-gutter: stable;
 }
 
 .editor-backdrop {

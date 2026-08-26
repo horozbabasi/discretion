@@ -58,7 +58,13 @@ export function createApp(mount: HTMLElement, options: AppOptions = {}): App {
 
   // ---- skeleton -----------------------------------------------------------
 
-  const backdrop = el('div', { class: 'pane-text editor-backdrop', 'aria-hidden': 'true' });
+  // dir=auto on BOTH layers: each resolves base direction from the same text,
+  // so RTL input aligns identically in the glyph layer and the edit layer.
+  const backdrop = el('div', {
+    class: 'pane-text editor-backdrop',
+    'aria-hidden': 'true',
+    dir: 'auto',
+  });
   const textarea = el('textarea', {
     class: 'pane-text editor-input',
     'aria-label': 'Text to analyze',
@@ -166,6 +172,25 @@ export function createApp(mount: HTMLElement, options: AppOptions = {}): App {
 
   // ---- rendering ----------------------------------------------------------
 
+  /** Keep the glyph layer aligned with the textarea's scroll position. */
+  function syncScroll(): void {
+    backdrop.scrollTop = textarea.scrollTop;
+    backdrop.scrollLeft = textarea.scrollLeft;
+  }
+
+  /**
+   * Mirror the textarea's text into the backdrop SYNCHRONOUSLY, without
+   * marks. The visible glyphs are the backdrop's (the textarea text is
+   * transparent), so this must run on every input event — if only the
+   * debounced analysis re-rendered the backdrop, the visible text would
+   * freeze while the user types. Highlights return with the next analysis;
+   * stale marks over shifted offsets would be wrong anyway.
+   */
+  function mirrorPlainText(): void {
+    setChildren(backdrop, [textarea.value + '\u200B']);
+    syncScroll();
+  }
+
   function renderEmpty(): void {
     displayed = [];
     outputEntities = [];
@@ -180,7 +205,9 @@ export function createApp(mount: HTMLElement, options: AppOptions = {}): App {
   function renderError(err: unknown): void {
     displayed = [];
     outputEntities = [];
-    setChildren(backdrop, []);
+    // The user's text stays visible (unhighlighted); only the OUTPUT is
+    // blocked — fail-closed guards what leaves, not what the user sees.
+    mirrorPlainText();
     const message = err instanceof Error ? err.message : String(err);
     setChildren(outputPane, [
       el(
@@ -210,6 +237,7 @@ export function createApp(mount: HTMLElement, options: AppOptions = {}): App {
     });
     // Sentinel (ZWSP) so a trailing newline still occupies a rendered line.
     setChildren(backdrop, [...inputNodes, '\u200B']);
+    syncScroll();
 
     // Output pane: replacements marked; hover explains the substitution.
     const outputNodes = buildOutputSegments(result.original, outputEntities).map((seg) => {
@@ -306,7 +334,13 @@ export function createApp(mount: HTMLElement, options: AppOptions = {}): App {
 
   // ---- events -------------------------------------------------------------
 
-  textarea.addEventListener('input', schedule);
+  // The mirror runs on EVERY input — including during IME composition, so
+  // in-progress compositions stay visible; only detection waits for the
+  // composition to settle.
+  textarea.addEventListener('input', () => {
+    mirrorPlainText();
+    schedule();
+  });
   textarea.addEventListener('compositionstart', () => {
     composing = true;
   });
@@ -314,10 +348,7 @@ export function createApp(mount: HTMLElement, options: AppOptions = {}): App {
     composing = false;
     schedule();
   });
-  textarea.addEventListener('scroll', () => {
-    backdrop.scrollTop = textarea.scrollTop;
-    backdrop.scrollLeft = textarea.scrollLeft;
-  });
+  textarea.addEventListener('scroll', syncScroll);
 
   function setMode(next: SubstitutionMode): void {
     if (mode === next) return;
@@ -330,8 +361,11 @@ export function createApp(mount: HTMLElement, options: AppOptions = {}): App {
   tokenBtn.addEventListener('click', () => setMode('token'));
 
   exampleSelect.addEventListener('change', () => {
-    const index = Number(exampleSelect.value);
-    const example = examples[index];
+    // Re-selecting the placeholder must be a no-op: its value is '' and
+    // Number('') is 0, which would otherwise load example 0 over the
+    // user's text.
+    if (exampleSelect.value === '') return;
+    const example = examples[Number(exampleSelect.value)];
     if (example === undefined) return;
     textarea.value = example.text;
     flush();

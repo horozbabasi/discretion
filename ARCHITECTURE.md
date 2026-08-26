@@ -363,6 +363,66 @@ fail-closed guards what leaves, not what the user sees.
 
 Code: `packages/web/src/`; `packages/web/test/`.
 
+### D15 — Scope amendment after M5: seven standing goals (SPEC.md change)
+
+Ratified as project direction between M5 and M6, amended into SPEC.md in
+one dedicated commit. The goals, why each was chosen, and how they stack:
+
+1. **Rigor as a visible artifact (BENCHMARKS.md, from M6).** The
+   project's core claim is measured accuracy; numbers in a README table
+   cannot be audited, a methodology document can. Written at M6 and
+   extended at M7/M8 because those stages change the numbers — a
+   benchmark frozen at model selection would misrepresent the shipped
+   pipeline.
+2. **Core as a publishable library (M12).** The API discipline starts
+   NOW — no extension/playground concepts in core's exports, breaking
+   changes deliberate, every export documented — because M9–M11 wire
+   the extension deep into core, and retrofitting a public API after
+   that means either churning the shipped extension or freezing a bad
+   API. Publication itself waits for post-launch: the shipped extension
+   is the proof the API works, and before launch the API must stay free
+   to change with M6–M8 findings. Acceptance is behavioral: a developer
+   who has never seen the repo installs and runs detection/masking from
+   the docs alone.
+3. **Exposure score (M8).** Waits for Stage 4 calibration for the same
+   honesty reason M3 refused to label raw confidence as calibration: a
+   score aggregated over uncalibrated confidences is a number that
+   means nothing, shown as if it meant something. Two binding design
+   constraints are acceptance criteria, not aspirations: EXPLAINABLE BY
+   CONSTRUCTION (deterministic aggregation; the report decomposes the
+   total into named contributions) and the MONOTONICITY property test
+   (adding a detected entity never lowers the score, removing one never
+   raises it). Severity weights are a reviewed data file in
+   packages/data with per-category rationale — weights are editorial
+   judgements that need review and history, not constants buried in
+   code.
+4. **Paste guard (M9).** Warning moves to paste time, before the user
+   ever reaches send; submit remains the single enforcement gate and
+   fail-closed rules are untouched. Layered warning, one gate.
+5. **Quick Redact (M10).** The popup becomes a universal masking
+   surface for ANY destination with zero added host permissions — the
+   product becomes useful everywhere without touching the
+   exactly-three-sites trust claim. The playground (D14) is its
+   reference implementation: the UI is reused, not reinvented.
+6. **Local Insights (M10).** Values-free counts by category over time.
+   The no-plaintext-persistence rule is satisfied by construction —
+   counts are not values — and the purpose is retention-honest: silent
+   protection does not sustain daily use; visible protection does.
+7. **Explicit non-goals.** Two tiers, recorded so future feature
+   pressure cannot silently relitigate them. Attachment scanning and
+   additional chat sites are ROADMAP (revisitable by deliberate
+   decision — the first is heavy and fragile today, the second is
+   already served by Quick Redact without permission growth). Vault
+   export and any cloud component are REJECTED PERMANENTLY because each
+   contradicts a foundational claim: an unmask file is itself a secret
+   (memory-only is the feature), and any cloud component breaks the
+   zero-network claim the whole product stands on.
+
+How they stack: (1) hardens the measurement backbone everything else is
+judged against; (2) constrains API shape from M6 onward; (3) builds on
+M8 calibration; (4)–(6) are extension surfaces consuming the same core;
+(7) fences the boundary around all of it.
+
 ## Status after M2
 
 Stage 1 is complete: 113 registered detectors — 57 NATIONAL_ID and 19

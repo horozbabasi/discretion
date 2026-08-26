@@ -1,7 +1,7 @@
 # PrivacyShield — Specification
 
 ## What it is
-A Chrome extension (Manifest V3) that protects sensitive data when people use ChatGPT, Claude, and Gemini in their browser. It detects sensitive information in outgoing text, substitutes it with realistic format-preserving surrogates, sends only sanitized text, and restores the original values in the response as it streams in. Everything runs locally. Zero outbound network requests at runtime.
+A Chrome extension (Manifest V3) that protects sensitive data when people use ChatGPT, Claude, and Gemini in their browser. It detects sensitive information in outgoing text, substitutes it with realistic format-preserving surrogates, sends only sanitized text, and restores the original values in the response as it streams in. Everything runs locally. Zero outbound network requests at runtime. The engine underneath (packages/core) is additionally published post-launch as a standalone npm library (M12); the extension is one consumer of it, not its definition.
 
 Users are ordinary people worldwide: freelancers pasting client contracts, developers pasting code containing credentials, people pasting medical results, bank statements, legal documents, or emails containing third parties' information. It works with their existing free accounts. No API key, no signup, no cost.
 
@@ -12,6 +12,7 @@ This is intended for public release on the Chrome Web Store and for real daily u
 - False positives are treated as severely as false negatives. Over-masking destroys answer quality and drives uninstalls.
 - PACKAGE SIZE IS NOT A CONSTRAINT. Reliability comes first. When accuracy and size conflict, choose accuracy, even if the more accurate option is several times larger. Do not quantize, prune, or downscale a model to save space unless the eval harness shows the quality cost is negligible. The only size ceiling is the Chrome Web Store's published package limit — verify the current limit during M6 and treat it as the sole boundary. Runtime latency IS still a constraint; see the performance budgets.
 - Every architectural decision that trades accuracy, latency, or complexity must be documented in ARCHITECTURE.md with the reasoning and the measured numbers behind it.
+- packages/core is designed for standalone publication as an npm library. Its public API is a supported product surface: no extension- or playground-specific concepts may leak into core's exports, breaking changes are deliberate decisions, and everything exported must be documented. The extension is one consumer of the library, not its definition.
 
 ## Non-negotiable constraints
 1. ZERO RUNTIME NETWORK ACCESS. No outbound request of any kind after install: no analytics, telemetry, crash reporting, remote config, model downloads, or CDN fetches. Every dependency, model, and dataset is bundled at build time. host_permissions is exactly chatgpt.com, claude.ai, gemini.google.com and nothing else. This is the entire basis of user trust; it must be literally true and verifiable by reading the source.
@@ -25,7 +26,7 @@ npm workspaces. TypeScript strict throughout: no `any`, strictNullChecks, noUnch
 
 privacyshield/
   packages/
-    core/        Detection, substitution, and restoration engine. Zero DOM dependencies.
+    core/        Detection, substitution, and restoration engine. Zero DOM dependencies. Published standalone to npm after launch (M12).
     data/        Bundled gazetteers, validator tables, surrogate pools, confusables map, trigger lexicons.
     eval/        Labeled corpus generator + benchmark harness. Gates every change to core.
     extension/   Chrome MV3 extension.
@@ -164,6 +165,16 @@ Each candidate's confidence is adjusted by evidence from its surroundings:
   - Custom — per-entity-type threshold control.
 - Apply user allowlist (never mask; e.g. their own employer's name) and denylist (always mask; e.g. an internal project codename). Denylist beats everything.
 
+--- Exposure score ---
+A document-level, user-facing sensitivity summary, computed in core.
+- computeExposure(detectionResult) → an exposure report: an overall score, a per-category breakdown (secrets/credentials, financial, government identity, health, contact, location, personal names), and the top contributing entities.
+- EXPLAINABLE BY CONSTRUCTION: a deterministic aggregation of calibrated confidence × category severity weight × per-type factors, and the report decomposes the total into named contributions. A score that cannot show its work is not acceptable.
+- Severity weights live in a reviewed data file in packages/data with documented per-category rationale (a validated credit card outweighs a city name) — never constants buried in code.
+- Depends on Stage 4 calibrated confidence, so it is an M8 deliverable. No uncalibrated preview ships earlier, for the same honesty reason M3 refused to label raw confidence as calibration.
+- Property test required: monotonicity — adding a detected entity never lowers the score; removing one never raises it.
+- Surfacing: the playground gains an exposure panel at M8; the extension review panel shows the document score at M9; the popup shows session aggregates at M10; the README documents the model at M11.
+- Limitation stated wherever the score is shown: it summarizes detection output, inherits every detection limitation, and a low score is not a guarantee of safety.
+
 --- Substitution: format-preserving surrogates ---
 This is the single largest lever on output quality and must be done properly.
 
@@ -255,6 +266,8 @@ SELECTOR RESILIENCE IS THE HIGHEST-RISK AREA. These sites change frequently. For
 8. Observe the response stream and restore surrogates in the DOM as it arrives
 9. Record to an in-memory session log: timestamp, types, counts, confidence distribution. Never values.
 
+PASTE GUARD — detection also runs at paste time, not only at submit. When pasted content contains sensitive entities, show an immediate, dismissible inline notice (e.g. "3 API keys, 1 IBAN in what you just pasted") with a one-tap "mask now" — before the user ever reaches send. Submit-time remains the enforcement gate; paste guard is early warning layered on top. Fail-closed rules are unchanged.
+
 Handle correctly: composer edited after detection, cancel mid-flow, rapid successive sends, SPA navigation, conversation switching, file and image attachments (detect and warn that attachment contents are not protected), regenerate and edit-message flows, and copy-to-clipboard of a restored response.
 
 --- UI ---
@@ -262,8 +275,17 @@ Handle correctly: composer edited after detection, cancel mid-flow, rapid succes
 - Respect the host page's light/dark theme
 - Full keyboard navigation, ARIA roles, screen-reader tested, visible focus states
 - Extension UI internationalized via chrome.i18n with English plus at minimum Spanish, German, French, Portuguese, Turkish, Japanese, Hindi, and Arabic (with RTL layout support) message catalogues
-- Popup: per-site toggle, session counts by type, adapter health, sensitivity profile switcher
+- Popup: per-site toggle, session counts by type, adapter health, sensitivity profile switcher, the session exposure aggregate, Quick Redact, and Local Insights (both below)
 - Options: per-entity toggles, sensitivity profile, surrogate vs token mode, allowlist, denylist, custom regex rules with live tester, default phone region, settings export/import, a plain-language explanation of what the extension does and does not protect against
+
+--- Quick Redact (popup) ---
+A universal redaction surface in the popup: paste any text → masked version with one-tap copy; paste a reply back within the same popup session → restored. Powered entirely by core and the vault; the playground UI is the reference implementation.
+- Works for ANY destination — email, Slack, tickets, forums, anywhere — with zero additional host permissions, deliberately preserving the exactly-three-sites permission claim while making the tool useful everywhere else.
+- Same memory-only vault rules apply: closing the popup session clears the mapping, and the UI states this plainly.
+
+--- Local Insights (popup) ---
+A local, values-free history: counts of masked entities by category over time (e.g. "this month: 12 secrets, 8 financial"). Never values, never text — counts only, satisfying the no-plaintext-persistence rule by construction. User-resettable.
+- Purpose: makes ongoing protection visible instead of silent, which is what sustains daily use.
 
 --- Security of the extension itself ---
 - No innerHTML with any untrusted content; construct nodes programmatically
@@ -291,7 +313,8 @@ TESTS
 ===========================================================
 SUPPORTING FILES
 ===========================================================
-- README.md: pitch, problem, demo GIF placeholder, install (store and unpacked), architecture diagram, supported sites, full entity-type table with measured per-type precision and recall, per-language accuracy table, the exact model used with its size and license and why it was chosen, privacy guarantees with instructions for verifying the zero-network claim independently, performance numbers, configuration guide, LIMITATIONS, roadmap
+- README.md: pitch, problem, demo GIF placeholder, install (store and unpacked), architecture diagram, supported sites, full entity-type table with measured per-type precision and recall, per-language accuracy table, the exact model used with its size and license and why it was chosen, privacy guarantees with instructions for verifying the zero-network claim independently, performance numbers, configuration guide, the exposure score model, Quick Redact, Local Insights, LIMITATIONS, the non-goals with reasoning, roadmap
+- BENCHMARKS.md: the accuracy work as a published, readable document — candidate models considered, methodology, per-language results, selection reasoning. Written at M6, extended at M7 and M8 as those stages change the numbers. Rigor is a visible artifact, not just numbers in a README table.
 - ARCHITECTURE.md: the pipeline in detail, and the reasoning behind each significant tradeoff
 - PRIVACY.md: real privacy policy, required for store submission
 - SECURITY.md, CONTRIBUTING.md (including a guide to writing a new site adapter and adding a new national identifier validator), LICENSE (MIT), .gitignore
@@ -311,6 +334,15 @@ LIMITATIONS TO STATE PLAINLY
 - Protects what you send to these sites; does not protect against the sites themselves.
 
 ===========================================================
+NON-GOALS — DECIDED, NOT OPEN
+===========================================================
+Recorded so they are never silently relitigated. "Roadmap" means possible later by deliberate decision; "rejected" means permanent.
+- Attachment/file scanning: roadmap only — interception is heavy and fragile today; the limitation is stated plainly instead.
+- Additional chat sites beyond the three: roadmap only — Quick Redact already covers other destinations without expanding host permissions, and minimal permissions IS the trust claim this product depends on.
+- Vault/mapping export: rejected permanently — an unmask file is itself a secret; memory-only is the feature, not a limitation to fix.
+- Accounts, sync, or any cloud component: rejected permanently — contradicts the product's core zero-network claim.
+
+===========================================================
 EXECUTION — MILESTONES
 ===========================================================
 This is too large for one session. Complete each milestone fully, with its tests passing, before starting the next. End each milestone with a summary of what was built and what was measured.
@@ -320,11 +352,12 @@ M2  Stage 1 validators — all identifier families, with valid and invalid test 
 M3  eval package: corpus generator, hard negatives, metrics, error analysis. Report baseline numbers for Stage 1 alone.
 M4  Vault, surrogate substitution with collision safety, streaming-safe restoration, egress guard. Property and fuzz tests.
 M5  packages/web on Stages 0–1 plus substitution. First working end-to-end demo.
-M6  Stage 2 NER: benchmark at least four candidate models on accuracy, select accuracy-first, integrate in a Web Worker, report per-language numbers and the size cost.
-M7  Stage 2b gazetteers, Stage 2c verification pass, and Stage 3 context scoring. Re-run eval; report the precision improvement on hard negatives.
-M8  Stage 4 fusion, calibration, explanations, sensitivity profiles. Publish the calibration curve.
-M9  Extension: manifest, adapters, content script, review UI, streaming restoration in the DOM.
-M10 Popup, options, i18n, accessibility, security hardening.
-M11 Full eval run, performance benchmarks, documentation, store listing draft, production build verified loading unpacked in Chrome.
+M6  Stage 2 NER: benchmark at least four candidate models on accuracy, select accuracy-first, integrate in a Web Worker, report per-language numbers and the size cost. Deliverable: BENCHMARKS.md — candidates considered, methodology, per-language results, selection reasoning.
+M7  Stage 2b gazetteers, Stage 2c verification pass, and Stage 3 context scoring. Re-run eval; report the precision improvement on hard negatives. Extend BENCHMARKS.md.
+M8  Stage 4 fusion, calibration, explanations, sensitivity profiles. Publish the calibration curve. Exposure score engine in core, its severity-weight data file with documented rationale, tests including the monotonicity property, and the playground exposure panel. Extend BENCHMARKS.md.
+M9  Extension: manifest, adapters, content script, review UI, streaming restoration in the DOM. Paste guard; review panel shows the document exposure score.
+M10 Popup, options, i18n, accessibility, security hardening. Quick Redact, Local Insights, and the exposure session aggregate in the popup.
+M11 Full eval run, performance benchmarks, documentation, store listing draft, production build verified loading unpacked in Chrome. README/docs cover the exposure model, Quick Redact, Local Insights, and all non-goals with reasoning.
+M12 Library publication (post-launch, after the extension ships): finalize core's public API surface with explicit exports and no internal leakage; semver from 0.x with a documented policy; generated plus hand-curated API docs; npm publish workflow with provenance; a standalone "using the library" guide with examples fully independent of the extension; a CHANGELOG. Final package name decided at M12 (the PrivacyShield name itself is still an open pre-public question, separate from this). Acceptance test: a developer who has never seen this repo can npm install the package and run detection and masking from the docs alone.
 
 Write clean, strictly typed, thoroughly commented TypeScript. Prefer clarity over cleverness. Where you make a judgement call, record it in ARCHITECTURE.md with the reasoning. At each milestone, show the passing tests and the measured numbers.

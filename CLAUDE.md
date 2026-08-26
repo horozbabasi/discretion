@@ -8,7 +8,7 @@ privacyshield is a browser extension that detects and redacts sensitive informat
 - **ARCHITECTURE.md** records decisions made while implementing SPEC.md and the reasoning behind them — append to it, don't just read it.
 - **CLAUDE.md** (this file) is working conventions only. It does not restate SPEC.md.
 
-**Milestones are built strictly one at a time**, tests passing, before the next starts. Currently: **M1-M3 complete** (Stage 0 normalization; Stage 1 with 113 detectors; the eval package with seeded corpus, hard negatives, metrics, error analysis, and regression gates — baseline published in `packages/eval/reports/baseline.md`, floors in `packages/eval/gates.config.json` enforced by `npm test`). M4 complete (session vault with capability-gated plaintext access, format-preserving surrogate substitution with recorded token fallback, streaming-safe restoration, egress guard — ARCHITECTURE.md D11–D13). M5 complete (packages/web playground: live Stage 0–1 detection with highlights and hover cards, masked output with surrogate/token toggle, corpus-generated multilingual examples, fail-closed UI, browser-smoke-verified — ARCHITECTURE.md D14). M6 (Stage 2 NER: model benchmarking and Web Worker integration) is next and has not started — `packages/extension` is still a placeholder. `npm.cmd run eval` regenerates the baseline report. `npm.cmd run web:dev` serves the playground at http://localhost:5173.
+**Milestones are built strictly one at a time**, tests passing, before the next starts. Currently: **M1-M3 complete** (Stage 0 normalization; Stage 1 with 113 detectors; the eval package with seeded corpus, hard negatives, metrics, error analysis, and regression gates — baseline published in `packages/eval/reports/baseline.md`, floors in `packages/eval/gates.config.json` enforced by `npm test`). M4 complete (session vault with capability-gated plaintext access, format-preserving surrogate substitution with recorded token fallback, streaming-safe restoration, egress guard — ARCHITECTURE.md D11–D13). M5 complete (packages/web playground: live Stage 0–1 detection with highlights and hover cards, masked output with surrogate/token toggle, corpus-generated multilingual examples, fail-closed UI, browser-smoke-verified — ARCHITECTURE.md D14). M6 (Stage 2 NER: model benchmarking and Web Worker integration) is next and has not started — `packages/extension` is still a placeholder. Milestones now run M1–M12: a post-M5 scope amendment (ARCHITECTURE.md D15) added M12 (post-launch npm publication of core) and new deliverables to M6–M11. `npm.cmd run eval` regenerates the baseline report. `npm.cmd run web:dev` serves the playground at http://localhost:5173.
 
 ## Environment (this machine)
 
@@ -49,6 +49,18 @@ Developer-local tooling: `.claude/` is gitignored and not part of the repo (ARCH
 - **`clean-code`** — active on all code work, every milestone.
 - **`frontend-design`** — M5 playground, M9 review panel, M10 popup/options only.
 - **`webapp-testing`** — M5 onward, once there's a browser surface to test.
+
+## Scope amendments (post-M5 — SPEC.md, ARCHITECTURE.md D15)
+
+Standing decisions a session must know before touching these areas:
+
+- **Core is a future standalone npm library (M12).** From M6 on, its public API is a supported surface: nothing extension- or playground-specific in core's exports, breaking changes are deliberate decisions, every export documented.
+- **Exposure score is an M8 deliverable** — calibrated confidence only, no uncalibrated preview earlier. Binding constraints: explainable by construction (report decomposes into named contributions) and a monotonicity property test. Severity weights are a reviewed data file in `packages/data` with per-category rationale, never code constants.
+- **Paste guard (M9):** early warning at paste time; submit stays the only enforcement gate, fail-closed unchanged.
+- **Quick Redact (M10):** popup masking/restoring for any destination with zero added host permissions — the three-sites permission claim must survive it. Playground UI is the reference implementation.
+- **Local Insights (M10):** persisted counts by category only — never values, never text. Counts may use storage; values never.
+- **BENCHMARKS.md** is a standing deliverable from M6, extended at M7/M8.
+- **Non-goals are recorded in SPEC.md** — attachment scanning and more sites are roadmap; vault export and any cloud component are rejected permanently. Do not relitigate.
 
 ## Working rules
 

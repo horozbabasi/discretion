@@ -71,3 +71,5 @@ export { mask, maskOriginal, resolveForMasking } from './mask/masker.js';
 export type { MaskOptions, MaskResult, MaskedEntity } from './mask/masker.js';
 export { Restorer, restore } from './mask/restorer.js';
 export type { RestorerOptions } from './mask/restorer.js';
+export { guardEgress } from './mask/egressGuard.js';
+export type { EgressLeak, EgressVerdict } from './mask/egressGuard.js';

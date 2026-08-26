@@ -51,6 +51,20 @@ export function generateValidIban(seed: number): string {
   return `${country}${check}${bban}`;
 }
 
+/** A valid IBAN for a SPECIFIC country (SPEC.md: substitute same-country). */
+export function generateValidIbanForCountry(country: string, seed: number): string {
+  const spec = IBAN_REGISTRY.get(country);
+  if (spec === undefined) return generateValidIban(seed);
+  const rng = mulberry32(seed);
+  let bban = '';
+  for (const seg of spec.segments) {
+    const alphabet = seg.type === 'n' ? DIGITS : seg.type === 'a' ? LETTERS : ALNUM;
+    bban += chars(rng, alphabet, seg.length);
+  }
+  const check = ibanCheckDigits(country, bban)!;
+  return `${country}${check}${bban}`;
+}
+
 /** The same IBAN in conventional four-character display groups. */
 export function groupIban(iban: string): string {
   return iban.replace(/(.{4})/g, '$1 ').trim();
@@ -83,6 +97,33 @@ const CARD_SHAPES: readonly (readonly [string, number])[] = [
 export function generateValidCard(seed: number): string {
   const rng = mulberry32(seed);
   const [prefix, length] = pick(rng, CARD_SHAPES);
+  const payload = prefix + chars(rng, DIGITS, length - prefix.length - 1);
+  return `${payload}${luhnCheckDigit(payload)!}`;
+}
+
+/** Prefix + length per issuer, for same-issuer credit-card surrogates. */
+const ISSUER_SHAPES: Readonly<Record<string, readonly [string, number]>> = {
+  visa: ['4539', 16],
+  mastercard: ['5274', 16],
+  amex: ['371', 15],
+  discover: ['6011', 16],
+  jcb: ['3540', 16],
+  diners: ['36', 14],
+  unionpay: ['6250', 16],
+  maestro: ['6759', 16],
+  troy: ['9792', 16],
+  mir: ['2201', 16],
+  rupay: ['6521', 16],
+  elo: ['509001', 16],
+  verve: ['506110', 16],
+};
+
+/** A Luhn-valid PAN for a SPECIFIC issuer (SPEC.md: substitute same issuer). */
+export function generateValidCardForIssuer(issuer: string, seed: number): string {
+  const shape = ISSUER_SHAPES[issuer];
+  if (shape === undefined) return generateValidCard(seed);
+  const rng = mulberry32(seed);
+  const [prefix, length] = shape;
   const payload = prefix + chars(rng, DIGITS, length - prefix.length - 1);
   return `${payload}${luhnCheckDigit(payload)!}`;
 }

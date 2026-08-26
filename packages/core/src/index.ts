@@ -60,3 +60,12 @@ export * as checksums from './checksums/index.js';
 // Seeded valid-value generators: consumed by the eval corpus builder (M3)
 // and by format-preserving surrogate synthesis (M4).
 export * as generate from './generate/index.js';
+
+// ── Stage: masking (M4) ──
+export { Vault, normalizedKey } from './mask/vault.js';
+export type { EgressAuditor } from './mask/vault.js';
+export { chooseSurrogate } from './mask/surrogates.js';
+export type { SurrogateRequest } from './mask/surrogates.js';
+export { PERSON_POOLS, ORG_POOL, LOCATION_POOL } from './mask/surrogatePools.js';
+export { mask, maskOriginal, resolveForMasking } from './mask/masker.js';
+export type { MaskOptions, MaskResult, MaskedEntity } from './mask/masker.js';

@@ -11,3 +11,5 @@ export { LANGUAGES, LANGUAGE_CODES } from './corpus/languages.js';
 export type { LanguageBank } from './corpus/languages.js';
 export { generateCorpus } from './corpus/builder.js';
 export type { CorpusOptions } from './corpus/builder.js';
+export { generateHardNegatives, HARD_NEGATIVE_CATEGORIES } from './corpus/hardNegatives.js';
+export type { HardNegativeOptions } from './corpus/hardNegatives.js';

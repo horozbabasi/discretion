@@ -4,3 +4,4 @@
  * registry. One line per family; families grow by batch during M2.
  */
 import './contact/index.js';
+import './financial/index.js';

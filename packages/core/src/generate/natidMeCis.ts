@@ -3,8 +3,8 @@
  * East), synthesized with the shared checksum primitives.
  */
 
-import { luhnCheckDigit, toDigits, weightedMod, weightedModBy } from '../../src/checksums/index.js';
-import { mulberry32 } from '../helpers.js';
+import { luhnCheckDigit, toDigits, weightedMod, weightedModBy } from '../checksums/index.js';
+import { mulberry32 } from './prng.js';
 
 function pick<T>(rng: () => number, items: readonly T[]): T {
   return items[Math.floor(rng() * items.length)]!;

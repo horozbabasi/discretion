@@ -27,7 +27,7 @@ import {
   generateValidSol,
   generateValidAda,
   generateValidDot,
-} from './generators/crypto.js';
+} from '../src/generate/crypto.js';
 
 const btc = getDetector('crypto-btc')!;
 const eth = getDetector('crypto-eth')!;

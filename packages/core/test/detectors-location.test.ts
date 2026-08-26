@@ -22,7 +22,7 @@ import {
   generateValidPostal,
   generateValidStreet,
   generateValidCoordinates,
-} from './generators/location.js';
+} from '../src/generate/location.js';
 
 const postal = getDetector('postal-code')!;
 const street = getDetector('street-address')!;

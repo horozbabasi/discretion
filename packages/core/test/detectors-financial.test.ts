@@ -26,7 +26,7 @@ import {
   groupIban,
   generateValidCard,
   generateValidBic,
-} from './generators/financial.js';
+} from '../src/generate/financial.js';
 
 const card = getDetector('credit-card')!;
 const iban = getDetector('iban')!;

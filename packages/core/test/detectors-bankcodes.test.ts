@@ -23,7 +23,7 @@ import {
   generateValidBsb,
   generateValidIfsc,
   generateValidAgencia,
-} from './generators/bankcodes.js';
+} from '../src/generate/bankcodes.js';
 
 const routing = getDetector('us-routing-number')!;
 const sortCode = getDetector('uk-sort-code')!;

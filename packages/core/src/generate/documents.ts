@@ -8,10 +8,10 @@
  * and lab results are structural.
  */
 
-import { mrzCheckDigit } from '../../src/checksums/index.js';
-import { luhnCheckDigit, verhoeffCheckDigit } from '../../src/checksums/index.js';
-import { vinCheckChar } from '../../src/detect/detectors/documents/vin.js';
-import { mulberry32 } from '../helpers.js';
+import { mrzCheckDigit } from '../checksums/index.js';
+import { luhnCheckDigit, verhoeffCheckDigit } from '../checksums/index.js';
+import { vinCheckChar } from '../detect/detectors/documents/vin.js';
+import { mulberry32 } from './prng.js';
 
 function pick<T>(rng: () => number, items: readonly T[]): T {
   return items[Math.floor(rng() * items.length)]!;

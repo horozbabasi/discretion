@@ -4,7 +4,7 @@
  * the mutation half — stated in the tests.
  */
 
-import { mulberry32 } from '../helpers.js';
+import { mulberry32 } from './prng.js';
 
 function pick<T>(rng: () => number, items: readonly T[]): T {
   return items[Math.floor(rng() * items.length)]!;

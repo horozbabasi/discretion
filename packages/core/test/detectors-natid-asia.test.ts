@@ -24,7 +24,7 @@ import {
   generateValidRic,
   generateValidTwId,
   generateValidMyNumber,
-  generateValidRrn,
+  generateValidKrRrn,
   generateValidNric,
   generateValidHkid,
   generateValidCnic,
@@ -34,7 +34,7 @@ import {
   generateValidThaiId,
   generateValidCccd,
   generateValidPsn,
-} from './generators/natidAsia.js';
+} from '../src/generate/natidAsia.js';
 
 const det = (id: string): Detector => getDetector(id)!;
 
@@ -129,13 +129,13 @@ describe('tw / sg / hk', () => {
 describe('jp / kr / th', () => {
   it('validate their mod-11 variants', () => {
     only(`jp ${generateValidMyNumber(6)} x`, det('national-id-jp-my-number'));
-    only(`kr ${generateValidRrn(7)} x`, det('national-id-kr-rrn'));
+    only(`kr ${generateValidKrRrn(7)} x`, det('national-id-kr-rrn'));
     only(`th ${generateValidThaiId(8)} x`, det('national-id-th'));
     none('kr 991301-1234567 x', det('national-id-kr-rrn')); // month 13
   });
   it('PROPERTIES: validation-only — all three fold remainders (r≤1→0 / (11−r) mod 10)', () => {
     validOnlyProperty(det('national-id-jp-my-number'), generateValidMyNumber);
-    validOnlyProperty(det('national-id-kr-rrn'), generateValidRrn);
+    validOnlyProperty(det('national-id-kr-rrn'), generateValidKrRrn);
     validOnlyProperty(det('national-id-th'), generateValidThaiId);
   });
 });

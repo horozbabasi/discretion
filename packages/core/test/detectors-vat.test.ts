@@ -17,7 +17,7 @@ import { runStage1 } from '../src/detect/runner.js';
 import { normalize } from '../src/normalization.js';
 import { CONFIDENCE } from '../src/detect/types.js';
 import type { Detector, Stage1Candidate } from '../src/detect/types.js';
-import { generateValidEuVat, generateValidVatFor, VAT_COUNTRIES } from './generators/vat.js';
+import { generateValidEuVat, generateValidVatFor, VAT_COUNTRIES } from '../src/generate/vat.js';
 
 const vat = getDetector('eu-vat')!;
 

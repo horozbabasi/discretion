@@ -3,9 +3,9 @@
  * East Asia).
  */
 
-import { toDigits, verhoeffCheckDigit, weightedSum, weightedMod, weightedModBy, mod11_2CheckChar } from '../../src/checksums/index.js';
-import { myNumberCheckDigit } from '../../src/detect/detectors/natid/jp.js';
-import { mulberry32 } from '../helpers.js';
+import { toDigits, verhoeffCheckDigit, weightedSum, weightedMod, weightedModBy, mod11_2CheckChar } from '../checksums/index.js';
+import { myNumberCheckDigit } from '../detect/detectors/natid/jp.js';
+import { mulberry32 } from './prng.js';
 
 function pick<T>(rng: () => number, items: readonly T[]): T {
   return items[Math.floor(rng() * items.length)]!;
@@ -81,7 +81,7 @@ export function generateValidMyNumber(seed: number): string {
   return `${payload.join('')}${myNumberCheckDigit(payload)}`;
 }
 
-export function generateValidRrn(seed: number): string {
+export function generateValidKrRrn(seed: number): string {
   const rng = mulberry32(seed);
   const body = `${pad2(int(rng, 0, 99))}${pad2(int(rng, 1, 12))}${pad2(int(rng, 1, 28))}${int(rng, 1, 8)}${digits(rng, 5)}`;
   const remainder = weightedMod(toDigits(body)!, [2, 3, 4, 5, 6, 7, 8, 9, 2, 3, 4, 5], 11)!;

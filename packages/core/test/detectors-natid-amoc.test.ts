@@ -36,7 +36,7 @@ import {
   generateValidKeId,
   generateValidEgId,
   generateValidCnie,
-} from './generators/natidAmOc.js';
+} from '../src/generate/natidAmOc.js';
 
 const det = (id: string): Detector => getDetector(id)!;
 

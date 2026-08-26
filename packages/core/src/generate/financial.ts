@@ -12,10 +12,10 @@
  * checksum; its property omits mutation (see the BIC section).
  */
 
-import { ibanCheckDigits, luhnCheckDigit } from '../../src/checksums/index.js';
-import { IBAN_REGISTRY } from '../../src/detect/detectors/financial/ibanRegistry.js';
-import { ISO_COUNTRY_CODES } from '../../src/detect/isoCountries.js';
-import { mulberry32 } from '../helpers.js';
+import { ibanCheckDigits, luhnCheckDigit } from '../checksums/index.js';
+import { IBAN_REGISTRY } from '../detect/detectors/financial/ibanRegistry.js';
+import { ISO_COUNTRY_CODES } from '../detect/isoCountries.js';
+import { mulberry32 } from './prng.js';
 
 function pick<T>(rng: () => number, items: readonly T[]): T {
   return items[Math.floor(rng() * items.length)]!;

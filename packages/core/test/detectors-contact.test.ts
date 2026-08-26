@@ -27,7 +27,7 @@ import {
   generateValidMac,
   generateValidCredentialUrl,
   VALID_E164_POOL,
-} from './generators/contact.js';
+} from '../src/generate/contact.js';
 
 const email = getDetector('email')!;
 const phone = getDetector('phone')!;

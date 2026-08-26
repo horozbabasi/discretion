@@ -12,8 +12,8 @@ import {
   cyclicWeightedMod,
   luhnCheckDigit,
   mod11_10CheckDigit,
-} from '../../src/checksums/index.js';
-import { mulberry32 } from '../helpers.js';
+} from '../checksums/index.js';
+import { mulberry32 } from './prng.js';
 
 function pick<T>(rng: () => number, items: readonly T[]): T {
   return items[Math.floor(rng() * items.length)]!;

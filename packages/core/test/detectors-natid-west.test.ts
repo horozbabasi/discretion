@@ -30,8 +30,8 @@ import {
   generateValidNie,
   generateValidCodiceFiscale,
   generateValidBsn,
-  generateValidRrn,
-} from './generators/natidWest.js';
+  generateValidBeRrn,
+} from '../src/generate/natidWest.js';
 
 const det = (id: string): Detector => getDetector(id)!;
 
@@ -237,10 +237,10 @@ describe('nl-bsn', () => {
 
 describe('be-rrn', () => {
   it('validates both centuries', () => {
-    only(`rrn ${generateValidRrn(11)} reg`, det('national-id-be-rijksregister'));
+    only(`rrn ${generateValidBeRrn(11)} reg`, det('national-id-be-rijksregister'));
     let y2k: string | null = null;
     for (let s = 0; s < 100 && y2k === null; s++) {
-      const v = generateValidRrn(s);
+      const v = generateValidBeRrn(s);
       const c = scan(`rrn ${v} x`, det('national-id-be-rijksregister'));
       if (c[0]?.metadata?.['century'] === 2000) y2k = v;
     }
@@ -253,7 +253,7 @@ describe('be-rrn', () => {
     // That makes a hard mutation property wrong by design, not flaky.
     fc.assert(
       fc.property(fc.integer({ min: 0, max: 1 << 30 }), (seed) => {
-        expect(scan(`rrn ${generateValidRrn(seed)} x`, det('national-id-be-rijksregister'))).toHaveLength(1);
+        expect(scan(`rrn ${generateValidBeRrn(seed)} x`, det('national-id-be-rijksregister'))).toHaveLength(1);
       }),
       { numRuns: 250 },
     );

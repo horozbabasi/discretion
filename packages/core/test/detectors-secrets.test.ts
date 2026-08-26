@@ -26,7 +26,7 @@ import {
   generateValidPem,
   generateValidConnectionString,
   generateHighEntropySecret,
-} from './generators/secrets.js';
+} from '../src/generate/secrets.js';
 
 const apiKey = getDetector('api-key')!;
 const jwt = getDetector('jwt')!;

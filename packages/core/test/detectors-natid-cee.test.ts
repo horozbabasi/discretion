@@ -35,7 +35,7 @@ import {
   generateValidEgn,
   generateValidOib,
   generateValidEmso,
-} from './generators/natidCee.js';
+} from '../src/generate/natidCee.js';
 
 const det = (id: string): Detector => getDetector(id)!;
 

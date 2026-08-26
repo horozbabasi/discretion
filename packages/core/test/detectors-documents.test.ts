@@ -25,7 +25,7 @@ import {
   generateValidDvla,
   generateValidSctid,
   generateValidLabResult,
-} from './generators/documents.js';
+} from '../src/generate/documents.js';
 
 const mrz = getDetector('passport-mrz')!;
 const vin = getDetector('vin')!;

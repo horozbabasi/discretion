@@ -29,7 +29,7 @@ import {
   generateValidEmiratesId,
   generateValidQid,
   generateValidKwCivilId,
-} from './generators/natidMeCis.js';
+} from '../src/generate/natidMeCis.js';
 
 const det = (id: string): Detector => getDetector(id)!;
 

@@ -9,7 +9,7 @@
  * generator produces high-entropy strings the entropy half accepts.
  */
 
-import { mulberry32 } from '../helpers.js';
+import { mulberry32 } from './prng.js';
 
 function pick<T>(rng: () => number, items: readonly T[]): T {
   return items[Math.floor(rng() * items.length)]!;

@@ -9,12 +9,12 @@
  * tests).
  */
 
-import { keccak256 } from '../../src/crypto/keccak256.js';
-import { base58CheckEncode, base58Encode } from '../../src/encoding/base58.js';
-import { bech32Encode, convertBits } from '../../src/encoding/bech32.js';
-import { moneroBase58Encode } from '../../src/encoding/base58monero.js';
-import { toEip55 } from '../../src/detect/detectors/crypto/eth.js';
-import { mulberry32 } from '../helpers.js';
+import { keccak256 } from '../crypto/keccak256.js';
+import { base58CheckEncode, base58Encode } from '../encoding/base58.js';
+import { bech32Encode, convertBits } from '../encoding/bech32.js';
+import { moneroBase58Encode } from '../encoding/base58monero.js';
+import { toEip55 } from '../detect/detectors/crypto/eth.js';
+import { mulberry32 } from './prng.js';
 
 function randomBytes(rng: () => number, count: number): Uint8Array {
   const out = new Uint8Array(count);

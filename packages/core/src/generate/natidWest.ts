@@ -12,9 +12,9 @@ import {
   mod11_10CheckDigit,
   mrzCheckDigit,
   modString,
-} from '../../src/checksums/index.js';
-import { codiceFiscaleCin } from '../../src/detect/detectors/natid/it.js';
-import { mulberry32 } from '../helpers.js';
+} from '../checksums/index.js';
+import { codiceFiscaleCin } from '../detect/detectors/natid/it.js';
+import { mulberry32 } from './prng.js';
 
 function pick<T>(rng: () => number, items: readonly T[]): T {
   return items[Math.floor(rng() * items.length)]!;
@@ -194,7 +194,7 @@ export function generateValidBsn(seed: number): string {
 }
 
 /** A Belgian RRN, either century. */
-export function generateValidRrn(seed: number): string {
+export function generateValidBeRrn(seed: number): string {
   const rng = mulberry32(seed);
   const born2000 = rng() < 0.4;
   const yy = pad2(int(rng, 0, 99));

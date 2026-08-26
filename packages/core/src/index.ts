@@ -56,3 +56,7 @@ export type { Stage1Options } from './detect/runner.js';
 // The checksum library is public API: M3's corpus generator and M4's
 // format-preserving surrogates both need to CREATE valid identifiers.
 export * as checksums from './checksums/index.js';
+
+// Seeded valid-value generators: consumed by the eval corpus builder (M3)
+// and by format-preserving surrogate synthesis (M4).
+export * as generate from './generate/index.js';

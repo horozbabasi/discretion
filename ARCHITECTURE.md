@@ -136,6 +136,55 @@ stop being redistributed as part of this repository.
 
 Code: `.gitignore` (`.claude/`).
 
+### D7 — Stage 1 candidates carry both normalized and original offsets
+
+`Candidate.start`/`end` are defined in `types.ts` as offsets into the
+NORMALIZED text, and every M1 offset-map invariant is written against that
+meaning. Stage 1 detectors match on normalized text, but substitution edits
+the ORIGINAL text, so a candidate needs both.
+
+**Rule.** `Stage1Candidate` carries `start`/`end` (normalized) alongside
+`originalStart`/`originalEnd`, which the runner resolves once via
+`mapNormalizedSpan()`. Redefining `Candidate.start` to mean original offsets
+was rejected: it would silently invalidate the M1 property tests while leaving
+them passing, since both are plain numbers.
+
+**Consequence, discovered by the runner's property test.** An original span
+ABSORBS adjacent runs of characters that Stage 0 deletes — a leading run
+because deleted runs attribute to the cluster that follows them, and a
+trailing run at end-of-text because it attributes to the sentinel. So for
+`"AAA​123"` the original span includes the zero-width space.
+
+This is correct and desirable rather than a defect: masking the span removes
+the obfuscating character along with the value, instead of leaving it stranded
+beside a surrogate. The invariant worth asserting is therefore not
+byte-exactness but that the original span re-normalizes to exactly the matched
+value — which is what `detect-runner.test.ts` checks over generated input.
+
+Code: `packages/core/src/detect/runner.ts`, `packages/core/src/detect/types.ts`.
+
+### D8 — The checksum library stops at the remainder
+
+Most national identifier checksums are Σ(digitᵢ × weightᵢ) mod m, differing
+only in weights and modulus. SPEC.md asks for each algorithm to be
+"implemented once and reused", so those shared parts live in
+`packages/core/src/checksums/`.
+
+**Rule.** The shared layer computes the weighted remainder and stops. The
+closing rule — whether the check digit is the remainder, its complement,
+whether 10 maps to 'X' or invalidates, whether 11 folds to 0 — stays in each
+detector.
+
+**Reasoning.** The closing rules vary too much to generalize honestly. Encoding
+them as configuration produces one function with a dozen mutually exclusive
+branches, where each branch is exercised by only a handful of countries and a
+mistake in one silently corrupts an unrelated one. Splitting at the remainder
+puts the error-prone shared arithmetic in one tested place while keeping each
+country's idiosyncrasy visible in its own file, next to the spec reference
+that justifies it.
+
+Code: `packages/core/src/checksums/weighted.ts` and siblings.
+
 ## Standing contracts (established in M1)
 
 - **Offset map:** `offsetMap[i]` is the original index of the cluster that

@@ -32,3 +32,5 @@ export {
 } from './iso7064.js';
 
 export { abaValid, abaCheckDigit } from './aba.js';
+
+export { mrzCharValue, mrzCheckDigit, mrzCheckValid } from './icao9303.js';

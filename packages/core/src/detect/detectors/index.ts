@@ -11,3 +11,4 @@ import './secrets/index.js';
 import './documents/index.js';
 import './location/index.js';
 import './natid/index.js';
+import './vat/index.js';

@@ -11,6 +11,10 @@
     ".": {
       "types": "./dist/src/index.d.ts",
       "default": "./dist/src/index.js"
+    },
+    "./ner-transformers": {
+      "types": "./dist/src/ner/transformersClassifier.d.ts",
+      "default": "./dist/src/ner/transformersClassifier.js"
     }
   },
   "dependencies": {

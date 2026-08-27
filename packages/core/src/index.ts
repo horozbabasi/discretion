@@ -61,6 +61,26 @@ export * as checksums from './checksums/index.js';
 // and by format-preserving surrogate synthesis (M4).
 export * as generate from './generate/index.js';
 
+// ── Stage 2: multilingual NER (M6) ──
+// Pure logic only. The Transformers.js-backed classifier is exported through
+// the './ner-transformers' entry point so that importing the core root never
+// loads the ONNX runtime.
+export { alignPieces } from './ner/align.js';
+export type { AlignedPiece } from './ner/align.js';
+export { decodeEntities } from './ner/merge.js';
+export { chunkText } from './ner/chunk.js';
+export type { Chunk } from './ner/chunk.js';
+export { NerEngine } from './ner/engine.js';
+export type { NerEngineOptions } from './ner/engine.js';
+export { runStage2 } from './ner/runStage2.js';
+export type {
+  NerEntityType,
+  NerSpan,
+  Stage2Candidate,
+  TokenClassifier,
+  TokenPrediction,
+} from './ner/types.js';
+
 // ── Stage: masking (M4) ──
 export { Vault, normalizedKey } from './mask/vault.js';
 export type { EgressAuditor } from './mask/vault.js';

@@ -46,9 +46,17 @@ const TABLE_SEPARATOR = /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/;
 const LOG_TIMESTAMP =
   /^\s*[[(]?(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}|[A-Z][a-z]{2} {1,2}\d{1,2} \d{2}:\d{2}:\d{2})/;
 const LOG_LEVEL = /\b(TRACE|DEBUG|INFO|WARN|WARNING|ERROR|FATAL|CRITICAL)\b/;
-/** Keywords that are strong evidence of source code across common languages. */
+/**
+ * Keywords that are strong evidence of source code.
+ *
+ * Deliberately excludes words that are ordinary English: `new`, `for`, `from`,
+ * `if`, `else`, `while`, `return`, `class`, `try`, `throw`, `package` and
+ * `public` all appear constantly in prose. Including them classified "everyone
+ * agreed to the new schedule" as source code, and code mode shifts PERSON
+ * sensitivity down — so the cost of a loose keyword list is missed names.
+ */
 const CODE_KEYWORD =
-  /(^|\s)(const|let|var|function|return|import|from|export|class|def|public|private|static|void|struct|impl|fn|package|require|async|await|if|else|for|while|try|catch|throw|new)\b/;
+  /(^|\s)(const|let|var|function|def|elif|lambda|func|fn|impl|struct|async|await|=>|null|undefined|nullptr|println|printf|console\.log|System\.out)\b/;
 const CODE_PUNCTUATION = /(=>|::|->|\)\s*\{|\{\s*$|;\s*$|\)\s*;)/;
 const COMMENT_LINE = /^\s*(\/\/|#|\/\*|\*|--)/;
 /** RFC-822-style headers that mark an email thread. */
@@ -161,6 +169,10 @@ function scoreCode(lines: readonly string[], scores: FormatScore[]): void {
   const keyworded = lines.filter((l) => CODE_KEYWORD.test(l)).length;
   const punctuated = lines.filter((l) => CODE_PUNCTUATION.test(l)).length;
   const commented = lines.filter((l) => COMMENT_LINE.test(l)).length;
+  // Punctuation is required, not merely additive. Prose can borrow a keyword
+  // but it does not end lines with `;`, `{` or `);` — that is what separates
+  // a sentence containing "function" from a line of code.
+  if (punctuated === 0) return;
   const signal = ratio(keyworded + punctuated, lines.length);
   if (signal < 0.25) return;
 
@@ -191,6 +203,27 @@ function scoreEmail(lines: readonly string[], scores: FormatScore[]): void {
 // Domain scoring
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Does `text` contain `term` as a whole word?
+ *
+ * Plain substring matching found "lan" inside "balance" and counted it as
+ * financial vocabulary. Scripts that do not space their words cannot use a
+ * boundary test, so for those the substring match stands — which is correct,
+ * since that is how those scripts are written.
+ */
+function containsAsWord(text: string, term: string): boolean {
+  if (!/^[\p{L}\p{M}\p{N} '-]+$/u.test(term)) return text.includes(term);
+
+  let at = text.indexOf(term);
+  while (at !== -1) {
+    const before = at === 0 ? '' : text[at - 1] ?? '';
+    const after = text[at + term.length] ?? '';
+    if (!/\p{L}/u.test(before) && !/\p{L}/u.test(after)) return true;
+    at = text.indexOf(term, at + 1);
+  }
+  return false;
+}
+
 function detectDomain(
   folded: string,
   lexicon: DomainLexicon,
@@ -201,8 +234,8 @@ function detectDomain(
   for (const [domain, terms] of Object.entries(lexicon)) {
     const hits: string[] = [];
     for (const term of terms ?? []) {
-      const folded_term = foldForMatch(term);
-      if (folded_term.length > 0 && folded.includes(folded_term)) hits.push(folded_term);
+      const foldedTerm = foldForMatch(term);
+      if (foldedTerm.length > 0 && containsAsWord(folded, foldedTerm)) hits.push(foldedTerm);
     }
     if (hits.length > bestCount) {
       bestCount = hits.length;

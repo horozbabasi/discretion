@@ -54,3 +54,4 @@ export type { SecretProvider } from './secretProviders.js';
 // ── Stage 3 context lexicons (M7) ──
 export { TRIGGER_LEXICONS } from './triggerLexicons.js';
 export type { TriggerLexicon } from './triggerLexicons.js';
+export { DOMAIN_LEXICONS } from './domainLexicons.js';

@@ -17,7 +17,7 @@
  * genuinely want one stage; `detect` is what consumers should use.
  */
 
-import { TRIGGER_LEXICONS } from '@privacyshield/data';
+import { DOMAIN_LEXICONS, TRIGGER_LEXICONS } from '@privacyshield/data';
 
 import type { NormalizationResult } from './types.js';
 import { runStage1, type Stage1Options } from './detect/runner.js';
@@ -67,6 +67,7 @@ export async function detect(
 ): Promise<DetectionOutcome> {
   const analysis = analyzeContext(normalization.normalizedText, {
     triggerLexicons: TRIGGER_LEXICONS,
+    domainLexicon: DOMAIN_LEXICONS,
     ...options.context,
   });
 

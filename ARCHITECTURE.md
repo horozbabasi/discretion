@@ -674,7 +674,14 @@ more, never less.
 | --- | ---: | ---: | ---: |
 | Stage 1 baseline | 3.1% | 100% | 2236 |
 | Stage 3, suppress on missing context | 3.8% | 56.9% | 1046 |
-| **Stage 3, with overlap deferral (shipped)** | **1.8%** | **56.9%** | **2230** |
+| Stage 3, with overlap deferral (first measurement) | 1.8% | 56.9% | 2230 |
+| **Stage 3, shipped — current** | **1.9%** | **56.9%** | **2130** |
+
+The 1.8%/2230 row was measured before the M7 error-taxonomy rules landed;
+`data-uri-payload` then removed 100 base64-blob false positives. **1.9%
+precision, 56.9% recall, 2130 false positives is the current figure** and the
+one BENCHMARKS.md publishes. The earlier row is kept only so the two numbers
+in circulation reconcile.
 
 The deferral gives back the false positives it should — those are
 overlap-explained and M8's to resolve — but recovers no recall, and
@@ -702,7 +709,13 @@ cannot price that trade. Stage 4 can: fusion and calibration weigh
 evidence rather than gating on it, which is the right machinery for a
 signal that is genuine but weak.
 
-**Status: OPEN, M8/M9 scope. Not resolved, and not accepted as final.**
+**Status: REOPENED AT M8.** This was open M8/M9 scope at M7 and the
+milestone carried a do-not-reopen note, which has now expired by design:
+the overlap deferral parked JWT segments, API keys and crypto wallets for
+Stage 4 explicitly, and the prose-labeled-secret recall gap was deferred to
+fusion precisely because fusion weighs evidence instead of making the binary
+suppress-or-allow call Stage 3 is limited to. Both are M8's to resolve.
+Nothing here was accepted as final.
 These numbers are published in BENCHMARKS.md with the same caveat, so
 nothing downstream can read the current figure as a settled result.
 

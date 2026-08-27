@@ -292,7 +292,12 @@ already covers the span (ARCHITECTURE.md D19):
 | --- | ---: | ---: | ---: |
 | Stage 1 baseline | 3.1% | 100% | 2236 |
 | Suppress on missing context | 3.8% | 56.9% | 1046 |
-| **Shipped: with overlap deferral** | **1.8%** | **56.9%** | **2230** |
+| Shipped: with overlap deferral (first measurement) | 1.8% | 56.9% | 2230 |
+| **Shipped: current** | **1.9%** | **56.9%** | **2130** |
+
+The 1.8% row predates the M7 error-taxonomy rules; `data-uri-payload` then
+removed 100 base64-blob false positives. **1.9% / 56.9% / 2130 is the current
+measured figure.** Both rows are shown because both numbers were published.
 
 Residual precision is BELOW the Stage 1 baseline. That is the honest number
 and it is not a typo: the overlap deferral gives back exactly the false
@@ -319,8 +324,10 @@ language and are not secrets. Stage 3 can only make a binary suppress-or-allow
 call, so it cannot price that trade; Stage 4 weighs evidence instead of gating
 on it, which is the right machinery for a signal that is real but weak.
 
-**Status: OPEN, M8/M9 scope. Not resolved, and not accepted as final.** Any
-later reading of a GENERIC_SECRET figure should carry this caveat with it.
+**Status: REOPENED AT M8.** Open scope at M7, and now M8's to resolve — the
+overlap deferral parked JWT segments, API keys and crypto wallets for Stage 4
+explicitly, and the recall gap was deferred to fusion because fusion weighs
+evidence rather than making a binary suppress-or-allow call.
 
 ### Where Stage 3 does work
 

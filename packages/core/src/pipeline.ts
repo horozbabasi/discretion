@@ -24,7 +24,6 @@ import { runStage1, type Stage1Options } from './detect/runner.js';
 import { runStage2 } from './ner/runStage2.js';
 import type { NerEngine } from './ner/engine.js';
 import { analyzeContext, type ContextOptions } from './context/score.js';
-import { verifyAmbiguous, type VerificationStats } from './context/verify.js';
 import type { ContextScoredCandidate, DocumentProfile, PipelineCandidate } from './context/types.js';
 
 export interface DetectOptions {
@@ -37,12 +36,6 @@ export interface DetectOptions {
   readonly ner?: NerEngine;
   /** Stage 3 configuration. Defaults to the bundled trigger lexicons. */
   readonly context?: ContextOptions;
-  /**
-   * Run the Stage 2c verification pass over ambiguous named-entity
-   * candidates. Requires `ner`. Off by default until its measured
-   * contribution justifies its latency — see BENCHMARKS.md.
-   */
-  readonly verify?: boolean;
 }
 
 export interface DetectionOutcome {
@@ -58,8 +51,6 @@ export interface DetectionOutcome {
    */
   readonly suppressed: readonly ContextScoredCandidate[];
   readonly profile: DocumentProfile;
-  /** Present when the Stage 2c verification pass ran. */
-  readonly verification?: VerificationStats;
 }
 
 /**
@@ -91,19 +82,15 @@ export async function detect(
   const stage2 = options.ner === undefined ? [] : await runStage2(normalization, options.ner);
 
   const candidates: PipelineCandidate[] = [...stage1, ...stage2];
-  let scored = analysis.score(candidates);
+  const scored = analysis.score(candidates);
 
-  let verification: VerificationStats | undefined;
-  if (options.verify === true && options.ner !== undefined) {
-    const result = await verifyAmbiguous(normalization, scored, options.ner);
-    scored = [...result.candidates];
-    verification = result.stats;
-  }
-
+  // NO STAGE 2C. SPEC.md asks for a verification pass over an ambiguous
+  // confidence band, and requires it be removed if the eval shows it does not
+  // improve results. It was built, measured, and removed — see ARCHITECTURE.md
+  // D20 and the BENCHMARKS.md M7 section for the numbers.
   return {
     emitted: scored.filter((c) => !c.suppressed),
     suppressed: scored.filter((c) => c.suppressed),
     profile: analysis.profile,
-    ...(verification !== undefined ? { verification } : {}),
   };
 }

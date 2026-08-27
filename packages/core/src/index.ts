@@ -110,8 +110,6 @@ export type { GazetteerHit, GazetteerType } from './gazetteer/index.js';
 // Stages 0–3 in one call. This is what consumers should use; the individual
 // stage functions remain exported for tooling that wants one stage.
 export { detect } from './pipeline.js';
-export { verifyAmbiguous, AMBIGUOUS_LOW, AMBIGUOUS_HIGH } from './context/verify.js';
-export type { VerificationResult, VerificationStats } from './context/verify.js';
 export type { DetectOptions, DetectionOutcome } from './pipeline.js';
 
 // ── Stage: masking (M4) ──

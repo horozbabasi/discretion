@@ -335,3 +335,84 @@ TAX_ID (54.6%) and URL_WITH_CREDENTIALS (37.6%) are unchanged, as expected:
 their errors are cross-type overlap — TAX_ID cross-scheme collisions,
 URL_WITH_CREDENTIALS against CONNECTION_STRING — which is Stage 4 resolution
 and deliberately not Stage 3's to fix.
+
+### Stage 2b — gazetteers
+
+1.41 M entries bundled at 3.2 MB as Bloom filters (ARCHITECTURE.md D20 for why
+filters rather than name lists): 762,502 person names and 342,031
+organisations from Wikidata (CC0), 308,524 places from GeoNames (CC BY 4.0).
+`cities500` and ParaNames were both excluded — the first on precision, the
+second because its data licence is stated inconsistently across its own
+sources.
+
+A filter never returns a false negative; its only error mode is a false
+positive, sized at 0.1% and **measured at 0.000% on 20,000 random tokens**.
+That asymmetry is what makes it safe to treat a hit as corroboration, which is
+the weight SPEC.md assigns it.
+
+### Stage 2c — built, measured, and removed
+
+SPEC.md specifies a verification pass over an ambiguous confidence band, and
+requires it be removed if it does not improve results. It does not.
+
+Method: re-inference over a recentred context window — chosen because a second
+bundled model measured *worse* at M6, and the gazetteer is already consumed by
+Stage 3. Measured over 861 documents, verification on versus off:
+
+| | PERSON | ORG | LOCATION |
+| --- | ---: | ---: | ---: |
+| precision, off → on | 99.0% → 99.0% | 80.2% → 80.2% | 55.3% → 55.3% |
+| false positives | 3 → 3 | 22 → 22 | 55 → 55 |
+
+Identical, to the candidate. 1.28% of candidates entered the band (45 of 3,505;
+39 confirmed, 6 refuted) for **+10.5% wall-clock**.
+
+The reason is structural, and it is the useful part of the result: Stage 2c
+only adjusts confidence, and this eval scores every emitted prediction
+regardless of confidence. A pure confidence adjustment is invisible to it by
+construction, so the stage cannot be evaluated until Stage 4 applies profile
+thresholds. Removed rather than shipped off-by-default, because unmeasured
+machinery in the pipeline is exactly what SPEC's rule exists to prevent.
+
+### M7 exit criterion — precision on hard negatives
+
+SPEC.md names this as what M7 must report. Full pipeline (Stages 0–3 with the
+gazetteers) against the Stage 1 baseline, same 2,618-document corpus and seeds:
+
+| hard-negative category | Stage 1 | with Stage 3 | change |
+| --- | ---: | ---: | ---: |
+| base64-blob | 100 | **0** | −100 |
+| labeled-examples | 67 | **50** | −17 |
+| checksum-failures | 65 | **59** | −6 |
+| placeholder-code | 37 | **18** | −19 |
+| order-numbers | 47 | 47 | 0 |
+| version-numbers | 15 | 15 | 0 |
+| hex-artifacts | 1 | 1 | 0 |
+| **total** | **332** | **190** | **−42.8%** |
+
+`order-numbers` is unchanged **by design**: the reference-noun rule is a
+penalty rather than a suppression, because in medical and legal documents a
+case or claim number IS the sensitive record identifier. Confidence moves;
+emission does not, and this eval does not threshold on confidence.
+
+### Full per-type results, Stages 0–3
+
+| type | Stage 1 | with Stage 3 | false positives |
+| --- | ---: | ---: | ---: |
+| EMAIL | 81.3% | **98.5%** | 148 → 10 |
+| POSTAL_CODE | 5.9% | **20.0%** | 922 → 232 |
+| NATIONAL_ID | 67.2% | **71.8%** | 294 → 236 |
+| API_KEY | 92.3% | **95.9%** | 39 → 20 |
+| SWIFT_BIC | 88.2% | **100%** | 10 → 0 |
+| PERSON | — | 98.7% | 13 |
+| ORG | — | 80.0% | 60 |
+| LOCATION | — | 59.1% | 147 |
+| GENERIC_SECRET | 3.1% | **1.9%** | see the open failure above |
+
+Unchanged and expected: TAX_ID (54.6%), URL_WITH_CREDENTIALS (37.6%),
+DRIVERS_LICENSE (26.3%), US_ROUTING_NUMBER (41.7%). Every one is a cross-type
+overlap — TAX_ID cross-scheme collisions, URL_WITH_CREDENTIALS against
+CONNECTION_STRING — which is Stage 4 resolution and deliberately outside
+Stage 3's remit. LOCATION's 59.1% is dominated by the same effect measured at
+M6: its false positives are largely correct city names sitting inside
+STREET_ADDRESS ground truth.

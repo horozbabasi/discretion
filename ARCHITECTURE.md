@@ -706,6 +706,87 @@ signal that is genuine but weak.
 These numbers are published in BENCHMARKS.md with the same caveat, so
 nothing downstream can read the current figure as a settled result.
 
+### D20 — Stage 2b ships as membership filters; Stage 2c was built, measured, and removed (M7)
+
+**Stage 2b: Bloom filters, not name lists.** The gazetteers hold
+1.41 M entries — 762,502 person names, 342,031 organisations, 308,524
+places — and ship as Bloom filters at 3.2 MB. SPEC.md asks for
+"compressed sets or a succinct data structure", and two things argued
+for the filter over a list. Size is the obvious one: the same entries
+are roughly 12 MB as plaintext. The other is that a gazetteer of
+people's names IS personal data about identifiable living people; CC0
+and CC BY waive copyright and database rights, they do not make that
+untrue. Membership testing is the only capability Stage 2b needs, and a
+filter answers "is this a known name?" without redistributing a list of
+who those people are.
+
+The trade is a bounded false-positive rate and NO false negatives. That
+asymmetry fits the weight SPEC.md assigns the evidence — "gazetteer hit
+alone is medium confidence" — because a hit is corroboration while a
+miss is conclusive. Sized for 0.1%; measured at 0.000% on 20,000 random
+tokens.
+
+Sources were restricted to the two the licensing review verified from
+primary sources: Wikidata (CC0) for names, brands and businesses, and
+GeoNames (CC BY 4.0) for places, whose attribution is in
+THIRD_PARTY_NOTICES.md. ParaNames was rejected despite being the
+convenient pre-typed option, because its data licence is stated
+inconsistently across its repository, its paper and its README, and
+"probably fine because the upstream is CC0" is a legal conclusion this
+project should not be asserting. GeoNames `cities500` was rejected on
+precision grounds: small-town names collide massively with common words
+and surnames.
+
+One coverage bug came out of probing rather than assuming: a
+three-character minimum silently dropped most Chinese and Japanese city
+names, because a CJK place name is routinely two characters and is a
+whole word. Known remaining gap, recorded rather than hidden: consumer
+brands such as Photoshop and Coca-Cola still miss, because Wikidata
+files them under classes other than the two queried.
+
+**Stage 2c: removed, on its own measurement.** SPEC.md specifies a
+verification pass over an ambiguous confidence band and then says
+plainly: "If the eval shows it does not improve results, remove it and
+document why." It was built and measured, and it does not.
+
+The method was chosen by elimination. A second bundled model was
+rejected because M6 measured the runner-up as WORSE overall at 2.8× the
+latency, so a disagreement between the two would carry little
+information. The gazetteer was rejected because Stage 3 already consumes
+it, so re-using it would double-count one piece of evidence rather than
+add one. What remained was genuinely independent: re-inference over a
+recentred context window. A transformer's prediction is a function of
+surrounding tokens, and Stage 2 necessarily sees each span at an
+arbitrary position inside a 400-character chunk, so re-asking with the
+span centred tests whether the original prediction depended on chunk
+placement.
+
+Measured over 861 documents, verification on versus off:
+
+| | PERSON | ORG | LOCATION |
+| --- | ---: | ---: | ---: |
+| precision, off → on | 99.0% → 99.0% | 80.2% → 80.2% | 55.3% → 55.3% |
+| false positives, off → on | 3 → 3 | 22 → 22 | 55 → 55 |
+
+Identical, to the candidate. 1.28% of candidates entered the band (45 of
+3,505; 39 confirmed, 6 refuted) at a cost of +10.5% wall-clock.
+
+**Why it changed nothing, which is the part worth keeping.** Stage 2c
+only ADJUSTS confidence; it never suppresses. The eval scores every
+emitted prediction regardless of confidence, so a pure confidence
+adjustment is invisible to it by construction. The stage is therefore
+not measurable until Stage 4 applies profile thresholds and confidence
+starts deciding what is emitted.
+
+Two options were rejected before removing it. Keeping it off by default
+would leave unmeasured machinery in the pipeline, which is the thing
+SPEC's rule exists to prevent. Letting it SUPPRESS on refutation would
+make it measurable, but that turns it into a suppression rule, and D18
+requires every one of those to survive constructed, executed
+counterexamples — a disproportionate risk for the six refutations it
+found. So it is removed, and reinstating it at M8 should be a deliberate
+decision made against a thresholded eval, not a default.
+
 ## Status after M2
 
 Stage 1 is complete: 113 registered detectors — 57 NATIONAL_ID and 19

@@ -19,7 +19,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import process from 'node:process';
 
-import { NerEngine, normalize, runStage1, runStage2 } from '@privacyshield/core';
+import { NerEngine, detect, normalize } from '@privacyshield/core';
 import type { LabeledDocument } from './corpus/types.js';
 import { generateCorpus } from './corpus/builder.js';
 import { generateHardNegatives } from './corpus/hardNegatives.js';
@@ -128,14 +128,15 @@ async function main(): Promise<void> {
   await engine.warmup();
 
   const combinedStarted = performance.now();
-  const detect = async (doc: LabeledDocument): Promise<readonly ScoredCandidate[]> => {
-    const normalization = normalize(doc.text);
-    const stage1 = runStage1(normalization);
-    const stage2 = await runStage2(normalization, engine);
-    return [...stage1, ...stage2];
+  // The full pipeline: Stages 0-3, including Stage 3 context scoring and the
+  // Stage 2b gazetteers. `detect` is the supported entry point, so measuring
+  // anything else would measure a configuration nobody ships.
+  const detectAll = async (doc: LabeledDocument): Promise<readonly ScoredCandidate[]> => {
+    const { emitted } = await detect(normalize(doc.text), { ner: engine });
+    return emitted.map((s) => s.candidate);
   };
-  const combined = await runEvalAsync(corpus, detect, { maxExamples: 60 });
-  const nerOnly = await runEvalAsync(corpus, detect, { maxExamples: 60, types: NER_TYPES });
+  const combined = await runEvalAsync(corpus, detectAll, { maxExamples: 60 });
+  const nerOnly = await runEvalAsync(corpus, detectAll, { maxExamples: 60, types: NER_TYPES });
   const combinedElapsed = ((performance.now() - combinedStarted) / 1000).toFixed(1);
 
   const combinedTitle = `Stage 1+2 combined — model ${nerModel} (${dtype}), same corpus and seeds as the Stage 1 baseline`;

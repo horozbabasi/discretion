@@ -98,7 +98,7 @@ Stage 1 confidences are detector-local and only ordered; real calibration requir
 
 ## Latency
 
-p50 0.45ms · p95 1.59ms · p99 2.94ms · max 27.07ms per document (normalize + all detectors).
+p50 0.24ms · p95 0.95ms · p99 2.01ms · max 14.48ms per document (normalize + all detectors).
 
 ## Worst false positives (highest confidence first)
 

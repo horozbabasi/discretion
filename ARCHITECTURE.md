@@ -575,11 +575,73 @@ afterwards.
    read "Upgraded … from v1.5.3 to 3.12.7-rc.2 in build …" and are
    saturated with it, while an identifier line carries none.
 
+**What rounds two and three found.** Six adversarial reviewers ran 562
+executed inputs in total. The first round's fixes were not enough, and
+the pattern in what they missed is the useful part:
+
+4. **A suppression window ran past its own boundary.** `uri-authority`
+   scanned until a delimiter it happened to list, so any separator that
+   was not `/`, `?` or `#` let the "authority" swallow the rest of the
+   line — a pipe-delimited log line, a semicolon-delimited CSV, a JDBC
+   URL with parameters, a markdown table row. A valid SSN, TC Kimlik
+   number and tax identifier were each suppressed as "part of the
+   authority". It now scans only the RFC 3986 authority character class.
+5. **A guard keyed on type instead of position.** Round one required a
+   password component only for EMAIL, which left the identical hole
+   open for every other type: a TC Kimlik number used as a bare
+   userinfo username was suppressed with nothing else reporting it. The
+   requirement is now keyed on POSITION — anything in the userinfo
+   region needs a password, whatever its type.
+6. **A marker meant something else entirely.** `phone-run-interior`
+   read any leading `+` as a dialling prefix. In a git diff or a
+   markdown bullet the `+` is a line marker, so a Luhn-valid Amex PAN,
+   an SSN, a routing number and an NPI on added lines were all
+   suppressed. Three conditions now: the `+` must be immediately
+   followed by a digit; the run must be a single field (a tab or two
+   or more spaces is a column boundary — that is how a German postal
+   code beside a phone column was lost); and the candidate must be
+   genuinely INTERIOR, because if it accounts for every digit in the
+   run then the rule's own claim is false.
+7. **"Somewhere on the line" is not evidence.** `version-number` was
+   the most dangerous rule of the five, because many national
+   identifiers are printed as dot-separated digit groups. Line-level
+   vocabulary let the words "Updated", "release", "beta", the `v.` of
+   a legal citation, and a fentanyl "patch" suppress an Argentine DNI,
+   a Swiss AHV number and a patient chart number. Its pattern also
+   accepted two dotted components while its own risk text claimed
+   three, so an NPI followed by a decimal amount read as a version.
+   Rebuilt on four conditions, of which two generalize: evidence must
+   be ADJACENT, not merely present; and a candidate claimed WHOLE by a
+   validating detector is not this rule's to overrule.
+8. **A dotted token is not a host name.** `host-port` suppressed real
+   postal codes in grep output (`customers.csv:10001`), dotted property
+   paths (`kunde.adresse.plz:10115`) and colon-delimited exports. The
+   whitespace-delimited token must now be exactly `host:port`, the TLD
+   must be plausible, and zero-padded values are rejected — a written
+   port is never zero-padded, while short postal codes are by
+   definition.
+
+**Two lessons worth keeping.** First, every one of these rules was
+plausible when written and wrong in a way only execution exposed —
+which is why D18 requires executed counterexamples rather than review.
+Second, the recurring defect is *evidence that is too loose about
+scope*: a line instead of an adjacency, a type instead of a position, a
+prefix character instead of a parse. When tightening a suppression
+rule, the question to ask is not "is this signal related?" but "does
+this signal actually bind to THIS span?"
+
 **The standing consequence.** `NegativeRule.risk` is a required field
 holding prose, not an optional note, and a test asserts every rule
 states both its principle and its risk. A suppression rule whose author
 cannot name what it might wrongly suppress has not been thought
 through.
+
+**Known and deliberately not fixed here.** The rules scan ASCII digits,
+so they neither fire nor leak on Arabic-Indic (٠١٢٣) or Devanagari
+digits. That is a fail-to-fire, not a leak, and the correct fix is
+upstream — a decimal-digit folding transform in Stage 0 — rather than
+widening suppression rules into scripts where they are least tested.
+Recorded for M8 rather than patched here.
 
 **A second, quieter consequence.** Once GENERIC_SECRET requires an
 assignment signal to be emitted at all (D19), every key/value form

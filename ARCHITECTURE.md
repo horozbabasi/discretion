@@ -423,6 +423,97 @@ judged against; (2) constrains API shape from M6 onward; (3) builds on
 M8 calibration; (4)–(6) are extension surfaces consuming the same core;
 (7) fences the boundary around all of it.
 
+### D16 — Stage 2 model selection: XLM-R base, quantized (M6)
+
+**Decision:** Stage 2 ships `jiting/xlm-roberta-base-ner-hrl_onnx` at q8,
+pinned to revision `478a2a3e99ef680e4a107c80a7d0c59d51f185ae` (afl-3.0,
+ONNX conversion of `Davlan/xlm-roberta-base-ner-hrl`). Full matrix,
+methodology, and per-language numbers: BENCHMARKS.md.
+
+**Why this model.** Five candidates, fourteen runs, 1,500 documents per
+run (823 planted PERSON/ORG/LOCATION spans across 25 languages). XLM-R
+base q8 took the best macro F1 (87.8) with the highest per-language
+floor — no language under 80 F1 — at p50 30 ms/doc on CPU. The two
+findings that decided it against intuition: **larger lost** (XLM-R large
+scored 86.7 macro at 2.8× the latency and 2× the size — its best-in-matrix
+ORG was outweighed by a LOCATION precision collapse), and **the
+English-only fine-tune collapsed** (61.3 macro despite the same large
+backbone), proving the fine-tune's language coverage matters more than
+backbone size. DistilBERT's 143 MB saving cost 26 macro-F1 points — not a
+trade a privacy tool can make.
+
+**Quantization evidence.** q8 vs fp32 measured on all three architectures
+with both variants available: macro deltas +0.9, +0.3, +1.5 — all in q8's
+favor, per-type deltas mixed in sign and within noise. SPEC's "only
+quantize if the loss is negligible" is satisfied with margin: 279 MB
+ships instead of 1,110 MB. fp16 was ruled out on runtime grounds, not
+quality: every fp16 model failed to load on onnxruntime's CPU execution
+provider (two distinct failure classes, recorded verbatim in
+BENCHMARKS.md), so the unquantized comparison ran at fp32.
+
+**Bundling and integrity.** HF revisions are content-addressed commits,
+so the pinned revision fixes the exact model bytes; build tooling fetches
+into a gitignored cache (`.hf-cache/`) and production consumers load only
+from the bundled copy — `allowRemoteModels` defaults to false in the
+classifier, keeping the zero-network non-negotiable structural rather
+than procedural. The ~296 MB payload (model + tokenizer) is the largest
+asset in the extension; the only hard ceiling is the Chrome Web Store's
+2 GB package limit, which it clears with wide margin. Hosting the model
+in a Web Worker is deliberately the consumer's job (M9): core stays
+environment-agnostic, same rule as every stage before it.
+
+### D17 — Stage 2 integration: injected classifier, alignment, chunking (M6)
+
+**Injected classifier.** Core's NER logic (`packages/core/src/ner/`)
+depends on a three-member `TokenClassifier` interface — id, window size,
+`classify(text)` — not on Transformers.js. The ONNX-backed implementation
+lives behind the dedicated `@privacyshield/core/ner-transformers` subpath
+export, so consumers that never run Stage 2 never load the ONNX runtime,
+and alignment/decoding/chunking/engine logic is tested against a
+deterministic mock without model weights. This is also what keeps the
+vitest suite model-free: the unit-test path exercises everything except
+the weights themselves, and the Stage-2-inclusive accuracy gate lives in
+the eval CLI's `--ner` run (gates.config.json `nerPerType`), not vitest.
+
+**Alignment.** The token-classification pipeline returns pieces with no
+character offsets, so `alignPieces` reconstructs them: greedy
+left-to-right matching with a bounded search window, whitespace skipping,
+and explicit refusal of far jumps; `[UNK]`/`<unk>` pieces are bridged
+only between located neighbors, and entities whose pieces all failed to
+locate are dropped rather than guessed. Correctness is pinned by tests
+across the nine scripts M1 handles (Latin+diacritics, Cyrillic, Arabic
+and Hebrew RTL, Han, Kana, Hangul, Devanagari, Thai) and through Stage
+0's NFKC expansions and invisible-stripping, because a misaligned span
+redacts the wrong text — the same offset-map stakes as M1.
+
+**Chunking.** Transformers.js silently truncates past 512 tokens — no
+error, text simply unscanned, which is a silent fail-open. Stage 2
+therefore chunks at a character budget (400 chars: 512 tokens at the
+worst-case one-token-per-char CJK ratio, with headroom) with 96-char
+overlap and whitespace-preferring cut points; each chunk owns a core
+region (overlap midpoints) and only core-owned entities are emitted, so
+chunk boundaries neither drop nor duplicate entities. The engine wraps
+the whole run in a hard deadline (`DetectionTimeoutError` → fail closed,
+default 2 s) and warms the model once at init.
+
+**IOB decoding.** XLM-R CoNLL-style fine-tunes emit IOB1 in practice —
+entities open with `I-` — so the decoder treats both `B-X` and
+`I-X`-after-non-X as entity starts, handling IOB1 and IOB2 without a
+scheme flag. Entity confidence is the minimum piece score (the weakest
+link, honest about uncertainty), surfaced as `rawConfidence` — raw model
+softmax, explicitly uncalibrated until M8, the same honesty rule M3 set
+for Stage 1.
+
+**Corpus ground truth (deviation, recorded).** M6's instruction assumed
+M3's corpus already carried PERSON/ORG/LOCATION labels; it did not — M3
+planted only Stage 1 identifier types. Rather than build a separate NER
+corpus (explicitly ruled out), the M3 generator was extended: 25-language
+name/org/location banks in native scripts, carrier templates, and
+planting wired into the existing document kinds, with the NER value
+stream forked off the document seed (`seed ^ 0x4e4552`) so Stage 1
+value draws stay byte-identical per seed and all M3 baselines remain
+comparable.
+
 ## Status after M2
 
 Stage 1 is complete: 113 registered detectors — 57 NATIONAL_ID and 19
@@ -504,6 +595,41 @@ and zero-coverage on IME and hover flows. Deviations from SPEC's web
 section, by milestone design: no sensitivity profile switcher and no
 calibrated confidence or explanations until M8; names/addresses absent
 until M6/M7 — the UI says so rather than faking them.
+
+## Status after M6
+
+Stage 2 multilingual NER is complete: a 14-run benchmark matrix over
+five candidate models (BENCHMARKS.md) selected
+`jiting/xlm-roberta-base-ner-hrl_onnx` at q8, pinned by content-addressed
+revision (D16); core gained an injected-classifier NER module —
+piece-to-character alignment, IOB1/IOB2 decoding, silent-truncation-proof
+chunking, hard-deadline fail-closed engine, and `runStage2` emitting
+`Stage2Candidate`s through the same offset-map path as Stage 1 (D17).
+The eval corpus now plants PERSON/ORG/LOCATION in native scripts across
+all 25 languages via a forked RNG stream, leaving every Stage 1 metric
+byte-identical (verified in the regenerated baseline). 37 new tests
+bring the suite to 647, including nine-script alignment, chunk-boundary
+coverage, timeout and load-failure fail-closure, and offset mapping
+through NFKC expansions and stripped invisibles.
+
+Official combined run (2,600 docs, 1,393 NER spans): PERSON
+98.7 P / 98.5 R-partial / F1 98.6; ORG 80.0 / 88.4 / 84.0; LOCATION
+59.1 / 100.0 / 74.3; per-language F1 80.5 (th) to 97.6 (uk), no language
+below 80. `nerPerType` regression floors now bind in the eval CLI's
+`--ner` run. LOCATION's precision is dominated by a measured scoring
+artifact — on the bench corpus, 52 of its 58 false positives sit on
+STREET_ADDRESS ground truth and zero are hallucinations; only 16 of 956
+NER predictions (1.7%, all ORG) match no ground truth at all, and the
+hard negatives produced zero NER false positives. The M3
+NATIONAL_ID/TAX_ID collision problem is measurably unaffected (identical
+metrics; 0 of 651 identifier predictions overlap any Stage 2 span);
+cross-type overlap resolution is M8's job, with the numbers above as its
+starting facts.
+
+Deferred by design: Web Worker hosting and model bundling into the
+extension (M9, per D16 core stays environment-agnostic), gazetteers and
+verification (M7), calibration of the raw softmax `rawConfidence` and
+overlap fusion (M8).
 
 ## Standing contracts (established in M1)
 

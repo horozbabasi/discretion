@@ -151,6 +151,25 @@ describe('buildStructureIndex — fail-open coverage gaps (M7 review)', () => {
     expect(keyFor('client.setApiKey("Rz8Km2Qx9LpWvNc4Tb");\n', 'Rz8Km2Qx9LpWvNc4Tb')).toBe('ApiKey');
   });
 
+  it('reads every key of a minified single-line JSON payload', () => {
+    // The line-anchored form found only the first key, so an `ssn` label in a
+    // one-line API response — the ordinary shape of a log entry — was lost.
+    const minified = '{"name":"Ann Meyer","ssn":"123-45-6789","zip":"90210"}';
+    expect(keyFor(minified, '123-45-6789')).toBe('ssn');
+    expect(keyFor(minified, '90210')).toBe('zip');
+  });
+
+  it('reads a CJK form label whose colon is followed directly by the value', () => {
+    // Stage 0 folds the full-width colon to ASCII but leaves no space, which
+    // the spaced colon form requires. This is a Japanese My Number.
+    expect(keyFor('お客様情報\n個人番号:123456789012\n氏名:山田太郎\n', '123456789012')).toBe('個人番号');
+  });
+
+  it('does not let an unspaced ASCII colon create a key', () => {
+    // The non-ASCII requirement is what keeps a bare time out of scope.
+    expect(buildStructureIndex('Meeting at 09:30 tomorrow\n').slots).toEqual([]);
+  });
+
   it('does not let arithmetic parse as an assignment', () => {
     // Widening the assignment form must not make `a+b=c` key on `b`.
     const index = buildStructureIndex('let total = a+b\nif (x-1 == y) { return 5 }\n');

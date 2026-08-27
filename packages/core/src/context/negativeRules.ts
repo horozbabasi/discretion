@@ -178,9 +178,25 @@ function measurementPrecedes(line: string, before: number): boolean {
   return /\d(?:[.,]\d+)?\s*[%\p{L}/]*\s*$/u.test(line.slice(0, before));
 }
 
-/** Vocabulary that marks a dotted numeric run as a software version. */
-const VERSION_VOCABULARY =
-  /\b(v|ver|vers|version|versione|versión|versao|versão|release|build|upgrade[sd]?|updated?|bump(?:ed)?|rc|alpha|beta|snapshot|patch|semver|tag)\b|-(?:rc|alpha|beta|snapshot)\b/i;
+/**
+ * Vocabulary that marks a dotted numeric run as a software version, required
+ * IMMEDIATELY BEFORE the run rather than anywhere on the line.
+ *
+ * Line membership was far too weak. The review executed an Argentine DNI
+ * suppressed because the line said "Updated", a Swiss AHV number suppressed
+ * because an HR sentence said "release", and a patient chart number
+ * suppressed because the line mentioned a fentanyl "patch". A line is not a
+ * unit of meaning — a log line or a minified JSON document can be thousands
+ * of characters — so generic prose verbs are gone and what remains must be
+ * adjacent.
+ */
+// `ver` is deliberately absent: it is an ordinary verb in Spanish and
+// Portuguese ("para que puedas ver 20.123.456"), and the review found that
+// class of collision is exactly how identifiers get suppressed.
+const VERSION_INTRODUCER = /\b(?:version|versione|versión|versao|versão|semver)\s+$/i;
+
+/** Attached pre-release suffixes: `-rc.2`, `-beta`, `-SNAPSHOT`. */
+const PRERELEASE_SUFFIX = /^-(?:rc|alpha|beta|snapshot|dev|pre)\b/i;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Rules
@@ -308,10 +324,21 @@ const hostPort: NegativeRule = {
     if (Number(value) > MAX_PORT) return false;
     if (text[start - 1] !== ':') return false;
 
-    // The left side must be a HOST, not any dotted token. Without this,
-    // `exports/customers.csv:10001` and `kunde.adresse.plz:10115` both read as
-    // host and port and suppressed real postal codes.
-    return looksLikeHostName(text.slice(0, start - 1));
+    // The whitespace-delimited token containing the candidate must be
+    // EXACTLY host:port. Testing only the text to the left let a
+    // colon-delimited record — `jane.doe@corp.com:8001:Zurich` — read as a
+    // host and port and suppress a real postal code, because the left side
+    // genuinely ends in a host name.
+    let tokenStart = start;
+    while (tokenStart > 0 && !/\s/.test(text[tokenStart - 1] ?? '')) tokenStart -= 1;
+    let tokenEnd = end;
+    while (tokenEnd < text.length && !/\s/.test(text[tokenEnd] ?? '')) tokenEnd += 1;
+    const token = text.slice(tokenStart, tokenEnd).replace(/[:.,;/]+$/, '');
+
+    const hostPort = /^([A-Za-z0-9][A-Za-z0-9.-]*):([1-9]\d{1,4})$/.exec(token);
+    if (hostPort === null || hostPort[2] !== value) return false;
+
+    return looksLikeHostName(hostPort[1] ?? '');
   },
 };
 
@@ -380,9 +407,9 @@ const versionNumber: NegativeRule = {
   appliesTo: NUMERIC_IDENTIFIERS,
   action: 'suppress',
   principle:
-    'A dotted numeric run is a release version — not an identifier — when the line it sits on carries explicit version vocabulary.',
+    'A dotted numeric run of three or more components is a release version when a version introducer sits immediately before it, or it carries an attached pre-release suffix — and only when no detector has claimed the whole run.',
   risk:
-    'A dotted identifier on a line that also discusses a release could be suppressed. Requiring version vocabulary on the same line is what keeps ordinary identifier lines out of scope.',
+    'A dotted identifier written directly after a version introducer could be suppressed. The proper-fragment condition means a validated identifier is never suppressed, since a detector that claimed the whole run has already judged it.',
   test(ctx) {
     const { text } = ctx.line;
     const { start, end } = localSpan(ctx);
@@ -392,18 +419,34 @@ const versionNumber: NegativeRule = {
     while (to < text.length && /[\d.]/.test(text[to] ?? '')) to += 1;
     const run = text.slice(from, to);
 
-    const dotted = /^\d+(?:\.\d+)+$/.test(run);
-    if (!dotted) return false;
+    // TIGHTENED TWICE after the M7 safety review (ARCHITECTURE.md D18). Four
+    // conditions, each closing an executed leak.
 
-    // TIGHTENED after the M7 adversarial safety review (ARCHITECTURE.md D18).
-    // Shape alone cannot tell a version from an identifier: several national
-    // and tax identifiers are written as dot-separated digit groups, and the
-    // review executed a dotted German Steuer-ID (12.345.678.901) being
-    // suppressed on shape. Requiring the LINE to carry version vocabulary
-    // keeps the corpus's version negatives suppressed — they read "Upgraded …
-    // from v1.5.3 to 3.12.7-rc.2 in build …", which is saturated with it —
-    // while an identifier line carries none.
-    return VERSION_VOCABULARY.test(text);
+    // (1) Three or more components. Two-component runs are decimals: the
+    //     review executed an NPI at `1245319599.00` and a routing number at
+    //     `021000021.00` being read as versions.
+    if (!/^\d+(?:\.\d+){2,}$/.test(run)) return false;
+
+    // An ATTACHED marker — a `-rc.2` suffix, or a `v` with no space before the
+    // digits — is conclusive: no identifier is printed that way. A spaced
+    // introducer ("version 1.2.3") is weaker, because ordinary words abut
+    // numbers all the time.
+    const prerelease = PRERELEASE_SUFFIX.test(text.slice(to));
+    const attachedV = /[vV]$/.test(text.slice(0, from));
+    const conclusive = prerelease || attachedV;
+
+    // (2) Absent a conclusive marker, the candidate must be a PROPER FRAGMENT
+    //     of the run. If a detector claimed the whole dotted value it has
+    //     already judged it — usually against a checksum — and this rule has
+    //     no standing to overrule it. Argentine DNI (20.123.456), Swiss AHV
+    //     (756.1234.5678.97) and Brazilian CPF are all claimed whole by
+    //     validating detectors.
+    if (from === start && to === end && !conclusive) return false;
+
+    // (3) Otherwise a version introducer must sit immediately before the run.
+    //     Adjacency is the point: mere presence on the line let "Updated",
+    //     "release" and a legal citation's "v." suppress identifiers.
+    return conclusive || VERSION_INTRODUCER.test(text.slice(0, from));
   },
 };
 

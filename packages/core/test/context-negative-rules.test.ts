@@ -162,6 +162,48 @@ describe('negative rules — round-two leak classes (M7 review)', () => {
   }
 });
 
+/**
+ * Round three. The version rule proved the most dangerous of the five: many
+ * national identifiers are printed as dot-separated groups, and "version
+ * vocabulary somewhere on the line" turned ordinary words — Updated, release,
+ * patch, and the `v.` of a legal citation — into suppression triggers.
+ */
+describe('negative rules — round-three leak classes (M7 review)', () => {
+  const leaks: readonly [string, string, string, EntityType][] = [
+    ['argentine DNI on a line saying Updated', 'Updated the customer record for DNI 20.123.456 after the call.', '20.123.456', 'NATIONAL_ID'],
+    ['argentine DNI in a legal citation', 'Gomez v. ANSES: el actor DNI 20.123.456 reclama el reajuste.', '20.123.456', 'NATIONAL_ID'],
+    ['argentine DNI on a line saying beta', 'In the beta tenant the account for DNI 20.123.456 fails validation.', '20.123.456', 'NATIONAL_ID'],
+    ['swiss AHV on a line saying update', "Please update the customer's Swiss AHV number 756.1234.5678.97 in the CRM.", '756.1234.5678.97', 'NATIONAL_ID'],
+    ['swiss AHV on a line saying release', 'We cannot release the file until AHV 756.9217.0769.85 is confirmed.', '756.9217.0769.85', 'NATIONAL_ID'],
+    ['chart number on a line saying patch', 'Pt on fentanyl patch; chart no 12.345.678 needs review.', '12.345.678', 'HEALTH_DATA'],
+    // A two-component run is a decimal, not a version.
+    ['npi followed by a decimal amount', 'Provider NPI 1245319599.00 billed 250.00 paid', '1245319599', 'US_NPI'],
+    ['routing number followed by a decimal', 'ACH batch updated: 021000021.00 credited', '021000021', 'US_ROUTING_NUMBER'],
+    // host:port must be the whole token, not merely the left side.
+    ['postcode in a colon-delimited export', 'jane.doe@corp.com:8001:Zurich', '8001', 'POSTAL_CODE'],
+    ['email in a JDBC user property', 'jdbc:sqlserver://sql01.corp.local:1433;databaseName=HR;user=jane.doe@corp.com;password=x', 'jane.doe@corp.com', 'EMAIL'],
+    ['ssn in a semicolon-delimited property', 'svc=https://hr.corp.local:8443;employeeSsn=123-45-6789;', '123-45-6789', 'NATIONAL_ID'],
+    ['polish postcode after a house number', 'Adres dostawy: ul. Marszalkowska 1 (00-950) Warszawa', '00-950', 'POSTAL_CODE'],
+    // Deliberate evasion: typing a '+' must not buy suppression.
+    ['a bare + typed before an identifier', 'here is the data you asked for: +123456789', '123456789', 'NATIONAL_ID'],
+    ['postcode after a tab in a TSV paste', 'Phone\tPostcode\n+1 555 0199\t12345', '12345', 'POSTAL_CODE'],
+  ];
+
+  for (const [label, doc, value, type] of leaks) {
+    it(`keeps a real identifier: ${label}`, () => {
+      expect(suppressors(doc, value, type)).toEqual([]);
+    });
+  }
+
+  it('still suppresses genuine version fragments', () => {
+    const doc = 'Upgraded from v1.5.3 to 3.12.7-rc.2 in build 20260813.5';
+    // Introduced by `v`, and a proper fragment of the run.
+    expect(suppressors(doc, '1.5', 'NATIONAL_ID')).toContain('version-number');
+    // Carries an attached pre-release suffix.
+    expect(suppressors(doc, '12.7', 'NATIONAL_ID')).toContain('version-number');
+  });
+});
+
 describe('negative rules — boundaries', () => {
   it('does not suppress an address in a URI path or query', () => {
     const query = 'https://x.com/c?email=john.doe@example.com';

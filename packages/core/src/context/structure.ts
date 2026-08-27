@@ -147,6 +147,29 @@ const BLOCK_SCALAR = /^[|>][+-]?\d*$/;
 const DIFF_LINE = /^[+\- ]/;
 const DIFF_DOCUMENT = /^(?:@@ -\d+|--- a\/|\+\+\+ b\/|diff --git )/m;
 
+/**
+ * `"key": value` anywhere on a line, for minified JSON.
+ *
+ * The line-anchored form finds only the first key of a single-line payload,
+ * and a one-line JSON body is what an API response or a log entry actually
+ * looks like — the review executed `{"name":…,"ssn":"123-45-6789",…}` and
+ * found the `ssn` label lost entirely.
+ */
+const JSON_KEY_INLINE = /(["'`])([^"'`\\]{1,48})\1\s*:\s*/g;
+
+/**
+ * A form label whose colon is followed immediately by its value.
+ *
+ * CJK forms write `個人番号：123456789012`; Stage 0 folds the full-width colon
+ * to ASCII but leaves no space, which the spaced colon form requires. The key
+ * must contain a non-ASCII letter, which is what keeps `09:30` and ordinary
+ * ASCII prose out of scope.
+ */
+const COLON_KEY_UNSPACED = /^[\s>-]*([\p{L}][\p{L}\p{M}\p{N} _.\\/-]{0,47}?)\s*:(?=\S)/u;
+
+/** True when the key carries a non-ASCII letter, which gates the form above. */
+const HAS_NON_ASCII = /\P{ASCII}/u;
+
 /** `machine host` / `login user` / `password secret` — .netrc and friends. */
 const NETRC_PAIR = /^\s*(machine|login|password|account|default)\s+(\S.*)$/;
 const NETRC_DOCUMENT = /^\s*(?:machine\s+\S+|default)\s*$/m;
@@ -239,7 +262,47 @@ function keyValueSlot(line: Line): StructuredSlot | undefined {
     }
   }
 
+  const unspaced = COLON_KEY_UNSPACED.exec(line.text);
+  if (unspaced?.[1] !== undefined) {
+    const key = unspaced[1].trim();
+    if (key.length > 0 && key.length <= MAX_KEY_LENGTH && HAS_NON_ASCII.test(key)) {
+      return buildSlot(line, key, unspaced[0].length, 'form-label');
+    }
+  }
+
   return undefined;
+}
+
+/** Every `"key": value` pair on a line — the minified-JSON case. */
+function jsonInlineSlots(line: Line): StructuredSlot[] {
+  const out: StructuredSlot[] = [];
+  const pattern = new RegExp(JSON_KEY_INLINE.source, JSON_KEY_INLINE.flags);
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(line.text)) !== null) {
+    const key = match[2];
+    if (key === undefined) continue;
+    const valueStart = match.index + match[0].length;
+    const range = trimValue(line.text, valueStart, jsonValueEnd(line.text, valueStart));
+    if (range.end <= range.start) continue;
+    out.push({
+      key,
+      kind: 'json',
+      valueStart: line.offset + range.start,
+      valueEnd: line.offset + range.end,
+    });
+  }
+  return out;
+}
+
+/** End of a JSON value: the closing quote, or the next separator. */
+function jsonValueEnd(text: string, from: number): number {
+  const opener = text[from];
+  if (opener !== undefined && VALUE_WRAPPERS.has(opener)) {
+    const closing = text.indexOf(opener, from + 1);
+    return closing === -1 ? text.length : closing + 1;
+  }
+  const separator = text.slice(from).search(/[,}\]]/);
+  return separator === -1 ? text.length : from + separator;
 }
 
 function buildSlot(line: Line, rawKey: string, valueOffsetInLine: number, kind: StructureKind): StructuredSlot {
@@ -522,6 +585,7 @@ export function buildStructureIndex(text: string): StructureIndex {
     if (kv !== undefined && kv.valueEnd > kv.valueStart) slots.push(kv);
     slots.push(...codeAssignmentSlots(line));
     slots.push(...inlineSlots(line));
+    slots.push(...jsonInlineSlots(line));
   }
   slots.push(...blockScalarSlots(lines));
   slots.push(...netrcSlots(text, lines));

@@ -51,7 +51,11 @@ registerDetector({
   id: 'national-id-au-medicare',
   entityType: 'NATIONAL_ID',
   regions: ['AU'],
-  pattern: /\b([2-6]\d{3})[ ]?(\d{5})[ ]?(\d)[ ]?(\d)?\b/g,
+  // The optional issue number is grouped WITH its separating space. Written
+  // as `[ ]?(\d)?` the space could be consumed while the digit matched
+  // nothing, leaving trailing whitespace inside the emitted span — which
+  // masking would then overwrite along with the identifier.
+  pattern: /\b([2-6]\d{3})[ ]?(\d{5})[ ]?(\d)(?:[ ]?(\d))?\b/g,
   baseConfidence: CONFIDENCE.HIGH,
   description: 'Australian Medicare numbers with the weighted mod-10 check digit.',
   validate(ctx): ValidationResult {

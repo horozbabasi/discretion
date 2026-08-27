@@ -58,7 +58,13 @@ registerDetector({
   id: 'connection-string',
   entityType: 'CONNECTION_STRING',
   regions: [GLOBAL_REGION],
-  pattern: /\b[a-zA-Z][a-zA-Z0-9+]*:\/\/[^\s"'<>]*:[^\s"'<>@]*@[^\s"'<>]{2,300}/g,
+  // Commas and pipes terminate the URI, for the reason recorded on the
+  // credentialled-URL detector: in CSV rows and pipe-delimited logs they are
+  // field boundaries, and an over-long span makes masking overwrite the
+  // user's adjacent cells. `;` is deliberately NOT excluded — a JDBC
+  // connection string carries its properties after one, and cutting there
+  // would truncate the credential this detector exists to find.
+  pattern: /\b[a-zA-Z][a-zA-Z0-9+]*:\/\/[^\s"'<>,|]*:[^\s"'<>,|@]*@[^\s"'<>,|]{2,300}/g,
   baseConfidence: CONFIDENCE.HIGH,
   description: 'Database connection URIs carrying a password in userinfo; whole-URI span.',
   validate: validateConnectionString,

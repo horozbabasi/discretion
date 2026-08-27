@@ -164,7 +164,16 @@ function validateMrz(ctx: ValidationContext): ValidationResult {
 
   if (typeof result === 'string') return invalid(result);
 
+  // The pattern anchors on `(?:^|\n)` and therefore CONSUMES the preceding
+  // newline, which belongs to the line before the MRZ rather than to the MRZ
+  // itself. Left in the span it would be masked along with the identifier,
+  // splicing the zone onto whatever came before it. Narrow past it — this is
+  // what `span` exists for: anchoring context the pattern needed but which
+  // must not be masked.
+  const leading = /^\s+/.exec(ctx.match[0])?.[0].length ?? 0;
+
   return valid({
+    ...(leading > 0 ? { span: { start: ctx.start + leading, end: ctx.end } } : {}),
     confidence: CONFIDENCE.MAXIMUM,
     metadata: {
       format: result.format,

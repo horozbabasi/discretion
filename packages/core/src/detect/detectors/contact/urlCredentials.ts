@@ -111,7 +111,13 @@ registerDetector({
   id: 'url-with-credentials',
   entityType: 'URL_WITH_CREDENTIALS',
   regions: [GLOBAL_REGION],
-  pattern: /\b[A-Za-z][A-Za-z0-9+.-]{1,15}:\/\/[^\s"'<>]{3,700}/g,
+  // Commas and pipes terminate the URI. RFC 3986 permits a comma as a
+  // sub-delimiter, but in the shapes URIs actually appear in — CSV rows,
+  // pipe-delimited logs, markdown table cells — an unencoded one is a FIELD
+  // boundary, and swallowing it made this span eat the neighbouring cells.
+  // That is not merely a mislabelled span: masking OVERWRITES the span, so an
+  // over-long one destroys the user's adjacent data.
+  pattern: /\b[A-Za-z][A-Za-z0-9+.-]{1,15}:\/\/[^\s"'<>,|]{3,700}/g,
   baseConfidence: CONFIDENCE.HIGH,
   description: 'URLs carrying credentials in userinfo or query parameters; whole-URL span.',
   validate: validateUrlCredentials,

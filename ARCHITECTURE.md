@@ -514,6 +514,79 @@ stream forked off the document seed (`seed ^ 0x4e4552`) so Stage 1
 value draws stay byte-identical per seed and all M3 baselines remain
 comparable.
 
+### D18 — Suppression is reviewed adversarially before it ships (M7)
+
+**The rule.** No Stage 3 suppression rule is wired into the pipeline
+until someone has tried to break it by constructing a REAL sensitive
+value the rule wrongly suppresses, and EXECUTED that case against the
+rule. A suppressed candidate is never sent to the review UI and never
+masked, so a wrong suppression is a silent leak — the worst failure
+this product has. False positives are visible and annoying; a wrong
+suppression is invisible and harmful, and the asymmetry justifies the
+extra process.
+
+**Why executed cases, not reasoning.** Reasoning about these rules is
+unreliable in a specific, repeatable way: they scan raw characters, and
+the spans they receive come from detectors whose exact boundaries are
+easy to misremember. The `uri-authority` finding below is the proof —
+by inspection the rule looked unsafe, and by execution it turned out
+safe for the wrong reason. Neither conclusion was reachable without
+running it.
+
+**What the first review found.** Three fail-open defects, each executed
+before and after the fix, each now pinned by a regression test in
+`context-negative-rules.test.ts`. Every fix TIGHTENS its rule rather
+than removing it: each rule exists to kill a large measured error
+class, and all four of those classes still suppress correctly
+afterwards.
+
+1. **`bracketed-numeric-range` suppressed hyphenated national
+   identifiers.** Running `Borger (010101-1234) er registreret.`
+   showed a correctly detected Danish CPR number being suppressed;
+   Korean RRN (`901010-1234567`) and Swedish personnummer behave the
+   same. A hyphenated digit pair *is* the written form of several
+   national identifiers, so shape alone cannot separate one from a
+   reference interval. The fix adds the evidence that actually makes an
+   interval an interval: both sides at most four digits (identifier
+   groups are longer), an ascending range, and a measured quantity
+   before the bracket. A US SSN was already safe — it carries two
+   hyphens, not one — which is luck, not design, and is now pinned.
+
+2. **`uri-authority` was safe only by accident.** Its stated argument
+   was that a suppressed address stays protected because another
+   detector reports the whole URI. Measuring that claim rather than
+   trusting it showed it is FALSE for a userinfo URI with no password:
+   for `https://john.doe@example.com`, EMAIL is the only detector that
+   fires, because the credentialled-URL and connection-string detectors
+   both require a `user:pass@` form. Suppressing there would report the
+   document clean. It did not leak in practice only because the EMAIL
+   detector's span includes the leading `//`, which falls outside the
+   authority and made the rule miss. A span defect in another module is
+   not a safety argument — it could be fixed tomorrow, correctly, and
+   silently open the leak. EMAIL is now yielded only when a password
+   component is present, which is exactly the condition under which the
+   other detectors fire.
+
+3. **`version-number` suppressed dot-formatted tax identifiers.** A
+   dotted German Steuer-ID was suppressed on shape alone. Several
+   national and tax identifiers are written as dot-separated digit
+   groups, so the shape is genuinely ambiguous. The fix requires the
+   LINE to carry version vocabulary — the corpus's version negatives
+   read "Upgraded … from v1.5.3 to 3.12.7-rc.2 in build …" and are
+   saturated with it, while an identifier line carries none.
+
+**The standing consequence.** `NegativeRule.risk` is a required field
+holding prose, not an optional note, and a test asserts every rule
+states both its principle and its risk. A suppression rule whose author
+cannot name what it might wrongly suppress has not been thought
+through.
+
+**A second, quieter consequence.** Once GENERIC_SECRET requires an
+assignment signal to be emitted at all (D19), every key/value form
+`structure.ts` fails to recognise becomes a dropped real secret. Its
+coverage gaps are therefore fail-open too, and are reviewed on the same
+terms as the suppression rules rather than as mere missing features.
+
 ## Status after M2
 
 Stage 1 is complete: 113 registered detectors — 57 NATIONAL_ID and 19

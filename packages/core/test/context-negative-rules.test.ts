@@ -204,6 +204,60 @@ describe('negative rules — round-three leak classes (M7 review)', () => {
   });
 });
 
+/**
+ * Round four measured the OTHER direction: whether the tightenings had gone
+ * so far that the rules stopped removing the errors they exist for. Two had.
+ * A suppression rule that suppresses nothing is not safe, it is useless — and
+ * these cases pin both edges at once.
+ */
+describe('negative rules — the tightenings did not disable the rules', () => {
+  const stillSuppressed: readonly [string, string, string, EntityType][] = [
+    // host-port: `key=` prefixes and quotes are the two commonest config shapes.
+    ['host:port under a config key', 'db.host=pg-primary.eu-west.internal.example.net:5432', '5432', 'POSTAL_CODE'],
+    ['host:port under a cache key', 'cache.host=redis-primary.prod.example.com:10001', '10001', 'POSTAL_CODE'],
+    ['host:port in a quoted value', 'proxy = "gateway.corp.example.com:3128"', '3128', 'POSTAL_CODE'],
+    ['host:port in a quoted yaml list item', '- "grafana.example.com:3000"', '3000', 'POSTAL_CODE'],
+    // version-number: changelogs, tags and dependency pins.
+    ['version in a changelog sentence', 'Upgraded the service from 1.5.3 to 2.10.201000021 today', '201000021', 'TAX_ID'],
+    ['version in a release heading', '## Release 2.10.201000021', '201000021', 'TAX_ID'],
+    ['version in a docker tag', 'docker pull acme/api:2.10.201000021', '201000021', 'TAX_ID'],
+    ['version in a dependency pin', 'requests==2.10.201000021', '201000021', 'TAX_ID'],
+    ['version in a markdown table cell', '| 2.10.201000021 |', '201000021', 'TAX_ID'],
+  ];
+
+  for (const [label, doc, value, type] of stillSuppressed) {
+    it(`still suppresses: ${label}`, () => {
+      expect(suppressors(doc, value, type).length).toBeGreaterThan(0);
+    });
+  }
+
+  const stillKept: readonly [string, string, string, EntityType][] = [
+    // Polish postal codes are written NN-NNN by national standard, so most
+    // carry no leading zero and the zero-pad guard alone did not save them.
+    ['polish postcode in an address', 'Sklep nr 12 Gdansk (80-180) otwarte codziennie', '80-180', 'POSTAL_CODE'],
+    ['polish postcode, krakow', 'Sklep nr 12 Krakow (31-548) otwarte codziennie', '31-548', 'POSTAL_CODE'],
+    // A single space is enough to fuse a phone and the next column.
+    ['french postcode after a phone', 'Tel +33 1 23 45 67 75008', '75008', 'POSTAL_CODE'],
+    ['german postcode after a phone', 'Kontakt +49 30 901820 10115 Berlin', '10115', 'POSTAL_CODE'],
+  ];
+
+  for (const [label, doc, value, type] of stillKept) {
+    it(`keeps a real identifier: ${label}`, () => {
+      expect(suppressors(doc, value, type)).toEqual([]);
+    });
+  }
+
+  it('still suppresses reference intervals, which carry a real unit', () => {
+    for (const [doc, value] of [
+      ['HbA1c 196.0 mmol/L [65-156]', '65-156'],
+      ['Glucose 5.4 mg/dL [70-99]', '70-99'],
+      ['HbA1c 5.7 % [40-60]', '40-60'],
+    ] as const) {
+      expect(suppressors(doc, value, 'POSTAL_CODE')).toContain('bracketed-numeric-range');
+    }
+  });
+});
+
 describe('negative rules — boundaries', () => {
   it('does not suppress an address in a URI path or query', () => {
     const query = 'https://x.com/c?email=john.doe@example.com';

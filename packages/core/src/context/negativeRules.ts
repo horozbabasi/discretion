@@ -27,6 +27,8 @@
  * what stops Stage 3 quietly absorbing the next milestone's work.
  */
 
+import { parsePhoneNumberFromString } from 'libphonenumber-js/max';
+
 import type { EntityType } from '../types.js';
 import type { NegativeRule, RuleContext } from './types.js';
 
@@ -66,6 +68,8 @@ function localSpan(ctx: RuleContext): { start: number; end: number } {
 
 interface PhoneRun {
   readonly run: string;
+  /** The part of the run before the candidate. */
+  readonly prefix: string;
   /** Digits of the run lying before the candidate. */
   readonly digitsBefore: number;
   /** Digits of the run lying after the candidate. */
@@ -89,6 +93,7 @@ function phoneRunAround(ctx: RuleContext): PhoneRun | undefined {
 
   return {
     run: text.slice(from, to),
+    prefix: text.slice(from, start),
     digitsBefore: countDigits(text.slice(from, start)),
     digitsAfter: countDigits(text.slice(end, to)),
   };
@@ -175,27 +180,37 @@ function bracketedAround(ctx: RuleContext): { inner: string; open: number } | un
  * identifier that merely happens to sit in brackets.
  */
 function measurementPrecedes(line: string, before: number): boolean {
-  return /\d(?:[.,]\d+)?\s*[%\p{L}/]*\s*$/u.test(line.slice(0, before));
+  // A REAL unit is required, immediately after a number. The earlier version
+  // accepted any trailing letters (and matched zero-width), so a Polish
+  // address — "Sklep nr 12 Gdansk (80-180)" — read as a measured quantity and
+  // the postal code was suppressed. A bare number is deliberately NOT enough:
+  // a number directly before a bracket is indistinguishable from a house
+  // number, which is exactly the address shape.
+  const tokens = line.slice(0, before).trimEnd().split(/\s+/);
+  const unit = tokens[tokens.length - 1];
+  const quantity = tokens[tokens.length - 2];
+  if (unit === undefined || quantity === undefined) return false;
+  return UNIT_TOKEN.test(unit) && /^\d+(?:[.,]\d+)?$/.test(quantity);
 }
 
 /**
- * Vocabulary that marks a dotted numeric run as a software version, required
- * IMMEDIATELY BEFORE the run rather than anywhere on the line.
- *
- * Line membership was far too weak. The review executed an Argentine DNI
- * suppressed because the line said "Updated", a Swiss AHV number suppressed
- * because an HR sentence said "release", and a patient chart number
- * suppressed because the line mentioned a fentanyl "patch". A line is not a
- * unit of meaning — a log line or a minified JSON document can be thousands
- * of characters — so generic prose verbs are gone and what remains must be
- * adjacent.
+ * Units a measured quantity is written in. Tokenized rather than scanned
+ * backwards because units themselves contain digits and slashes (`x10^9/L`),
+ * which defeats any anchored character-class scan.
  */
-// `ver` is deliberately absent: it is an ordinary verb in Spanish and
-// Portuguese ("para que puedas ver 20.123.456"), and the review found that
-// class of collision is exactly how identifiers get suppressed.
-const VERSION_INTRODUCER = /\b(?:version|versione|versión|versao|versão|semver)\s+$/i;
+const UNIT_TOKEN =
+  /^(?:%|°[CF]?|[x×]10\^?-?\d+(?:\/[A-Za-zµ]{1,6})?|mmHg|kPa|bpm|fL|pg|kcal|IU|U|(?:[mkcdµunp]?(?:mol|g|L|l|m|s|Hz|Pa|eq|Gy|Sv)))(?:\/(?:[mkcdµunp]?[Lldgm]\d?|min|h|24h))?$/i;
 
-/** Attached pre-release suffixes: `-rc.2`, `-beta`, `-SNAPSHOT`. */
+/**
+ * Attached pre-release suffixes: `-rc.2`, `-beta`, `-SNAPSHOT`.
+ *
+ * Only ATTACHED markers are consulted. An earlier revision matched version
+ * vocabulary near the run and then anywhere on the line; both were wrong in
+ * opposite directions — line membership let "Updated", "release" and a legal
+ * citation's "v." suppress national identifiers, and requiring adjacency gave
+ * back the changelog and Docker-tag errors the rule exists to remove. The
+ * structural conditions in the rule carry the decision instead.
+ */
 const PRERELEASE_SUFFIX = /^-(?:rc|alpha|beta|snapshot|dev|pre)\b/i;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -236,15 +251,31 @@ const phoneNumberInterior: NegativeRule = {
     // the column next to a '+49' phone column in a space-aligned paste.
     if (/\t|\s{2,}/.test(run)) return false;
 
-    const digits = countDigits(run);
-    if (digits < 7 || digits > 15) return false;
+    // The run must be an ACTUAL phone number, not merely phone-shaped. A digit
+    // count between 7 and 15 was far too loose: single-space column layouts
+    // fuse a phone and the next column into one run that still fits the
+    // window, and the review executed 'Tel +33 1 23 45 67 75008' suppressing a
+    // French postal code. libphonenumber is already bundled for the PHONE
+    // detector, so this is the same authority Stage 1 uses, not a new one.
+    if (parsePhoneNumberFromString(run)?.isValid() !== true) return false;
 
     // INTERIORITY. The rule's whole claim is that the candidate is PART OF a
     // longer phone number. If the candidate accounts for every digit in the
     // run, it is not interior to anything and the claim is false — that is
     // how a standalone routing number, NPI or card on a '+' line was being
     // suppressed.
-    return phone.digitsBefore + phone.digitsAfter >= 1;
+    if (phone.digitsBefore + phone.digitsAfter < 1) return false;
+
+    // A TRAILING candidate whose prefix is ALREADY a complete valid number is
+    // a separate field that a single space fused onto the phone. Germany's
+    // variable-length numbering makes '+49 30 901820 10115' parse as valid in
+    // full, so validity alone could not separate the postal code from the
+    // number; asking whether the phone was already complete without it can.
+    if (phone.digitsAfter === 0 && parsePhoneNumberFromString(phone.prefix.trim())?.isValid() === true) {
+      return false;
+    }
+
+    return true;
   },
 };
 
@@ -333,7 +364,18 @@ const hostPort: NegativeRule = {
     while (tokenStart > 0 && !/\s/.test(text[tokenStart - 1] ?? '')) tokenStart -= 1;
     let tokenEnd = end;
     while (tokenEnd < text.length && !/\s/.test(text[tokenEnd] ?? '')) tokenEnd += 1;
-    const token = text.slice(tokenStart, tokenEnd).replace(/[:.,;/]+$/, '');
+
+    // Normalize the token before requiring the host:port shape. Taking it
+    // verbatim was over-tight and gave back most of the errors this rule
+    // exists to remove: `db.host=pg.example.net:5432` and
+    // `proxy = "gateway.example.com:3128"` are the two commonest config and
+    // log shapes, and a `key=` prefix or a quote made both fail.
+    const token = text
+      .slice(tokenStart, tokenEnd)
+      .replace(/^[^\s"'=]*=/, '')
+      .replace(/^["'`[]+/, '')
+      .replace(/["'`\]]+$/, '')
+      .replace(/[:.,;/]+$/, '');
 
     const hostPort = /^([A-Za-z0-9][A-Za-z0-9.-]*):([1-9]\d{1,4})$/.exec(token);
     if (hostPort === null || hostPort[2] !== value) return false;
@@ -441,12 +483,15 @@ const versionNumber: NegativeRule = {
     //     no standing to overrule it. Argentine DNI (20.123.456), Swiss AHV
     //     (756.1234.5678.97) and Brazilian CPF are all claimed whole by
     //     validating detectors.
-    if (from === start && to === end && !conclusive) return false;
-
-    // (3) Otherwise a version introducer must sit immediately before the run.
-    //     Adjacency is the point: mere presence on the line let "Updated",
-    //     "release" and a legal citation's "v." suppress identifiers.
-    return conclusive || VERSION_INTRODUCER.test(text.slice(0, from));
+    //
+    // These two conditions are the whole rule. An earlier revision also
+    // required version vocabulary near the run, which was measured to be
+    // over-tight: it gave back most of the false positives the rule exists to
+    // remove — changelogs, release headings, Docker tags, dependency pins and
+    // markdown table cells all stopped being suppressed — while adding no
+    // safety, because condition (2) already protects every validated
+    // identifier. Fewer conditions, same protection, and the errors die again.
+    return from !== start || to !== end || conclusive;
   },
 };
 

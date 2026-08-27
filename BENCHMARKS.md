@@ -269,3 +269,69 @@ fixed, per the milestone boundary.
   moves into the extension's Web Worker.
 - Load time in these runs conflates first-run network download with ONNX
   session init; clean cold-start load in the browser is an M9 measurement.
+
+---
+
+## M7 — Stage 3 context scoring (in progress)
+
+This section is written as the stage is built and is extended when Stage 2b
+and Stage 2c land. The numbers below are Stage 1 + Stage 3 on the standing
+eval corpus — 2,600 documents (2,000 labeled + 600 hard-negative, seeds
+`0xc0ffee`/`0xbeef`) — scored with the eval's own scorer. Stage-1 figures
+reproduce the committed M3 baseline exactly, so every comparison is
+like-for-like.
+
+### GENERIC_SECRET — an open failure, published rather than smoothed over
+
+SPEC.md requires GENERIC_SECRET to need "a Shannon entropy threshold AND an
+assignment-context signal". Implemented literally, with an exception that
+leaves a candidate alone when another detector's positive identification
+already covers the span (ARCHITECTURE.md D19):
+
+| | precision | recall | false positives |
+| --- | ---: | ---: | ---: |
+| Stage 1 baseline | 3.1% | 100% | 2236 |
+| Suppress on missing context | 3.8% | 56.9% | 1046 |
+| **Shipped: with overlap deferral** | **1.8%** | **56.9%** | **2230** |
+
+Residual precision is BELOW the Stage 1 baseline. That is the honest number
+and it is not a typo: the overlap deferral gives back exactly the false
+positives that are explained by another detector — those are Stage 4's to
+resolve, not Stage 3's — while recovering none of the lost recall.
+
+**The failure mode**, diagnosed by inspecting every suppressed span rather
+than inferred. All of them have no overlapping detection at all, so the
+exception cannot reach them. They are secrets introduced by LABELING LANGUAGE
+in prose, across languages:
+
+- `У справі вказано <secret> як ідентифікатор` (Ukrainian — "as identifier")
+- `档案中登记的识别号是 <secret>` (Chinese — "the identification number on file is")
+- `Asiakirjoissa tunnisteena on <secret>` (Finnish — "as identifier in the documents")
+
+None is an assignment and none matches an API_KEY trigger, so SPEC's
+conjunction excludes them by construction.
+
+**Why it is not fixed here.** Letting a labeling phrase ("identifier",
+"reference", "token") count as context would reopen the correlation-identifier
+false-positive class that the M7 suppression review had just closed — request
+id, trace id, span id and idempotency key are introduced by exactly that
+language and are not secrets. Stage 3 can only make a binary suppress-or-allow
+call, so it cannot price that trade; Stage 4 weighs evidence instead of gating
+on it, which is the right machinery for a signal that is real but weak.
+
+**Status: OPEN, M8/M9 scope. Not resolved, and not accepted as final.** Any
+later reading of a GENERIC_SECRET figure should carry this caveat with it.
+
+### Where Stage 3 does work
+
+| type | precision | false positives | recall |
+| --- | ---: | ---: | ---: |
+| EMAIL | 81.3% → **98.5%** | 148 → 10 | 100% held |
+| POSTAL_CODE | 5.9% → **14.1%** | 922 → 353 | 72.5% held |
+| NATIONAL_ID | 67.2% → **71.8%** | 294 → 236 | 100% held |
+| all types | — | **4017 → 2062 (−49%)** | no loss except GENERIC_SECRET |
+
+TAX_ID (54.6%) and URL_WITH_CREDENTIALS (37.6%) are unchanged, as expected:
+their errors are cross-type overlap — TAX_ID cross-scheme collisions,
+URL_WITH_CREDENTIALS against CONNECTION_STRING — which is Stage 4 resolution
+and deliberately not Stage 3's to fix.

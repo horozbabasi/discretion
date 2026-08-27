@@ -649,6 +649,63 @@ assignment signal to be emitted at all (D19), every key/value form
 coverage gaps are therefore fail-open too, and are reviewed on the same
 terms as the suppression rules rather than as mere missing features.
 
+### D19 — GENERIC_SECRET: context is required, overlap defers to M8 (M7)
+
+**The rule as shipped.** A GENERIC_SECRET candidate with no assignment
+signal and no matching trigger is suppressed — SPEC.md requires "a
+Shannon entropy threshold AND an assignment-context signal", and the
+conjunction is the point. One exception: if another detector's positive
+identification already covers the span, the candidate is left alone.
+Suppressing it there would not be Stage 3 removing a false positive —
+the characters are sensitive and another detector says so — it would be
+Stage 3 pre-empting the cross-type overlap resolution that SPEC.md
+assigns to Stage 4.
+
+That overlap check is a deliberate, narrow exception to Stage 3's rule
+that a negative rule cannot see other candidates (D18). It is safe in a
+specific direction: the signal can only PREVENT a suppression, never
+cause one, so reading the pre-suppression candidate set is conservative
+— a candidate that is itself suppressed later can only have made us keep
+more, never less.
+
+**The measured result, which is not good.** On the standing corpus:
+
+| | precision | recall | false positives |
+| --- | ---: | ---: | ---: |
+| Stage 1 baseline | 3.1% | 100% | 2236 |
+| Stage 3, suppress on missing context | 3.8% | 56.9% | 1046 |
+| **Stage 3, with overlap deferral (shipped)** | **1.8%** | **56.9%** | **2230** |
+
+The deferral gives back the false positives it should — those are
+overlap-explained and M8's to resolve — but recovers no recall, and
+residual precision therefore sits BELOW the Stage 1 baseline.
+
+**The failure mode, diagnosed rather than assumed.** Every suppressed
+true positive has no overlapping detection at all, so the exception
+cannot reach it. They are secrets introduced by LABELING LANGUAGE in
+prose, across languages — three real examples from the corpus:
+
+- `У справі вказано <secret> як ідентифікатор` (uk, "as identifier")
+- `档案中登记的识别号是 <secret>` (zh, "the identification number on file is")
+- `Asiakirjoissa tunnisteena on <secret>` (fi, "as identifier in the documents")
+
+None is an assignment, and none matches an API_KEY trigger, so SPEC's
+conjunction excludes them by construction.
+
+**Why this is deferred and not fixed here.** The obvious repair — letting
+a labeling phrase ("identifier", "reference", "token") count as context
+— would reopen the correlation-identifier false-positive class the
+suppression review had just closed: request id, trace id, span id and
+idempotency key are introduced by exactly that language and are not
+secrets. Stage 3 can only make a binary suppress-or-allow call, so it
+cannot price that trade. Stage 4 can: fusion and calibration weigh
+evidence rather than gating on it, which is the right machinery for a
+signal that is genuine but weak.
+
+**Status: OPEN, M8/M9 scope. Not resolved, and not accepted as final.**
+These numbers are published in BENCHMARKS.md with the same caveat, so
+nothing downstream can read the current figure as a settled result.
+
 ## Status after M2
 
 Stage 1 is complete: 113 registered detectors — 57 NATIONAL_ID and 19

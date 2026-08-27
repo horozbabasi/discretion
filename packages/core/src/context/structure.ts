@@ -74,6 +74,15 @@ interface Line {
   readonly offset: number;
 }
 
+/**
+ * Drop a diff's leading marker, keeping offsets honest by advancing the
+ * line's own offset rather than rewriting the document.
+ */
+function stripDiffMarker(line: Line): Line {
+  if (!DIFF_LINE.test(line.text)) return line;
+  return { text: line.text.slice(1), offset: line.offset + 1 };
+}
+
 function splitLines(text: string): Line[] {
   const lines: Line[] = [];
   let offset = 0;
@@ -92,8 +101,55 @@ function splitLines(text: string): Line[] {
 // Key/value line forms
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** `"key": value` — JSON, and JS object literals with quoted keys. */
-const JSON_KEY = /^\s*"([^"\\]{1,48})"\s*:\s*/;
+/**
+ * `"key": value` — JSON, and object literals with quoted keys.
+ *
+ * All three quote styles are accepted, not just the double quote JSON itself
+ * uses: Python dictionaries and JavaScript object literals overwhelmingly use
+ * single quotes, and a Python `requests` snippet with an `'Authorization'`
+ * header is one of the most common things a developer pastes when asking for
+ * help. (M7 safety review — ARCHITECTURE.md D18.)
+ */
+const JSON_KEY = /^\s*(?:"([^"\\]{1,48})"|'([^'\\]{1,48})'|`([^`\\]{1,48})`)\s*:\s*/;
+
+/**
+ * A quoted `Header: value` pair anywhere on a line — `-H "Authorization: …"`.
+ *
+ * Scanned separately from the line-anchored colon form rather than by
+ * unanchoring it, because unanchoring would let arbitrary prose before a
+ * colon become a key.
+ */
+const QUOTED_HEADER = /['"]\s*([A-Za-z][A-Za-z0-9-]{0,47})\s*:\s+(?=\S)/g;
+
+/**
+ * `--api-token=…` — a credential passed as a command-line flag.
+ *
+ * The literal `--` is required, so this cannot match an ordinary expression.
+ */
+const CLI_FLAG = /(?:^|\s)--([A-Za-z][A-Za-z0-9-]{0,47})=(?!=)("[^"]*"|'[^']*'|\S+)/g;
+
+/**
+ * `setApiKey("…")` — a credential handed to an SDK setter.
+ *
+ * Restricted to a single string-literal argument so that ordinary calls with
+ * computed arguments are not read as assignments.
+ */
+const CALL_ARGUMENT =
+  /(?:^|[\s;{(,[.])([A-Za-z_$][A-Za-z0-9_$]{0,47})\s*\(\s*("[^"]{1,512}"|'[^']{1,512}')\s*[,)]/g;
+
+/** Leading verb stripped so `setApiKey` and `withApiKey` both key on `ApiKey`. */
+const SETTER_PREFIX = /^(?:set|with|put|add|update)(?=[A-Z_])/;
+
+/** A YAML block scalar introducer: `key: |`, `key: >-`, `key: |2`. */
+const BLOCK_SCALAR = /^[|>][+-]?\d*$/;
+
+/** Unified-diff and patch line markers, stripped only in a diff document. */
+const DIFF_LINE = /^[+\- ]/;
+const DIFF_DOCUMENT = /^(?:@@ -\d+|--- a\/|\+\+\+ b\/|diff --git )/m;
+
+/** `machine host` / `login user` / `password secret` — .netrc and friends. */
+const NETRC_PAIR = /^\s*(machine|login|password|account|default)\s+(\S.*)$/;
+const NETRC_DOCUMENT = /^\s*(?:machine\s+\S+|default)\s*$/m;
 
 /**
  * `key: value` — YAML mappings, and form labels in prose ("Tel: +90…").
@@ -103,8 +159,22 @@ const JSON_KEY = /^\s*"([^"\\]{1,48})"\s*:\s*/;
  */
 const COLON_KEY = /^[\s>-]*([\p{L}][\p{L}\p{M}\p{N} _.\\/-]{0,47})\s*:\s+(?=\S)/u;
 
-/** `KEY=value`, `export KEY=value` — .env files and shell assignments. */
-const ENV_KEY = /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]{0,47})\s*=\s*/;
+/**
+ * `KEY=value`, `export KEY=value` — .env files and shell assignments.
+ *
+ * Three widenings, each from an executed M7 safety-review case:
+ *   • hyphens in the CONTINUATION only, never the first character, so TOML
+ *     and INI keys like `api-key` are covered without letting an arithmetic
+ *     expression parse as an assignment;
+ *   • any script's letters, matching the policy the colon form already
+ *     states — a Turkish `şifre = …` labels a password just as well as
+ *     `password = …` does;
+ *   • an optional scope prefix ending in a colon, which is how `.npmrc`
+ *     writes `//registry.npmjs.org/:_authToken=…`. The prefix may not contain
+ *     `=` or whitespace, so it cannot swallow an ordinary line.
+ */
+const ENV_KEY =
+  /^\s*(?:export\s+)?(?:[^\s=]{1,80}:)?([\p{L}_][\p{L}\p{M}\p{N}_-]{0,47})\s*=\s*/u;
 
 /**
  * `const apiKey = "…"`, `apiKey = '…'`, `self.api_key = …` — assignments in
@@ -114,7 +184,7 @@ const ENV_KEY = /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]{0,47})\s*=\s*/;
  * that means something: in `user.ssn = …` the key is `ssn`, not `user`.
  */
 const CODE_ASSIGNMENT =
-  /(?:^|[\s;{(,[])(?:const|let|var|val|final|public|private|static|readonly)?\s*([A-Za-z_$][A-Za-z0-9_$]{0,47}(?:\.[A-Za-z_$][A-Za-z0-9_$]{0,47})*)\s*=\s*(?!=)/g;
+  /(?:^|[\s;{(,["'`])(?:const|let|var|val|final|public|private|static|readonly)?\s*([A-Za-z_$][A-Za-z0-9_$]{0,47}(?:\.[A-Za-z_$][A-Za-z0-9_$]{0,47})*)\s*=\s*(?!=)/g;
 
 /** Characters that wrap a value and are not part of it. */
 const VALUE_WRAPPERS = new Set(['"', "'", '`']);
@@ -151,8 +221,9 @@ function colonKind(key: string): StructureKind {
 
 function keyValueSlot(line: Line): StructuredSlot | undefined {
   const json = JSON_KEY.exec(line.text);
-  if (json?.[1] !== undefined) {
-    return buildSlot(line, json[1], json[0].length, 'json');
+  if (json !== null) {
+    const key = json[1] ?? json[2] ?? json[3];
+    if (key !== undefined) return buildSlot(line, key, json[0].length, 'json');
   }
 
   const env = ENV_KEY.exec(line.text);
@@ -197,6 +268,115 @@ function codeAssignmentSlots(line: Line): StructuredSlot[] {
     out.push({
       key,
       kind: 'code-assignment',
+      valueStart: line.offset + range.start,
+      valueEnd: line.offset + range.end,
+    });
+  }
+  return out;
+}
+
+/**
+ * Mid-line forms a developer pastes constantly: quoted HTTP headers, CLI
+ * flags, and single-string setter calls. Each is a narrow, explicitly
+ * delimited pattern rather than a general relaxation of the key/value forms.
+ */
+function inlineSlots(line: Line): StructuredSlot[] {
+  const out: StructuredSlot[] = [];
+
+  scan(QUOTED_HEADER, (match, key) => {
+    const valueStart = match.index + match[0].length;
+    // A quoted header value ends at the closing quote, not the line end.
+    const quote = line.text[match.index] ?? '"';
+    const closing = line.text.indexOf(quote, valueStart);
+    const rawEnd = closing === -1 ? line.text.length : closing;
+    push(key, valueStart, rawEnd, 'form-label');
+  });
+
+  scan(CLI_FLAG, (match, key) => {
+    const valueStart = match.index + match[0].indexOf('=') + 1;
+    push(key, valueStart, match.index + match[0].length, 'code-assignment');
+  });
+
+  scan(CALL_ARGUMENT, (match, key) => {
+    const argAt = match[0].lastIndexOf(match[2] ?? '');
+    const valueStart = match.index + argAt;
+    push(key.replace(SETTER_PREFIX, ''), valueStart, valueStart + (match[2]?.length ?? 0), 'code-assignment');
+  });
+
+  return out;
+
+  function scan(pattern: RegExp, emit: (match: RegExpExecArray, key: string) => void): void {
+    const local = new RegExp(pattern.source, pattern.flags);
+    let match: RegExpExecArray | null;
+    while ((match = local.exec(line.text)) !== null) {
+      const key = match[1];
+      if (key !== undefined) emit(match, key);
+    }
+  }
+
+  function push(key: string, from: number, to: number, kind: StructureKind): void {
+    const range = trimValue(line.text, from, to);
+    if (range.end <= range.start) return;
+    out.push({ key, kind, valueStart: line.offset + range.start, valueEnd: line.offset + range.end });
+  }
+}
+
+/**
+ * YAML block scalars: `key: |` followed by an indented block.
+ *
+ * Kubernetes Secrets and CI configuration embed whole credential files this
+ * way, and a line-bounded value reader sees only the `|` introducer.
+ */
+function blockScalarSlots(lines: readonly Line[]): StructuredSlot[] {
+  const out: StructuredSlot[] = [];
+  for (const [index, line] of lines.entries()) {
+    const colon = COLON_KEY.exec(line.text);
+    if (colon?.[1] === undefined) continue;
+    const remainder = line.text.slice(colon[0].length).trim();
+    if (!BLOCK_SCALAR.test(remainder)) continue;
+
+    const indent = line.text.length - line.text.trimStart().length;
+    let last: Line | undefined;
+    for (let i = index + 1; i < lines.length; i += 1) {
+      const next = lines[i];
+      if (next === undefined) break;
+      const blank = next.text.trim().length === 0;
+      const deeper = next.text.length - next.text.trimStart().length > indent;
+      if (!blank && !deeper) break;
+      if (!blank) last = next;
+    }
+    if (last === undefined) continue;
+
+    const first = lines[index + 1];
+    if (first === undefined) continue;
+    out.push({
+      key: colon[1].trim(),
+      kind: 'yaml',
+      valueStart: first.offset,
+      valueEnd: last.offset + last.text.length,
+    });
+  }
+  return out;
+}
+
+/**
+ * Whitespace-delimited credential files (.netrc, .authinfo).
+ *
+ * Gated on the document actually looking like one: a general "first word is
+ * the key" rule would make every prose sentence's first word a key.
+ */
+function netrcSlots(text: string, lines: readonly Line[]): StructuredSlot[] {
+  if (!NETRC_DOCUMENT.test(text)) return [];
+  const out: StructuredSlot[] = [];
+  for (const line of lines) {
+    const match = NETRC_PAIR.exec(line.text);
+    if (match?.[1] === undefined || match[2] === undefined) continue;
+    const valueStart = line.text.length - match[2].length;
+    const range = trimValue(line.text, valueStart, line.text.length);
+    if (range.end <= range.start) continue;
+    out.push({
+      key: match[1],
+      kind: 'env',
       valueStart: line.offset + range.start,
       valueEnd: line.offset + range.end,
     });
@@ -328,14 +508,23 @@ function appendCellSlots(
  * the most specific label for the value.
  */
 export function buildStructureIndex(text: string): StructureIndex {
-  const lines = splitLines(text);
-  const slots: StructuredSlot[] = [];
+  const rawLines = splitLines(text);
+  // In a diff, every line carries a +/-/space marker that would otherwise
+  // hide the key. Stripping is gated on the document actually being a diff,
+  // so an ordinary line beginning with '-' is untouched. A newly added
+  // `+API_KEY=…` line is exactly the shape of a leaked credential in a paste.
+  const isDiff = DIFF_DOCUMENT.test(text);
+  const lines = isDiff ? rawLines.map(stripDiffMarker) : rawLines;
 
+  const slots: StructuredSlot[] = [];
   for (const line of lines) {
     const kv = keyValueSlot(line);
     if (kv !== undefined && kv.valueEnd > kv.valueStart) slots.push(kv);
     slots.push(...codeAssignmentSlots(line));
+    slots.push(...inlineSlots(line));
   }
+  slots.push(...blockScalarSlots(lines));
+  slots.push(...netrcSlots(text, lines));
   slots.push(...markdownTableSlots(lines));
   slots.push(...csvSlots(lines));
 

@@ -92,6 +92,72 @@ describe('buildStructureIndex — tables', () => {
   });
 });
 
+/**
+ * Coverage gaps found by the M7 adversarial safety review (ARCHITECTURE.md
+ * D18). These are not cosmetic: once GENERIC_SECRET requires an assignment
+ * signal to be emitted at all, a key/value form this index fails to recognise
+ * becomes a real secret that is silently dropped. Each case below was
+ * executed and observed returning `undefined` before the fix.
+ *
+ * The scenarios are chosen for how ordinarily a person hits them — pasting a
+ * Python snippet, a curl command, a diff, a Kubernetes manifest — because
+ * that is what determines how often the gap would have leaked.
+ */
+describe('buildStructureIndex — fail-open coverage gaps (M7 review)', () => {
+  it('reads single- and backtick-quoted object keys, not only JSON double quotes', () => {
+    const python = "headers = {\n    'Authorization': 'Bearer eyJhbGciOiJIUzI1NiJ9.abc.7Hq2Lp9',\n}\n";
+    expect(keyFor(python, 'Bearer eyJhbGciOiJIUzI1NiJ9.abc.7Hq2Lp9')).toBe('Authorization');
+  });
+
+  it('reads a quoted HTTP header passed to curl', () => {
+    const curl = 'curl -H "Authorization: Bearer sk_live_51Mv8QpLkTn2aBc" https://api.example.com\n';
+    expect(keyFor(curl, 'Bearer sk_live_51Mv8QpLkTn2aBc')).toBe('Authorization');
+  });
+
+  it('sees through diff markers on an added line', () => {
+    const diff = 'diff --git a/.env b/.env\n@@ -3,4 +3,5 @@\n DEBUG=false\n+STRIPE_KEY=sk_live_51Mv8Qp\n';
+    expect(keyFor(diff, 'sk_live_51Mv8Qp')).toBe('STRIPE_KEY');
+  });
+
+  it('reads hyphenated TOML/INI keys and non-ASCII keys', () => {
+    expect(keyFor('[registry]\napi-secret = Tz3Nq8WvBk5RmYc2Xp\n', 'Tz3Nq8WvBk5RmYc2Xp')).toBe('api-secret');
+    // A Turkish key labels a password exactly as an English one does.
+    expect(keyFor('şifre = Tz3Nq8WvBk5RmYc2XpHd\n', 'Tz3Nq8WvBk5RmYc2XpHd')).toBe('şifre');
+  });
+
+  it('reads an .npmrc scoped auth token', () => {
+    const npmrc = 'registry=https://registry.npmjs.org/\n//registry.npmjs.org/:_authToken=npm_yT4kQz8RwVb2\n';
+    expect(keyFor(npmrc, 'npm_yT4kQz8RwVb2')).toBe('_authToken');
+  });
+
+  it('reads a YAML block scalar spanning several lines', () => {
+    const manifest = 'stringData:\n  service-account.json: |\n    {"id":"a91f2c"}\n    signing: hSdk39fjKQm2Zx0Pw\n';
+    expect(keyFor(manifest, 'hSdk39fjKQm2Zx0Pw')).toBeDefined();
+  });
+
+  it('reads a .netrc password, but only in a .netrc-shaped document', () => {
+    const netrc = 'machine api.github.com\n  login yagizhan\n  password ghp_R7kQm2Zx9LpWvNc4\n';
+    expect(keyFor(netrc, 'ghp_R7kQm2Zx9LpWvNc4')).toBe('password');
+    // Prose must not gain a "first word is the key" reading.
+    const prose = 'The password policy changed on Friday and everyone must rotate.\n';
+    const start = prose.indexOf('policy');
+    expect(buildStructureIndex(prose).slotAt(start, start + 6)).toBeUndefined();
+  });
+
+  it('reads quoted env assignments, CLI flags, and setter calls', () => {
+    expect(keyFor('docker run -e "DB_PASSWORD=Kq9Xm2Rv7LpTn4" img\n', 'Kq9Xm2Rv7LpTn4')).toBe('DB_PASSWORD');
+    expect(keyFor('./deploy.sh --api-token=8fK2mQz7VbXt0Rw --dry-run\n', '8fK2mQz7VbXt0Rw')).toBe('api-token');
+    // The setter verb is stripped so the key matches a lexicon term.
+    expect(keyFor('client.setApiKey("Rz8Km2Qx9LpWvNc4Tb");\n', 'Rz8Km2Qx9LpWvNc4Tb')).toBe('ApiKey');
+  });
+
+  it('does not let arithmetic parse as an assignment', () => {
+    // Widening the assignment form must not make `a+b=c` key on `b`.
+    const index = buildStructureIndex('let total = a+b\nif (x-1 == y) { return 5 }\n');
+    expect(index.slots.map((s) => s.key)).toEqual(['total']);
+  });
+});
+
 describe('buildStructureIndex — resolution', () => {
   it('returns the smallest containing slot when several apply', () => {
     // The CSV row gives a cell slot; the colon form would give a wider one.

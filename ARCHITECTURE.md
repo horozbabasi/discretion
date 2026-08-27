@@ -828,6 +828,73 @@ counterexamples — a disproportionate risk for the six refutations it
 found. So it is removed, and reinstating it at M8 should be a deliberate
 decision made against a thresholded eval, not a default.
 
+### D21 — Decimal digits fold to ASCII in Stage 0, and it runs last (M8)
+
+**The failure.** NFKC folds FULLWIDTH digits, because those are
+compatibility variants of ASCII. It leaves Arabic-Indic, Extended
+Arabic-Indic, Devanagari, Bengali and Thai digits alone, and that is
+CORRECT — they are the ordinary digits of living scripts, not variants
+of anything. But every Stage 1 detector matches `\d`, so the pipeline
+inherited a hole nobody had written down: an identifier in native digits
+matched nothing.
+
+Measured before fixing, because "probably broken" is not a finding: a
+Turkish national identity number in Arabic-Indic digits, an Iranian
+phone number, a Hindi Aadhaar number, a Thai national ID and a Bengali
+credit card ALL returned no detections at all. Not low confidence —
+nothing. That is the same class as an identifier hidden inside `<td>`
+markup, and it landed on precisely the users the 32-language trigger
+work exists to serve.
+
+**Why it ran last in the pipeline.** After homoglyph folding, not
+before, and this is the non-obvious part. Folding digits changes a
+token's SCRIPT CENSUS: Arabic-Indic digits are Arabic, ASCII digits are
+not. Folding them earlier would silently alter the dominant-script
+calculation that homoglyph folding depends on, and could flip a fold
+that D3 deliberately declines to make on a tie. Running afterwards
+leaves that decision on the original scripts. ASCII digits are
+NFKC-stable, so unlike homoglyph folding this owes no second NFKC pass.
+
+**It is not a 1:1 transform.** Most digit blocks are BMP and fold one
+code unit to one, but a few are astral — Osmanya, Brahmi, the
+mathematical digits — where a surrogate PAIR folds to a single
+character. It therefore goes through `MappedTextBuilder` rather than
+assuming equal lengths, the same machinery NFKC's expansions use, and a
+test folds an Osmanya run specifically to keep that path honest.
+
+**The user's text is never rewritten.** Folding happens only in the
+normalized text; masking edits the ORIGINAL through the offset map, so a
+Persian user gets their own digits back. A test asserts that the
+mapped-back span contains no ASCII digit at all. That separation is the
+entire point of the offset-map contract, and this transform is the
+clearest illustration of it so far.
+
+**The corpus had to change too, and that is the more general lesson.**
+The class was invisible to the eval, so the failure was UNMEASURABLE
+rather than merely unfixed — no metric would have moved if someone had
+broken it further. Planted values in the six native-digit languages are
+now written in native digits 40% of the time (not 100%: real documents
+mix both, and an all-native corpus would stop measuring the ASCII path
+in those languages), and a `native-digit-noise` hard-negative category
+carries ordinary order numbers, prices and dates in the same scripts.
+Without those negatives the corpus would measure the recall the fold
+buys and none of the precision it costs.
+
+**Measured, with the shape a correct fix should have:**
+
+| language group | GT spans | recall before | recall after | change |
+| --- | ---: | ---: | ---: | ---: |
+| native-digit languages | 804 | 66.17% | 99.75% | **+33.58pp** |
+| all other languages | 4,425 | 99.44% | 99.44% | +0.00pp |
+
+Large where it should be, exactly zero everywhere else. A fix of this
+kind that moved the other row would be a regression in disguise.
+
+**Sequencing.** This landed BEFORE any fusion or calibration work, on
+purpose. Everything downstream calibrates against this corpus, and
+fitting thresholds and weights while an entire input class was invisible
+would have meant refitting all of them afterwards.
+
 ## Status after M2
 
 Stage 1 is complete: 113 registered detectors — 57 NATIONAL_ID and 19

@@ -27,6 +27,13 @@ export interface TransformersClassifierOptions {
   readonly cacheDir?: string;
   /** Allow downloading missing models. Build-time tooling ONLY. */
   readonly allowRemoteModels?: boolean;
+  /**
+   * Pinned repo revision (commit hash). HF commits are content-addressed,
+   * so a pinned revision pins the exact model bytes — the integrity story
+   * for build-time bundling. Default 'main' is acceptable only in
+   * exploratory tooling.
+   */
+  readonly revision?: string;
   /** Short id for candidate metadata; defaults to model@dtype. */
   readonly id?: string;
   /**
@@ -54,6 +61,7 @@ export async function createTransformersClassifier(
   const dtype = options.dtype ?? 'q8';
   const nerPipeline = await pipeline('token-classification', options.model, {
     dtype: dtype as never, // the runtime validates; its literal union lags its own docs
+    ...(options.revision !== undefined ? { revision: options.revision } : {}),
   });
 
   const id = options.id ?? `${options.model.split('/').pop() ?? options.model}@${dtype}`;

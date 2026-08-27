@@ -90,7 +90,7 @@ function finalize(m: TypeMetrics): void {
     m.precision + m.recallPartial === 0 ? 0 : (2 * m.precision * m.recallPartial) / (m.precision + m.recallPartial);
 }
 
-const overlaps = (c: Stage1Candidate, e: GroundTruthEntity): boolean =>
+const overlaps = (c: ScoredCandidate, e: GroundTruthEntity): boolean =>
   c.originalStart < e.end && e.start < c.originalEnd;
 
 function confidenceBucket(raw: number): string {
@@ -116,8 +116,25 @@ export interface EvalOptions {
   readonly maxExamples?: number;
 }
 
-/** Run Stage 1 over the corpus and score it. */
-export function runEval(docs: readonly LabeledDocument[], options: EvalOptions = {}): EvalResult {
+/**
+ * The scoring core, shared by the sync Stage 1 gate and the async
+ * stage-2-inclusive runs: feed one document + its (already filtered)
+ * predictions at a time, then finish().
+ */
+/**
+ * What the scorer actually reads off a prediction — a structural subset of
+ * Stage1Candidate, so Stage 2 candidates (identical shape, different stage
+ * tag) score through the same machinery without casts.
+ */
+export type ScoredCandidate = Pick<
+  Stage1Candidate,
+  'type' | 'text' | 'originalStart' | 'originalEnd' | 'rawConfidence' | 'detectorId' | 'sensitive'
+>;
+
+function createScorer(options: EvalOptions = {}): {
+  scoreDoc(doc: LabeledDocument, predictions: readonly ScoredCandidate[], latencyMs: number): void;
+  finish(documents: number): EvalResult;
+} {
   const maxExamples = options.maxExamples ?? 50;
   const byType = new Map<string, TypeMetrics>();
   const byLanguage = new Map<string, TypeMetrics>();
@@ -139,13 +156,9 @@ export function runEval(docs: readonly LabeledDocument[], options: EvalOptions =
     return m;
   };
 
-  for (const doc of docs) {
+  function scoreDoc(doc: LabeledDocument, predictions: readonly ScoredCandidate[], latencyMs: number): void {
     totalLength += doc.text.length;
-    const started = performance.now();
-    const candidates = runStage1(normalize(doc.text));
-    latencies.push(performance.now() - started);
-
-    const predictions = candidates.filter((c) => c.sensitive);
+    latencies.push(latencyMs);
     predictionsTotal += predictions.length;
     groundTruthEntities += doc.entities.length;
 
@@ -212,29 +225,82 @@ export function runEval(docs: readonly LabeledDocument[], options: EvalOptions =
     }
   }
 
-  for (const m of byType.values()) finalize(m);
-  for (const m of byLanguage.values()) finalize(m);
-  for (const b of byConfidence.values()) b.precision = b.predictions === 0 ? 1 : b.matched / b.predictions;
+  function finish(documents: number): EvalResult {
+    for (const m of byType.values()) finalize(m);
+    for (const m of byLanguage.values()) finalize(m);
+    for (const b of byConfidence.values()) b.precision = b.predictions === 0 ? 1 : b.matched / b.predictions;
 
-  latencies.sort((a, b) => a - b);
-  const q = (p: number): number => latencies[Math.min(latencies.length - 1, Math.floor(p * latencies.length))] ?? 0;
+    latencies.sort((a, b) => a - b);
+    const q = (p: number): number => latencies[Math.min(latencies.length - 1, Math.floor(p * latencies.length))] ?? 0;
 
-  falsePositives.sort((a, b) => b.confidence - a.confidence);
+    falsePositives.sort((a, b) => b.confidence - a.confidence);
 
-  return {
-    documents: docs.length,
-    groundTruthEntities,
-    predictions: predictionsTotal,
-    byType: Object.fromEntries([...byType.entries()].sort()),
-    byLanguage: Object.fromEntries([...byLanguage.entries()].sort()),
-    byConfidence: Object.fromEntries([...byConfidence.entries()].sort()),
-    hardNegativeFalsePositivesByCategory: Object.fromEntries([...negFps.entries()].sort()),
-    latencyMs: {
-      p50: q(0.5), p95: q(0.95), p99: q(0.99),
-      max: latencies[latencies.length - 1] ?? 0,
-      meanDocLength: docs.length === 0 ? 0 : Math.round(totalLength / docs.length),
-    },
-    falsePositives,
-    falseNegatives,
-  };
+    return {
+      documents,
+      groundTruthEntities,
+      predictions: predictionsTotal,
+      byType: Object.fromEntries([...byType.entries()].sort()),
+      byLanguage: Object.fromEntries([...byLanguage.entries()].sort()),
+      byConfidence: Object.fromEntries([...byConfidence.entries()].sort()),
+      hardNegativeFalsePositivesByCategory: Object.fromEntries([...negFps.entries()].sort()),
+      latencyMs: {
+        p50: q(0.5), p95: q(0.95), p99: q(0.99),
+        max: latencies[latencies.length - 1] ?? 0,
+        meanDocLength: documents === 0 ? 0 : Math.round(totalLength / documents),
+      },
+      falsePositives,
+      falseNegatives,
+    };
+  }
+
+  return { scoreDoc, finish };
+}
+
+/** Run Stage 1 over the corpus and score it. */
+export function runEval(docs: readonly LabeledDocument[], options: EvalOptions = {}): EvalResult {
+  const scorer = createScorer(options);
+  for (const doc of docs) {
+    const started = performance.now();
+    const candidates = runStage1(normalize(doc.text));
+    const latency = performance.now() - started;
+    scorer.scoreDoc(doc, candidates.filter((c) => c.sensitive), latency);
+  }
+  return scorer.finish(docs.length);
+}
+
+/** A detection function for the async runs (Stage 2 and combined). */
+export type AsyncDetect = (doc: LabeledDocument) => Promise<readonly ScoredCandidate[]>;
+
+export interface AsyncEvalOptions extends EvalOptions {
+  /**
+   * Restrict scoring to these entity types: ground truth AND predictions
+   * outside the set are ignored. This is how the NER benchmark scores a
+   * model on PERSON/ORG/LOCATION over a corpus that also carries Stage 1
+   * ground truth the model cannot see.
+   */
+  readonly types?: readonly string[];
+}
+
+/** Score an arbitrary (async) detector — the Stage 2 benchmark entry. */
+export async function runEvalAsync(
+  docs: readonly LabeledDocument[],
+  detect: AsyncDetect,
+  options: AsyncEvalOptions = {},
+): Promise<EvalResult> {
+  const scorer = createScorer(options);
+  const typeSet = options.types === undefined ? undefined : new Set(options.types);
+  for (const doc of docs) {
+    const started = performance.now();
+    const candidates = await detect(doc);
+    const latency = performance.now() - started;
+    const scoredDoc =
+      typeSet === undefined
+        ? doc
+        : { ...doc, entities: doc.entities.filter((e) => typeSet.has(e.type)) };
+    const predictions = candidates.filter(
+      (c) => c.sensitive && (typeSet === undefined || typeSet.has(c.type)),
+    );
+    scorer.scoreDoc(scoredDoc, predictions, latency);
+  }
+  return scorer.finish(docs.length);
 }

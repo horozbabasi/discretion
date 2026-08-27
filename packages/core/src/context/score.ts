@@ -158,6 +158,27 @@ function clamp01(value: number): number {
 }
 
 /**
+ * Has another detector already positively identified these characters?
+ *
+ * Used ONLY to hold back GENERIC_SECRET's context requirement. The direction
+ * matters: this signal can prevent a suppression, never cause one, so reading
+ * the pre-suppression candidate set is conservative — a candidate that later
+ * gets suppressed itself can only have made us keep more, not less.
+ */
+function isExplainedByOverlap(
+  candidate: PipelineCandidate,
+  all: readonly PipelineCandidate[],
+): boolean {
+  return all.some(
+    (other) =>
+      other !== candidate &&
+      other.type !== candidate.type &&
+      other.start < candidate.end &&
+      candidate.start < other.end,
+  );
+}
+
+/**
  * Analyse a document once, then score any number of candidate sets against it.
  *
  * The document-level work (structure index, format and domain profile,
@@ -231,7 +252,14 @@ export function analyzeContext(text: string, options: ContextOptions = {}): Cont
     // differs deliberately from POSTAL_CODE and STREET_ADDRESS, which
     // "require context boost" — those stay emitted at low confidence and
     // context only raises them.
-    if (type === 'GENERIC_SECRET' && slot === undefined && !hasTrigger) {
+    //
+    // With one exception, ratified after measurement (ARCHITECTURE.md D19):
+    // a candidate whose span is ALREADY explained by another detector's
+    // positive identification is left alone. Suppressing it would not be
+    // Stage 3 removing a false positive — the characters are sensitive, and
+    // some other detector says so — it would be Stage 3 pre-empting the
+    // cross-type overlap resolution that belongs to Stage 4.
+    if (type === 'GENERIC_SECRET' && slot === undefined && !hasTrigger && !isExplainedByOverlap(candidate, all)) {
       return {
         candidate,
         contextConfidence: 0,

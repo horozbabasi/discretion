@@ -105,7 +105,7 @@ function uriAuthorityAround(ctx: RuleContext): string | undefined {
 }
 
 /** The innermost bracketed group containing the candidate, if any. */
-function bracketedAround(ctx: RuleContext): string | undefined {
+function bracketedAround(ctx: RuleContext): { inner: string; open: number } | undefined {
   const { text } = ctx.line;
   const { start, end } = localSpan(ctx);
   const openers: Record<string, string> = { '[': ']', '(': ')' };
@@ -117,10 +117,25 @@ function bracketedAround(ctx: RuleContext): string | undefined {
     if (closer === undefined) continue;
     const closeAt = text.indexOf(closer, end);
     if (closeAt === -1) return undefined;
-    return text.slice(i + 1, closeAt);
+    return { inner: text.slice(i + 1, closeAt), open: i };
   }
   return undefined;
 }
+
+/**
+ * Does a measured quantity precede this point on the line?
+ *
+ * A reference interval annotates a measurement — that adjacency is the actual
+ * signal, and requiring it is what separates "196.0 mmol/L [65-156]" from an
+ * identifier that merely happens to sit in brackets.
+ */
+function measurementPrecedes(line: string, before: number): boolean {
+  return /\d(?:[.,]\d+)?\s*[%\p{L}/]*\s*$/u.test(line.slice(0, before));
+}
+
+/** Vocabulary that marks a dotted numeric run as a software version. */
+const VERSION_VOCABULARY =
+  /\b(v|ver|vers|version|versione|versión|versao|versão|release|build|upgrade[sd]?|updated?|bump(?:ed)?|rc|alpha|beta|snapshot|patch|semver|tag)\b|-(?:rc|alpha|beta|snapshot)\b/i;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Rules
@@ -165,11 +180,26 @@ const uriAuthorityMember: NegativeRule = {
   appliesTo: ['EMAIL', 'POSTAL_CODE', 'NATIONAL_ID', 'TAX_ID', 'DRIVERS_LICENSE'],
   action: 'suppress',
   principle:
-    "A value inside a URI's authority component is a host, port, username or password of a connection target, not an independent address or identifier.",
+    "A value inside a URI's authority component is a host, port, username or password of a connection target, not an independent address or identifier — but only when the URI actually carries a credential, so that something else reports it.",
   risk:
-    'A real email address used as a userinfo component would be suppressed as an EMAIL. It stays protected as part of the credentialled URL the URI detectors report, and only the authority — not the path or query — is covered.',
+    'An address used as a bare userinfo component could be suppressed with nothing else reporting it. The password requirement below is exactly what prevents that.',
   test(ctx) {
-    return uriAuthorityAround(ctx) !== undefined;
+    const authority = uriAuthorityAround(ctx);
+    if (authority === undefined) return false;
+
+    // The rule's safety rests on the URI as a whole being reported by another
+    // detector. The M7 review measured that claim instead of trusting it:
+    // for `https://john.doe@example.com`, EMAIL is the ONLY detector that
+    // fires — the credentialled-URL and connection-string detectors both
+    // require a `user:pass@` form. Suppressing there would have been a silent
+    // leak, so an address is only yielded when a password component is
+    // present and those detectors therefore cover the URI.
+    // (It was previously safe only by accident: the EMAIL detector's span
+    // includes the leading `//`, which fell outside the authority. Relying on
+    // a span defect is not a safety argument — hence the explicit condition.)
+    if (ctx.type === 'EMAIL' && !/^[^@/]*:[^@/]*@/.test(authority)) return false;
+
+    return true;
   },
 };
 
@@ -201,25 +231,48 @@ const hostPort: NegativeRule = {
 };
 
 /**
- * A bracketed numeric range.
+ * A bracketed numeric range annotating a measurement.
  *
- * Laboratory results annotate a measurement with its reference interval, and
- * technical documents annotate values with bounds. Both write a pure numeric
+ * Laboratory results annotate a measured value with its reference interval,
+ * and technical documents annotate values with bounds. Both write a numeric
  * range in brackets, which postal-code patterns read as a code with a
  * separator.
+ *
+ * TIGHTENED after the M7 adversarial safety review (ARCHITECTURE.md D18).
+ * The original rule suppressed any bracketed `digits-digits`, which is the
+ * exact written form of several national identifiers: the review executed
+ * `Borger (010101-1234) er registreret.` and watched a correctly detected
+ * Danish CPR number get suppressed — a leak of a national identifier. Three
+ * conditions now separate an interval from an identifier:
+ *
+ *   • each side is at most 4 digits — reference intervals are small numbers,
+ *     whereas national identifier groups are longer (a Danish CPR's first
+ *     group is 6, a Korean RRN's is 6, a Swedish personnummer's is 8);
+ *   • the range ascends, because an interval whose low exceeds its high is
+ *     not an interval;
+ *   • a measured quantity precedes the bracket, which is the actual reason a
+ *     reference interval is there at all.
  */
 const bracketedNumericRange: NegativeRule = {
   id: 'bracketed-numeric-range',
   appliesTo: ['POSTAL_CODE', 'NATIONAL_ID', 'TAX_ID'],
   action: 'suppress',
   principle:
-    'A bracketed group whose entire content is a numeric range is a reference interval or bounds annotation, not an identifier.',
+    'A short, ascending numeric range in brackets that immediately follows a measured quantity is a reference interval, not an identifier.',
   risk:
-    'An identifier written alone inside brackets as `[nnn-nnn]` would be suppressed. The whole bracket content must be a bare numeric range, so any surrounding label or unit prevents the rule from firing.',
+    'A short ascending identifier written as `nnnn-nnnn` in brackets directly after a number could still be suppressed. Identifier groups longer than four digits, descending pairs, and brackets with no preceding measurement are all excluded, which covers the national-identifier formats the review tested.',
   test(ctx) {
-    const inner = bracketedAround(ctx);
-    if (inner === undefined) return false;
-    return /^\s*\d+(?:[.,]\d+)?\s*-\s*\d+(?:[.,]\d+)?\s*$/.test(inner);
+    const bracket = bracketedAround(ctx);
+    if (bracket === undefined) return false;
+
+    const range = /^\s*(\d{1,4})(?:[.,]\d+)?\s*-\s*(\d{1,4})(?:[.,]\d+)?\s*$/.exec(bracket.inner);
+    if (range === null) return false;
+
+    const low = Number(range[1]);
+    const high = Number(range[2]);
+    if (!(low <= high)) return false;
+
+    return measurementPrecedes(ctx.line.text, bracket.open);
   },
 };
 
@@ -234,9 +287,9 @@ const versionNumber: NegativeRule = {
   appliesTo: NUMERIC_IDENTIFIERS,
   action: 'suppress',
   principle:
-    'A digit group that is one component of a dotted or `v`-prefixed release version is part of a version number, not an identifier.',
+    'A dotted numeric run is a release version — not an identifier — when the line it sits on carries explicit version vocabulary.',
   risk:
-    'An identifier formatted with dots between groups would be suppressed. Requiring at least three dot-separated numeric components, or an explicit `v` prefix, distinguishes versions from grouped identifiers.',
+    'A dotted identifier on a line that also discusses a release could be suppressed. Requiring version vocabulary on the same line is what keeps ordinary identifier lines out of scope.',
   test(ctx) {
     const { text } = ctx.line;
     const { start, end } = localSpan(ctx);
@@ -245,8 +298,19 @@ const versionNumber: NegativeRule = {
     while (from > 0 && /[\d.]/.test(text[from - 1] ?? '')) from -= 1;
     while (to < text.length && /[\d.]/.test(text[to] ?? '')) to += 1;
     const run = text.slice(from, to);
-    const prefixed = from > 0 && /[vV]/.test(text[from - 1] ?? '') && /^\d+(?:\.\d+)+$/.test(run);
-    return prefixed || /^\d+(?:\.\d+){2,}$/.test(run);
+
+    const dotted = /^\d+(?:\.\d+)+$/.test(run);
+    if (!dotted) return false;
+
+    // TIGHTENED after the M7 adversarial safety review (ARCHITECTURE.md D18).
+    // Shape alone cannot tell a version from an identifier: several national
+    // and tax identifiers are written as dot-separated digit groups, and the
+    // review executed a dotted German Steuer-ID (12.345.678.901) being
+    // suppressed on shape. Requiring the LINE to carry version vocabulary
+    // keeps the corpus's version negatives suppressed — they read "Upgraded …
+    // from v1.5.3 to 3.12.7-rc.2 in build …", which is saturated with it —
+    // while an identifier line carries none.
+    return VERSION_VOCABULARY.test(text);
   },
 };
 

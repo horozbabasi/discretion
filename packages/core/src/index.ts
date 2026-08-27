@@ -26,6 +26,7 @@ export { stripInvisibles } from './transforms/stripInvisibles.js';
 export { nfkcByGrapheme } from './transforms/nfkc.js';
 export { foldHomoglyphs } from './transforms/homoglyphFold.js';
 export { normalizeWhitespacePunct } from './transforms/whitespacePunct.js';
+export { foldDigits, asciiDigitFor } from './transforms/foldDigits.js';
 
 // ── Stage 1: validated identifier detection (M2) ──
 // Importing the package registers every bundled detector.

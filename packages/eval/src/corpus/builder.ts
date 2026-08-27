@@ -47,8 +47,51 @@ function pickKind(rng: () => number, kinds: readonly EntityKind[]): EntityKind {
   return kinds[kinds.length - 1]!;
 }
 
+/**
+ * Languages whose readers routinely write numbers in their own script's
+ * digits, mapped to the first code point of that digit block.
+ *
+ * These exist in the corpus because Stage 0 digit folding (M8) exists: before
+ * it, an identifier written in native digits was invisible to every Stage 1
+ * detector, and the corpus could not see the class at all, so the failure was
+ * unmeasurable rather than merely unfixed. Hebrew is absent deliberately —
+ * Hebrew uses ASCII digits in ordinary writing.
+ */
+const NATIVE_DIGIT_ZERO: Readonly<Record<string, number>> = {
+  ar: 0x0660, // Arabic-Indic
+  fa: 0x06f0, // Extended Arabic-Indic (Persian)
+  ur: 0x06f0, // Extended Arabic-Indic (Urdu)
+  hi: 0x0966, // Devanagari
+  bn: 0x09e6, // Bengali
+  th: 0x0e50, // Thai
+};
+
+/**
+ * Fraction of planted values rewritten into native digits, for those
+ * languages. Not 100%: real documents mix both, and a corpus that used native
+ * digits exclusively would stop measuring the ASCII path in those languages.
+ */
+const NATIVE_DIGIT_RATE = 0.4;
+
+/**
+ * Rewrite ASCII digits into a script's own digits, one code unit for one.
+ *
+ * Every block here is in the BMP, so this preserves length and therefore every
+ * ground-truth offset already computed for the value.
+ */
+function toNativeDigits(value: string, zero: number): string {
+  return value.replace(/[0-9]/g, (d) => String.fromCodePoint(zero + Number(d)));
+}
+
 /** Accumulates text and records ground-truth spans as values are appended. */
 class DocBuilder {
+  /**
+   * Digit-block zero when this document's language writes native digits.
+   * Held on the builder rather than threaded through twenty appendEntity
+   * call sites, all of which would otherwise have to remember to pass it.
+   */
+  constructor(private readonly nativeZero?: number) {}
+
   private readonly parts: string[] = [];
   private length = 0;
   private readonly entities: GroundTruthEntity[] = [];
@@ -79,6 +122,13 @@ class DocBuilder {
         gtStart = this.length + m.index;
         gtEnd = gtStart + m[0].length;
       }
+    }
+
+    // Rewrite to native digits AFTER the span has been located: the value
+    // pattern is written against ASCII digits, and the rewrite is one code
+    // unit for one, so the offsets computed above stay correct.
+    if (this.nativeZero !== undefined && rng() < NATIVE_DIGIT_RATE) {
+      value = toNativeDigits(value, this.nativeZero);
     }
 
     this.entities.push({
@@ -429,7 +479,7 @@ export function generateCorpus(options: CorpusOptions): LabeledDocument[] {
   for (let i = 0; i < options.documents; i++) {
     const lang = pick(rng, LANGUAGES);
     const docType = pick(rng, DOC_TYPES);
-    const b = new DocBuilder();
+    const b = new DocBuilder(NATIVE_DIGIT_ZERO[lang.code]);
     const bank = nerBankFor(lang.code);
     BUILDERS[docType](b, {
       rng,
@@ -447,7 +497,7 @@ export function generateCorpus(options: CorpusOptions): LabeledDocument[] {
     while ((kindCounts.get(kind.kind) ?? 0) < minPerKind) {
       const langCode = kind.languages?.[0] ?? 'en';
       const lang = LANGUAGES.find((l) => l.code === langCode)!;
-      const b = new DocBuilder();
+      const b = new DocBuilder(NATIVE_DIGIT_ZERO[lang.code]);
       if (kind.placement === 'block') {
         b.append(`${pick(rng, lang.fillers)}\n`);
         b.appendEntity(kind, rng, false);

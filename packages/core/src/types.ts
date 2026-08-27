@@ -257,7 +257,12 @@ export interface ScriptInfo {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** The individual transforms of the Stage 0 pipeline, in execution order. */
-export type TransformKind = 'strip-invisibles' | 'nfkc' | 'homoglyph-fold' | 'whitespace-punct';
+export type TransformKind =
+  | 'strip-invisibles'
+  | 'nfkc'
+  | 'homoglyph-fold'
+  | 'whitespace-punct'
+  | 'fold-digits';
 
 /** One transform application, recorded for debugging and for the review UI. */
 export interface TransformationRecord {
@@ -278,6 +283,8 @@ export interface NormalizationOptions {
   nfkc?: boolean;
   homoglyphFold?: boolean;
   whitespacePunct?: boolean;
+  /** Fold non-ASCII decimal digits (Arabic-Indic, Devanagari, Thai, …) to ASCII. */
+  foldDigits?: boolean;
 }
 
 /**

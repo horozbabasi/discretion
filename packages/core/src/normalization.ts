@@ -32,6 +32,7 @@ import { stripInvisibles } from './transforms/stripInvisibles.js';
 import { nfkcByGrapheme } from './transforms/nfkc.js';
 import { foldHomoglyphs } from './transforms/homoglyphFold.js';
 import { normalizeWhitespacePunct } from './transforms/whitespacePunct.js';
+import { foldDigits } from './transforms/foldDigits.js';
 
 export function normalize(text: string, options?: NormalizationOptions): NormalizationResult {
   const opts = {
@@ -39,6 +40,7 @@ export function normalize(text: string, options?: NormalizationOptions): Normali
     nfkc: true,
     homoglyphFold: true,
     whitespacePunct: true,
+    foldDigits: true,
     ...options,
   };
 
@@ -98,6 +100,11 @@ export function normalize(text: string, options?: NormalizationOptions): Normali
     if (folded && opts.nfkc) applyNfkcToFixpoint();
   }
   if (opts.whitespacePunct) apply(normalizeWhitespacePunct);
+  // Last, and after homoglyph folding on purpose: folding digits changes a
+  // token's script census, and doing it earlier would alter the
+  // dominant-script decision homoglyph folding depends on. ASCII digits are
+  // NFKC-stable, so no further normalization pass is owed.
+  if (opts.foldDigits) apply(foldDigits);
 
   const offsetMap = cumulative ?? identityMap(text.length);
   return {

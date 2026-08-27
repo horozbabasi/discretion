@@ -150,6 +150,32 @@ const orderNumbers: NegativeBuilder = (rng) => ({
     `Invoice INV-2026-${digits(rng, 6)} is attached; case ${digits(rng, 8)} remains open.\n`,
 });
 
+/**
+ * Ordinary, non-sensitive numbers written in NATIVE DIGITS.
+ *
+ * The counterpart to the M8 Stage 0 digit fold. Folding made native-digit
+ * identifiers detectable, which is the point — but it also made every
+ * native-digit ORDER NUMBER, price and date detectable to the same patterns.
+ * Without these negatives the corpus would measure only the recall the fold
+ * buys and none of the precision it costs.
+ */
+const nativeDigitNoise: NegativeBuilder = (rng) => {
+  const zeros = [0x0660, 0x06f0, 0x0966, 0x09e6, 0x0e50];
+  const zero = zeros[int(rng, 0, zeros.length - 1)]!;
+  const native = (n: number): string =>
+    digits(rng, n).replace(/[0-9]/g, (d) => String.fromCodePoint(zero + Number(d)));
+  return {
+    docType: 'prose',
+    text:
+      `Order ${native(10)} shipped; tracking ${native(12)}.
+` +
+      `Invoice ${native(8)} totals ${native(4)}.${native(2)} and is due on ${native(2)}/${native(2)}/${native(4)}.
+` +
+      `Build ${native(3)}.${native(2)}.${native(4)} replaced part PN-${native(4)}.
+`,
+  };
+};
+
 const ordinaryDates: NegativeBuilder = (rng) => {
   const d = int(rng, 10, 28);
   const m = int(rng, 10, 12);
@@ -188,6 +214,7 @@ const CATEGORIES: readonly (readonly [string, NegativeBuilder])[] = [
   ['base64-blob', base64Blob],
   ['version-numbers', versionNumbers],
   ['order-numbers', orderNumbers],
+  ['native-digit-noise', nativeDigitNoise],
   ['ordinary-dates', ordinaryDates],
   ['german-nouns', germanNouns],
   ['checksum-failures', checksumFailures],

@@ -44,5 +44,11 @@
     "US_ROUTING_NUMBER": { "minPrecision": 0.5, "minRecallPartial": 0.9 },
     "VAT_NUMBER": { "minPrecision": 0.95, "minRecallPartial": 0.97 },
     "VIN": { "minPrecision": 0.95, "minRecallPartial": 0.9 }
+  },
+  "$commentNerPerType": "Stage 2 floors, enforced by the eval CLI's --ner run (not vitest, whose unit-test path carries no model). Set BELOW the 2026-08 M6 benchmark measurement for the selected model (xlm-roberta-base-ner-hrl q8: PERSON P .990/Rp .976, ORG P .809/Rp .883, LOCATION P .674/Rp 1.0) with margin for seed variance between the bench corpus and the CLI corpus. LOCATION's low precision floor reflects the measured street-address type-overlap penalty documented in BENCHMARKS.md, awaiting M8 overlap resolution.",
+  "nerPerType": {
+    "PERSON": { "minPrecision": 0.95, "minRecallPartial": 0.9 },
+    "ORG": { "minPrecision": 0.7, "minRecallPartial": 0.75 },
+    "LOCATION": { "minPrecision": 0.55, "minRecallPartial": 0.9 }
   }
 }

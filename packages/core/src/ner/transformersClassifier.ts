@@ -6,9 +6,10 @@
  * environment-specific API.
  *
  * ZERO NETWORK BY DEFAULT: remote model fetching is opt-in
- * (`allowRemoteModels`), used only by build-time tooling (the eval
- * benchmark, the model-fetch script). Production consumers load from the
- * bundled cache and never touch the network — the SPEC non-negotiable.
+ * (`allowRemoteModels`), used only by build-time tooling (today the eval
+ * benchmark and CLI; the extension's bundling step at M9). Production
+ * consumers load from the bundled cache and never touch the network — the
+ * SPEC non-negotiable.
  *
  * This module is exported through the dedicated `./ner-transformers` entry
  * point, NOT the package root, so consumers who never run Stage 2 never

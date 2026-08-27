@@ -1,6 +1,6 @@
 {
   "documents": 2618,
-  "groundTruthEntities": 5338,
+  "groundTruthEntities": 6731,
   "predictions": 9438,
   "byType": {
     "API_KEY": {
@@ -211,6 +211,19 @@
       "recallPartial": 1,
       "f1": 1
     },
+    "LOCATION": {
+      "groundTruth": 211,
+      "predictions": 0,
+      "matchedPredictions": 0,
+      "falsePositives": 0,
+      "matchedExact": 0,
+      "matchedPartial": 0,
+      "falseNegatives": 211,
+      "precision": 1,
+      "recallExact": 0,
+      "recallPartial": 0,
+      "f1": 0
+    },
     "MAC_ADDRESS": {
       "groundTruth": 65,
       "predictions": 65,
@@ -237,6 +250,19 @@
       "recallPartial": 1,
       "f1": 0.8037383177570093
     },
+    "ORG": {
+      "groundTruth": 259,
+      "predictions": 0,
+      "matchedPredictions": 0,
+      "falsePositives": 0,
+      "matchedExact": 0,
+      "matchedPartial": 0,
+      "falseNegatives": 259,
+      "precision": 1,
+      "recallExact": 0,
+      "recallPartial": 0,
+      "f1": 0
+    },
     "PASSPORT_MRZ": {
       "groundTruth": 37,
       "predictions": 37,
@@ -249,6 +275,19 @@
       "recallExact": 0,
       "recallPartial": 1,
       "f1": 1
+    },
+    "PERSON": {
+      "groundTruth": 923,
+      "predictions": 0,
+      "matchedPredictions": 0,
+      "falsePositives": 0,
+      "matchedExact": 0,
+      "matchedPartial": 0,
+      "falseNegatives": 923,
+      "precision": 1,
+      "recallExact": 0,
+      "recallPartial": 0,
+      "f1": 0
     },
     "PHONE": {
       "groundTruth": 604,
@@ -409,329 +448,329 @@
   },
   "byLanguage": {
     "ar": {
-      "groundTruth": 190,
+      "groundTruth": 245,
       "predictions": 291,
       "matchedPredictions": 190,
       "falsePositives": 101,
       "matchedExact": 185,
       "matchedPartial": 190,
-      "falseNegatives": 0,
+      "falseNegatives": 55,
       "precision": 0.6529209621993127,
-      "recallExact": 0.9736842105263158,
-      "recallPartial": 1,
-      "f1": 0.7900207900207901
+      "recallExact": 0.7551020408163265,
+      "recallPartial": 0.7755102040816326,
+      "f1": 0.7089552238805971
     },
     "cs": {
-      "groundTruth": 186,
+      "groundTruth": 233,
       "predictions": 347,
       "matchedPredictions": 186,
       "falsePositives": 161,
       "matchedExact": 183,
       "matchedPartial": 186,
-      "falseNegatives": 0,
+      "falseNegatives": 47,
       "precision": 0.5360230547550432,
-      "recallExact": 0.9838709677419355,
-      "recallPartial": 1,
-      "f1": 0.697936210131332
+      "recallExact": 0.7854077253218884,
+      "recallPartial": 0.7982832618025751,
+      "f1": 0.6413793103448275
     },
     "da": {
-      "groundTruth": 270,
+      "groundTruth": 344,
       "predictions": 474,
       "matchedPredictions": 283,
       "falsePositives": 191,
       "matchedExact": 264,
       "matchedPartial": 268,
-      "falseNegatives": 2,
+      "falseNegatives": 76,
       "precision": 0.5970464135021097,
-      "recallExact": 0.9777777777777777,
-      "recallPartial": 0.9925925925925926,
-      "f1": 0.7456080848595669
+      "recallExact": 0.7674418604651163,
+      "recallPartial": 0.7790697674418605,
+      "f1": 0.6760196805476327
     },
     "de": {
-      "groundTruth": 261,
+      "groundTruth": 329,
       "predictions": 452,
       "matchedPredictions": 258,
       "falsePositives": 194,
       "matchedExact": 251,
       "matchedPartial": 258,
-      "falseNegatives": 3,
+      "falseNegatives": 71,
       "precision": 0.5707964601769911,
-      "recallExact": 0.9616858237547893,
-      "recallPartial": 0.9885057471264368,
-      "f1": 0.723702664796634
+      "recallExact": 0.7629179331306991,
+      "recallPartial": 0.78419452887538,
+      "f1": 0.6606914212548016
     },
     "el": {
-      "groundTruth": 219,
+      "groundTruth": 269,
       "predictions": 368,
       "matchedPredictions": 219,
       "falsePositives": 149,
       "matchedExact": 218,
       "matchedPartial": 219,
-      "falseNegatives": 0,
+      "falseNegatives": 50,
       "precision": 0.595108695652174,
-      "recallExact": 0.9954337899543378,
-      "recallPartial": 1,
-      "f1": 0.7461669505962522
+      "recallExact": 0.8104089219330854,
+      "recallPartial": 0.8141263940520446,
+      "f1": 0.6875981161695448
     },
     "en": {
-      "groundTruth": 236,
+      "groundTruth": 286,
       "predictions": 716,
       "matchedPredictions": 254,
       "falsePositives": 462,
       "matchedExact": 227,
       "matchedPartial": 236,
-      "falseNegatives": 0,
+      "falseNegatives": 50,
       "precision": 0.3547486033519553,
-      "recallExact": 0.961864406779661,
-      "recallPartial": 1,
-      "f1": 0.5237113402061855
+      "recallExact": 0.7937062937062938,
+      "recallPartial": 0.8251748251748252,
+      "f1": 0.4961840907209668
     },
     "es": {
-      "groundTruth": 239,
+      "groundTruth": 290,
       "predictions": 363,
       "matchedPredictions": 237,
       "falsePositives": 126,
       "matchedExact": 233,
       "matchedPartial": 237,
-      "falseNegatives": 2,
+      "falseNegatives": 53,
       "precision": 0.6528925619834711,
-      "recallExact": 0.9748953974895398,
-      "recallPartial": 0.9916317991631799,
-      "f1": 0.7873754152823922
+      "recallExact": 0.803448275862069,
+      "recallPartial": 0.8172413793103448,
+      "f1": 0.7258805513016845
     },
     "fa": {
-      "groundTruth": 189,
+      "groundTruth": 236,
       "predictions": 347,
       "matchedPredictions": 189,
       "falsePositives": 158,
       "matchedExact": 187,
       "matchedPartial": 189,
-      "falseNegatives": 0,
+      "falseNegatives": 47,
       "precision": 0.5446685878962536,
-      "recallExact": 0.9894179894179894,
-      "recallPartial": 1,
-      "f1": 0.7052238805970149
+      "recallExact": 0.7923728813559322,
+      "recallPartial": 0.8008474576271186,
+      "f1": 0.6483704974271012
     },
     "fi": {
-      "groundTruth": 230,
+      "groundTruth": 284,
       "predictions": 422,
       "matchedPredictions": 229,
       "falsePositives": 193,
       "matchedExact": 219,
       "matchedPartial": 229,
-      "falseNegatives": 1,
+      "falseNegatives": 55,
       "precision": 0.542654028436019,
-      "recallExact": 0.9521739130434783,
-      "recallPartial": 0.9956521739130435,
-      "f1": 0.7024539877300613
+      "recallExact": 0.7711267605633803,
+      "recallPartial": 0.8063380281690141,
+      "f1": 0.6487252124645893
     },
     "fr": {
-      "groundTruth": 192,
+      "groundTruth": 232,
       "predictions": 333,
       "matchedPredictions": 197,
       "falsePositives": 136,
       "matchedExact": 188,
       "matchedPartial": 191,
-      "falseNegatives": 1,
+      "falseNegatives": 41,
       "precision": 0.5915915915915916,
-      "recallExact": 0.9791666666666666,
-      "recallPartial": 0.9947916666666666,
-      "f1": 0.7419523401066777
+      "recallExact": 0.8103448275862069,
+      "recallPartial": 0.8232758620689655,
+      "f1": 0.6884645997054168
     },
     "he": {
-      "groundTruth": 215,
+      "groundTruth": 271,
       "predictions": 369,
       "matchedPredictions": 226,
       "falsePositives": 143,
       "matchedExact": 210,
       "matchedPartial": 215,
-      "falseNegatives": 0,
+      "falseNegatives": 56,
       "precision": 0.6124661246612466,
-      "recallExact": 0.9767441860465116,
-      "recallPartial": 1,
-      "f1": 0.7596638655462185
+      "recallExact": 0.7749077490774908,
+      "recallPartial": 0.7933579335793358,
+      "f1": 0.6912740697533806
     },
     "hi": {
-      "groundTruth": 229,
+      "groundTruth": 275,
       "predictions": 370,
       "matchedPredictions": 233,
       "falsePositives": 137,
       "matchedExact": 223,
       "matchedPartial": 228,
-      "falseNegatives": 1,
+      "falseNegatives": 47,
       "precision": 0.6297297297297297,
-      "recallExact": 0.9737991266375546,
-      "recallPartial": 0.9956331877729258,
-      "f1": 0.7714951676263642
+      "recallExact": 0.8109090909090909,
+      "recallPartial": 0.8290909090909091,
+      "f1": 0.7157880553777749
     },
     "it": {
-      "groundTruth": 216,
+      "groundTruth": 267,
       "predictions": 353,
       "matchedPredictions": 214,
       "falsePositives": 139,
       "matchedExact": 207,
       "matchedPartial": 214,
-      "falseNegatives": 2,
+      "falseNegatives": 53,
       "precision": 0.6062322946175638,
-      "recallExact": 0.9583333333333334,
-      "recallPartial": 0.9907407407407407,
-      "f1": 0.7521968365553603
+      "recallExact": 0.7752808988764045,
+      "recallPartial": 0.8014981273408239,
+      "f1": 0.6903225806451613
     },
     "ja": {
-      "groundTruth": 157,
+      "groundTruth": 204,
       "predictions": 273,
       "matchedPredictions": 159,
       "falsePositives": 114,
       "matchedExact": 155,
       "matchedPartial": 157,
-      "falseNegatives": 0,
+      "falseNegatives": 47,
       "precision": 0.5824175824175825,
-      "recallExact": 0.9872611464968153,
-      "recallPartial": 1,
-      "f1": 0.736111111111111
+      "recallExact": 0.7598039215686274,
+      "recallPartial": 0.7696078431372549,
+      "f1": 0.6630543049523886
     },
     "ko": {
-      "groundTruth": 214,
+      "groundTruth": 274,
       "predictions": 376,
       "matchedPredictions": 214,
       "falsePositives": 162,
       "matchedExact": 210,
       "matchedPartial": 214,
-      "falseNegatives": 0,
+      "falseNegatives": 60,
       "precision": 0.5691489361702128,
-      "recallExact": 0.9813084112149533,
-      "recallPartial": 1,
-      "f1": 0.7254237288135594
+      "recallExact": 0.7664233576642335,
+      "recallPartial": 0.781021897810219,
+      "f1": 0.6584615384615385
     },
     "nl": {
-      "groundTruth": 192,
+      "groundTruth": 244,
       "predictions": 332,
       "matchedPredictions": 192,
       "falsePositives": 140,
       "matchedExact": 184,
       "matchedPartial": 190,
-      "falseNegatives": 2,
+      "falseNegatives": 54,
       "precision": 0.5783132530120482,
-      "recallExact": 0.9583333333333334,
-      "recallPartial": 0.9895833333333334,
-      "f1": 0.7300088049307613
+      "recallExact": 0.7540983606557377,
+      "recallPartial": 0.7786885245901639,
+      "f1": 0.6637071537733789
     },
     "pl": {
-      "groundTruth": 229,
+      "groundTruth": 275,
       "predictions": 400,
       "matchedPredictions": 232,
       "falsePositives": 168,
       "matchedExact": 225,
       "matchedPartial": 227,
-      "falseNegatives": 2,
+      "falseNegatives": 48,
       "precision": 0.58,
-      "recallExact": 0.982532751091703,
-      "recallPartial": 0.9912663755458515,
-      "f1": 0.7318103496192541
+      "recallExact": 0.8181818181818182,
+      "recallPartial": 0.8254545454545454,
+      "f1": 0.6812936610608021
     },
     "pt": {
-      "groundTruth": 193,
+      "groundTruth": 243,
       "predictions": 342,
       "matchedPredictions": 203,
       "falsePositives": 139,
       "matchedExact": 190,
       "matchedPartial": 193,
-      "falseNegatives": 0,
+      "falseNegatives": 50,
       "precision": 0.5935672514619883,
-      "recallExact": 0.9844559585492227,
-      "recallPartial": 1,
-      "f1": 0.744954128440367
+      "recallExact": 0.7818930041152263,
+      "recallPartial": 0.7942386831275721,
+      "f1": 0.6793948064334331
     },
     "ro": {
-      "groundTruth": 209,
+      "groundTruth": 278,
       "predictions": 347,
       "matchedPredictions": 209,
       "falsePositives": 138,
       "matchedExact": 207,
       "matchedPartial": 209,
-      "falseNegatives": 0,
+      "falseNegatives": 69,
       "precision": 0.6023054755043228,
-      "recallExact": 0.9904306220095693,
-      "recallPartial": 1,
-      "f1": 0.7517985611510791
+      "recallExact": 0.7446043165467626,
+      "recallPartial": 0.7517985611510791,
+      "f1": 0.6688000000000001
     },
     "ru": {
-      "groundTruth": 250,
+      "groundTruth": 334,
       "predictions": 414,
       "matchedPredictions": 254,
       "falsePositives": 160,
       "matchedExact": 247,
       "matchedPartial": 249,
-      "falseNegatives": 1,
+      "falseNegatives": 85,
       "precision": 0.6135265700483091,
-      "recallExact": 0.988,
-      "recallPartial": 0.996,
-      "f1": 0.7593195106431512
+      "recallExact": 0.7395209580838323,
+      "recallPartial": 0.7455089820359282,
+      "f1": 0.6731090558848883
     },
     "sv": {
-      "groundTruth": 217,
+      "groundTruth": 275,
       "predictions": 391,
       "matchedPredictions": 225,
       "falsePositives": 166,
       "matchedExact": 212,
       "matchedPartial": 215,
-      "falseNegatives": 2,
+      "falseNegatives": 60,
       "precision": 0.5754475703324808,
-      "recallExact": 0.9769585253456221,
-      "recallPartial": 0.9907834101382489,
-      "f1": 0.7280457521258183
+      "recallExact": 0.7709090909090909,
+      "recallPartial": 0.7818181818181819,
+      "f1": 0.6629436754830753
     },
     "th": {
-      "groundTruth": 228,
+      "groundTruth": 288,
       "predictions": 371,
       "matchedPredictions": 227,
       "falsePositives": 144,
       "matchedExact": 225,
       "matchedPartial": 227,
-      "falseNegatives": 1,
+      "falseNegatives": 61,
       "precision": 0.6118598382749326,
-      "recallExact": 0.9868421052631579,
-      "recallPartial": 0.9956140350877193,
-      "f1": 0.7579298831385644
+      "recallExact": 0.78125,
+      "recallPartial": 0.7881944444444444,
+      "f1": 0.6889226100151744
     },
     "tr": {
-      "groundTruth": 197,
+      "groundTruth": 263,
       "predictions": 344,
       "matchedPredictions": 208,
       "falsePositives": 136,
       "matchedExact": 195,
       "matchedPartial": 197,
-      "falseNegatives": 0,
+      "falseNegatives": 66,
       "precision": 0.6046511627906976,
-      "recallExact": 0.9898477157360406,
-      "recallPartial": 1,
-      "f1": 0.7536231884057971
+      "recallExact": 0.7414448669201521,
+      "recallPartial": 0.7490494296577946,
+      "f1": 0.6691488666797307
     },
     "uk": {
-      "groundTruth": 194,
+      "groundTruth": 255,
       "predictions": 327,
       "matchedPredictions": 198,
       "falsePositives": 129,
       "matchedExact": 189,
       "matchedPartial": 193,
-      "falseNegatives": 1,
+      "falseNegatives": 62,
       "precision": 0.6055045871559633,
-      "recallExact": 0.9742268041237113,
-      "recallPartial": 0.9948453608247423,
-      "f1": 0.7528146331373187
+      "recallExact": 0.7411764705882353,
+      "recallPartial": 0.7568627450980392,
+      "f1": 0.6727757678189453
     },
     "zh": {
-      "groundTruth": 186,
+      "groundTruth": 237,
       "predictions": 316,
       "matchedPredictions": 185,
       "falsePositives": 131,
       "matchedExact": 181,
       "matchedPartial": 185,
-      "falseNegatives": 1,
+      "falseNegatives": 52,
       "precision": 0.5854430379746836,
-      "recallExact": 0.9731182795698925,
-      "recallPartial": 0.9946236559139785,
-      "f1": 0.7370517928286853
+      "recallExact": 0.7637130801687764,
+      "recallPartial": 0.7805907172995781,
+      "f1": 0.6690777576853526
     }
   },
   "byConfidence": {
@@ -766,11 +805,11 @@
     "version-numbers": 15
   },
   "latencyMs": {
-    "p50": 0.13649999999995543,
-    "p95": 0.4826999999999657,
-    "p99": 1.0529999999999973,
-    "max": 9.201699999999988,
-    "meanDocLength": 185
+    "p50": 0.452199999999948,
+    "p95": 1.5907000000001972,
+    "p99": 2.943399999999997,
+    "max": 27.065000000000055,
+    "meanDocLength": 202
   },
   "falsePositives": [
     {
@@ -811,7 +850,7 @@
       "detectorId": "national-id-ca-sin",
       "text": "141 234 567",
       "confidence": 0.85,
-      "context": "e⏎Email: o'brien@sub.domain.net⏎Tel: +6 141 234 567 8⏎세종대로 256⏎⏎Ședința a fost mutată joi.⏎"
+      "context": ".⏎Email: o'brien@sub.domain.net⏎Tel: +6 141 234 567 8⏎세종대로 256⏎⏎Ședința a fost mutată joi.⏎"
     },
     {
       "docId": "doc-12648430-29",
@@ -831,7 +870,7 @@
       "detectorId": "national-id-ca-sin",
       "text": "901 234 567",
       "confidence": 0.85,
-      "context": "сено на четверг.⏎⏎С уважением,⏎Tel: +81 901 234 567 8⏎first.middle.last@gmail.com⏎"
+      "context": "г.⏎⏎С уважением,⏎Анна Соколова⏎Tel: +81 901 234 567 8⏎first.middle.last@gmail.com⏎"
     },
     {
       "docId": "doc-12648430-31",
@@ -861,7 +900,7 @@
       "detectorId": "national-id-th",
       "text": "2697926275001",
       "confidence": 0.85,
-      "context": "istrată.⏎HbA1c 21.2 g/dL [21-46]⏎SNOMED 2697926275001⏎Mulțumim pentru răspunsul rapid.⏎"
+      "context": "istrată.⏎HbA1c 21.2 g/dL [21-46]⏎SNOMED 2697926275001⏎Persoana de contact: Cristian Vasilescu"
     },
     {
       "docId": "doc-12648430-35",
@@ -981,7 +1020,7 @@
       "detectorId": "national-id-in-aadhaar",
       "text": "558121345678",
       "confidence": 0.85,
-      "context": "Vitae⏎Email: x.y.z@sub.domain.net⏎Tel: +558121345678⏎세종대로 425⏎⏎Ευχαριστούμε για την άμεση απ"
+      "context": "όλος.⏎Email: x.y.z@sub.domain.net⏎Tel: +558121345678⏎세종대로 425⏎⏎Ευχαριστούμε για την άμεση απ"
     },
     {
       "docId": "doc-12648430-61",
@@ -1011,7 +1050,7 @@
       "detectorId": "national-id-ca-sin",
       "text": "791 112 345",
       "confidence": 0.85,
-      "context": " швидку відповідь.⏎⏎З повагою,⏎Tel: +44 791 112 345 6⏎a@gmail.com⏎"
+      "context": ".⏎⏎З повагою,⏎Богдан Кравченко⏎Tel: +44 791 112 345 6⏎a@gmail.com⏎"
     },
     {
       "docId": "doc-12648430-70",
@@ -1021,7 +1060,7 @@
       "detectorId": "national-id-in-aadhaar",
       "text": "558121345678",
       "confidence": 0.85,
-      "context": "E5510585WH 的付款已经到账。⏎会议改到了周四。⏎⏎此致，⏎Tel: +558121345678⏎jane_doe@münchen.de⏎"
+      "context": "0585WH 的付款已经到账。⏎会议改到了周四。⏎⏎此致，⏎陈美玲⏎Tel: +558121345678⏎jane_doe@münchen.de⏎"
     },
     {
       "docId": "doc-12648430-83",
@@ -1131,7 +1170,7 @@
       "detectorId": "national-id-th",
       "text": "8613912345678",
       "confidence": 0.85,
-      "context": "цы.⏎3. Связаться с отделом можно через +8613912345678 в рабочее время.⏎"
+      "context": "цы.⏎3. Связаться с отделом можно через +8613912345678 в рабочее время.⏎4. Новый поставщик: Гр"
     },
     {
       "docId": "doc-12648430-124",
@@ -1141,7 +1180,7 @@
       "detectorId": "national-id-in-aadhaar",
       "text": "558121345678",
       "confidence": 0.85,
-      "context": "tae⏎Email: dev-ops@sub.domain.net⏎Tel: +558121345678⏎銀座7丁目2番18号⏎⏎ขอบคุณสำหรับการตอบกลับอย่าง"
+      "context": "หม่⏎Email: dev-ops@sub.domain.net⏎Tel: +558121345678⏎銀座7丁目2番18号⏎⏎ขอบคุณสำหรับการตอบกลับอย่าง"
     },
     {
       "docId": "doc-12648430-127",
@@ -1151,7 +1190,7 @@
       "detectorId": "national-id-in-aadhaar",
       "text": "719969057003",
       "confidence": 0.85,
-      "context": " geçti.⏎HbA1c 145.0 g/dL [33-77]⏎SNOMED 719969057003⏎Toplantı perşembeye alındı.⏎"
+      "context": " geçti.⏎HbA1c 145.0 g/dL [33-77]⏎SNOMED 719969057003⏎Burak Şahin sonuçları cuma günü sunacak"
     },
     {
       "docId": "doc-12648430-129",
@@ -1171,7 +1210,7 @@
       "detectorId": "national-id-in-aadhaar",
       "text": "558121345678",
       "confidence": 0.85,
-      "context": "m Vitae⏎Email: john.doe@gmail.com⏎Tel: +558121345678⏎شارع الملك فهد 191⏎⏎会議は木曜日に変更になりました。⏎"
+      "context": "ae⏎田中美咲⏎Email: john.doe@gmail.com⏎Tel: +558121345678⏎شارع الملك فهد 191⏎⏎会議は木曜日に変更になりました。⏎"
     },
     {
       "docId": "doc-12648430-50",
@@ -1221,7 +1260,7 @@
       "detectorId": "national-id-qa-qid",
       "text": "33612345678",
       "confidence": 0.6,
-      "context": " Vitae⏎Email: john.doe@münchen.de⏎Tel: +33612345678⏎Hauptstraße 121⏎⏎Mødet er flyttet til t"
+      "context": " dage.⏎Email: john.doe@münchen.de⏎Tel: +33612345678⏎Hauptstraße 121⏎⏎Mødet er flyttet til t"
     },
     {
       "docId": "doc-12648430-80",
@@ -1241,7 +1280,7 @@
       "detectorId": "health-data",
       "text": "12125550123",
       "confidence": 0.6,
-      "context": "e⏎Email: björn.b@xn--bcher-kva.de⏎Tel: +12125550123⏎銀座9丁目9番3号⏎⏎La riunione è stata spostata"
+      "context": ".⏎Email: björn.b@xn--bcher-kva.de⏎Tel: +12125550123⏎銀座9丁目9番3号⏎⏎La riunione è stata spostata"
     },
     {
       "docId": "doc-12648430-99",
@@ -1251,7 +1290,7 @@
       "detectorId": "health-data",
       "text": "6521199555020038",
       "confidence": 0.6,
-      "context": " till torsdag. Skicka handlingarna till 6521199555020038 före fredag. "
+      "context": " till torsdag. Skicka handlingarna till 6521199555020038 före fredag. Erik Sandberg godkände utk"
     },
     {
       "docId": "doc-12648430-103",
@@ -1281,7 +1320,7 @@
       "detectorId": "postal-code",
       "text": "65-156",
       "confidence": 0.3,
-      "context": "ing business hours.⏎HbA1c 196.0 mmol/L [65-156]⏎SNOMED 452046407217009⏎The updated dra"
+      "context": "ing business hours.⏎HbA1c 196.0 mmol/L [65-156]⏎SNOMED 452046407217009⏎Please forward "
     },
     {
       "docId": "doc-12648430-1",
@@ -1331,7 +1370,7 @@
       "detectorId": "generic-secret",
       "text": "_yeZLrrq83zBZQo761wYZdDLXkHhwmJQaJRjmVIoBwj",
       "confidence": 0.3,
-      "context": "OiJpQWhoRjJLdyIsImlhdCI6MTYwMDcyNzY3OH0._yeZLrrq83zBZQo761wYZdDLXkHhwmJQaJRjmVIoBwj som identifikation.⏎"
+      "context": "OiJpQWhoRjJLdyIsImlhdCI6MTYwMDcyNzY3OH0._yeZLrrq83zBZQo761wYZdDLXkHhwmJQaJRjmVIoBwj som identifikation.⏎4. Bølgekraft Tekni"
     },
     {
       "docId": "doc-12648430-4",
@@ -1341,7 +1380,7 @@
       "detectorId": "generic-secret",
       "text": "addr1hxfrcvlx6cht8fk7e5t3nvrsku2kqyhg3px3cs9jckce0z55g8ucf2ac06j30jj79afgm74tu9jakqmdcjskdtd450gs0gqza2",
       "confidence": 0.3,
-      "context": "Платіж із реквізитом addr1hxfrcvlx6cht8fk7e5t3nvrsku2kqyhg3px3cs9jckce0z55g8ucf2ac06j30jj79afgm74tu9jakqmdcjskdtd450gs0gqza2 зараховано.⏎HbA1c 186.0 % [23-47]⏎Нарад"
+      "context": "Платіж із реквізитом addr1hxfrcvlx6cht8fk7e5t3nvrsku2kqyhg3px3cs9jckce0z55g8ucf2ac06j30jj79afgm74tu9jakqmdcjskdtd450gs0gqza2 зараховано.⏎HbA1c 186.0 % [23-47]⏎Конта"
     },
     {
       "docId": "doc-12648430-5",
@@ -1461,7 +1500,7 @@
       "detectorId": "postal-code",
       "text": "31-133",
       "confidence": 0.3,
-      "context": "k als identificatie.⏎HbA1c 377.0 mg/dL [31-133]⏎De vergadering is verplaatst naar dond"
+      "context": "k als identificatie.⏎HbA1c 377.0 mg/dL [31-133]⏎Daan Vermeulen presenteert vrijdag de "
     },
     {
       "docId": "doc-12648430-13",
@@ -1501,7 +1540,7 @@
       "detectorId": "postal-code",
       "text": "81213",
       "confidence": 0.3,
-      "context": "6​198007010868。⏎感谢您的快速回复。⏎⏎此致，⏎Tel: +55 81213-45678⏎x.y.z@firma.de⏎"
+      "context": "8。⏎新办公室位于深圳。⏎感谢您的快速回复。⏎⏎此致，⏎李静⏎Tel: +55 81213-45678⏎x.y.z@firma.de⏎"
     },
     {
       "docId": "doc-12648430-17",
@@ -1511,7 +1550,7 @@
       "detectorId": "postal-code",
       "text": "13-119",
       "confidence": 0.3,
-      "context": "μέχρι την Παρασκευή.⏎HbA1c 337.0 ng/mL [13-119]⏎SNOMED 49718371004⏎Η συνάντηση μεταφέρ"
+      "context": "μέχρι την Παρασκευή.⏎HbA1c 337.0 ng/mL [13-119]⏎SNOMED 49718371004⏎Τα έγγραφα υπογράφε"
     },
     {
       "docId": "doc-12648430-18",
@@ -1531,7 +1570,7 @@
       "detectorId": "postal-code",
       "text": "012",
       "confidence": 0.3,
-      "context": "vor envíe la documentación a +1 212 555 012 3 antes del viernes.⏎"
+      "context": "vor envíe la documentación a +1 212 555 012 3 antes del viernes.⏎4. Grupo Almadera "
     },
     {
       "docId": "doc-12648430-19",
@@ -1741,7 +1780,7 @@
       "detectorId": "generic-secret",
       "text": "addr15nwcz4gmj230krfv6w8yzh38p34w8fhxuqflh4q4yxus9fgpmrvw9c7vwp22dryg34x389ncx4daf26f4dulqlx6pkxsxej8xk",
       "confidence": 0.3,
-      "context": "yJdBu1vs в рабочее время.⏎В деле указан addr15nwcz4gmj230krfv6w8yzh38p34w8fhxuqflh4q4yxus9fgpmrvw9c7vwp22dryg34x389​ncx4daf26f4dulqlx6pkxsxej8xk как идентификатор.⏎Совещание перенесено"
+      "context": "yJdBu1vs в рабочее время.⏎В деле указан addr15nwcz4gmj230krfv6w8yzh38p34w8fhxuqflh4q4yxus9fgpmrvw9c7vwp22dryg34x389​ncx4daf26f4dulqlx6pkxsxej8xk как идентификатор.⏎Документы подписывае"
     },
     {
       "docId": "doc-12648430-32",
@@ -1761,7 +1800,7 @@
       "detectorId": "generic-secret",
       "text": "AKIAMl0YuvgZbgjpplhG",
       "confidence": 0.3,
-      "context": "end der Bürozeiten.⏎Der Mitarbeiter hat AKIAMl0YuvgZbgjpplhG als Kennung angegeben.⏎Der Vertrag lieg"
+      "context": "end der Bürozeiten.⏎Der Mitarbeiter hat AKIAMl0YuvgZbgjpplhG als Kennung angegeben.⏎Bitte senden Sie"
     },
     {
       "docId": "doc-12648430-33",
@@ -1771,7 +1810,7 @@
       "detectorId": "postal-code",
       "text": "81213",
       "confidence": 0.3,
-      "context": "eit.⏎⏎Mit freundlichen Grüßen,⏎Tel: +55 81213-45678⏎jane_doe@startup.io⏎"
+      "context": "undlichen Grüßen,⏎Lukas Brandt⏎Tel: +55 81213-45678⏎jane_doe@startup.io⏎"
     },
     {
       "docId": "doc-12648430-34",
@@ -1861,7 +1900,7 @@
       "detectorId": "postal-code",
       "text": "20794",
       "confidence": 0.3,
-      "context": "ed to Thursday.⏎⏎Best regards,⏎Tel: +44 20794-60958⏎first.middle.last@corp.co.uk⏎"
+      "context": "⏎⏎Best regards,⏎Martha Ellison⏎Tel: +44 20794-60958⏎first.middle.last@corp.co.uk⏎"
     },
     {
       "docId": "doc-12648430-39",
@@ -1911,7 +1950,7 @@
       "detectorId": "postal-code",
       "text": "79111",
       "confidence": 0.3,
-      "context": "itae⏎Email: jane_doe@gmail.com⏎Tel: +44 79111-23456⏎Prinsengracht 92⏎⏎เลื่อนการประชุม"
+      "context": "สีมา⏎Email: jane_doe@gmail.com⏎Tel: +44 79111-23456⏎Prinsengracht 92⏎⏎เลื่อนการประชุม"
     },
     {
       "docId": "doc-12648430-43",
@@ -1941,7 +1980,7 @@
       "detectorId": "generic-secret",
       "text": "xoxb-EM2ZdpYD0FKWdSRPFDLUGXqs",
       "confidence": 0.3,
-      "context": "ם עם האסמכתא 543104905 התקבל. בתיק רשום xoxb-EM2ZdpYD0FKWdSRPFDLUGXqs כמזהה. "
+      "context": "ם עם האסמכתא 543104905 התקבל. בתיק רשום xoxb-EM2ZdpYD0FKWdSRPFDLUGXqs כמזהה. המשרד החדש: חיפה. "
     },
     {
       "docId": "doc-12648430-45",
@@ -1951,7 +1990,7 @@
       "detectorId": "postal-code",
       "text": "36123",
       "confidence": 0.3,
-      "context": "jantaihin mennessä.⏎Maksu viitteellä +3 36123-45678 on vastaanotettu.⏎Kokous siirrett"
+      "context": "jantaihin mennessä.⏎Maksu viitteellä +3 36123-45678 on vastaanotettu.⏎Toimituskaupunk"
     },
     {
       "docId": "doc-12648430-45",
@@ -1961,7 +2000,7 @@
       "detectorId": "postal-code",
       "text": "36123",
       "confidence": 0.3,
-      "context": "aihin.⏎⏎Ystävällisin terveisin,⏎Tel: +3 36123-45678⏎first.middle.last@xn--bcher-kva.d"
+      "context": "lisin terveisin,⏎Onni Heikkinen⏎Tel: +3 36123-45678⏎first.middle.last@xn--bcher-kva.d"
     },
     {
       "docId": "doc-12648430-47",
@@ -2171,7 +2210,7 @@
       "detectorId": "postal-code",
       "text": "25-111",
       "confidence": 0.3,
-      "context": "AP during business hours.⏎HbA1c 25.6 % [25-111]⏎SNOMED 567501833967101⏎Thanks again fo"
+      "context": "AP during business hours.⏎HbA1c 25.6 % [25-111]⏎SNOMED 567501833967101⏎Please forward "
     },
     {
       "docId": "doc-12648430-60",
@@ -2181,7 +2220,7 @@
       "detectorId": "postal-code",
       "text": "20794",
       "confidence": 0.3,
-      "context": "m Vitae⏎Email: jane_doe@q2.dev⏎Tel: +44 20794-60958⏎세종대로 79⏎⏎Спасибо за быстрый ответ"
+      "context": "инбург.⏎Email: jane_doe@q2.dev⏎Tel: +44 20794-60958⏎세종대로 79⏎⏎Спасибо за быстрый ответ"
     },
     {
       "docId": "doc-12648430-61",
@@ -2231,7 +2270,7 @@
       "detectorId": "postal-code",
       "text": "71-111",
       "confidence": 0.3,
-      "context": "14722283 до пятницы.⏎HbA1c 101.0 mg/dL [71-111]⏎Совещание перенесено на четверг.⏎"
+      "context": "14722283 до пятницы.⏎HbA1c 101.0 mg/dL [71-111]⏎Контактное лицо: Ольга Виноградова.⏎Со"
     },
     {
       "docId": "doc-12648430-63",
@@ -2281,7 +2320,7 @@
       "detectorId": "postal-code",
       "text": "79111",
       "confidence": 0.3,
-      "context": "itae⏎Email: björn.b@startup.io⏎Tel: +44 79111-23456⏎شارع الملك فهد 107⏎⏎Gracias por l"
+      "context": "ntes⏎Email: björn.b@startup.io⏎Tel: +44 79111-23456⏎شارع الملك فهد 107⏎⏎Gracias por l"
     },
     {
       "docId": "doc-12648430-64",
@@ -2301,7 +2340,7 @@
       "detectorId": "generic-secret",
       "text": "16nPNdCiyVMemYn1LVFLJ8o4TkFDTgtqhmLf6HZnx1VgU8ZA",
       "confidence": 0.3,
-      "context": "Доброго дня,⏎⏎Платіж із реквізитом 16nPNdCiyVMemYn1LVFLJ8o4TkFDTgtqhmLf6HZnx1VgU8ZA зараховано.⏎Дякуємо за швидку відповідь"
+      "context": "Доброго дня,⏎⏎Платіж із реквізитом 16nPNdCiyVMemYn1LVFLJ8o4TkFDTgtqhmLf6HZnx1VgU8ZA зараховано.⏎Новий постачальник: Група К"
     },
     {
       "docId": "doc-12648430-67",
@@ -2311,7 +2350,7 @@
       "detectorId": "postal-code",
       "text": "54-105",
       "confidence": 0.3,
-      "context": "+90 532 123 456 7 התקבל.⏎HbA1c 162.0 % [54-105]⏎תודה על המענה המהיר.⏎"
+      "context": "+90 532 123 456 7 התקבל.⏎HbA1c 162.0 % [54-105]⏎הצגת התוצאות ביום שישי: דניאל שפירא.⏎ת"
     },
     {
       "docId": "doc-12648430-68",
@@ -2361,7 +2400,7 @@
       "detectorId": "postal-code",
       "text": "31-128",
       "confidence": 0.3,
-      "context": "8a71dca9c3d7cd do piątku.⏎HbA1c 16.8 % [31-128]⏎SNOMED 22872007⏎Dziękuję za szybką odp"
+      "context": "8a71dca9c3d7cd do piątku.⏎HbA1c 16.8 % [31-128]⏎SNOMED 22872007⏎Osoba kontaktowa: Agni"
     },
     {
       "docId": "doc-12648430-73",
@@ -2451,7 +2490,7 @@
       "detectorId": "generic-secret",
       "text": "TCDiwCXh9fDbxthhxRCvoiTyHPHENmzywD",
       "confidence": 0.3,
-      "context": "ιστικό.⏎Παρακαλώ στείλτε τα έγγραφα στο TCDiwCXh9fDbxthhxRCvoiTyHPHENmzywD μέχρι την Παρασκευή.⏎Ευχαριστούμε για τ"
+      "context": "ιστικό.⏎Παρακαλώ στείλτε τα έγγραφα στο TCDiwCXh9fDbxthhxRCvoiTyHPHENmzywD μέχρι την Παρασκευή.⏎Πόλη παράδοσης: Λά"
     },
     {
       "docId": "doc-12648430-81",
@@ -2781,7 +2820,7 @@
       "detectorId": "generic-secret",
       "text": "token=Ab918tyiniexQ7tk",
       "confidence": 0.3,
-      "context": "周五之前把材料发送到 https://api.prod.net/v1/data?token=Ab918tyiniexQ7tk。 档案中登记的识别号是 U1804496。 "
+      "context": "周五之前把材料发送到 https://api.prod.net/v1/data?token=Ab918tyiniexQ7tk。 档案中登记的识别号是 U1804496。 新办公室位于成都。 "
     },
     {
       "docId": "doc-12648430-106",
@@ -2791,7 +2830,7 @@
       "detectorId": "drivers-license",
       "text": "U1804496",
       "confidence": 0.3,
-      "context": "data?token=Ab918tyiniexQ7tk。 档案中登记的识别号是 U1804496。 "
+      "context": "data?token=Ab918tyiniexQ7tk。 档案中登记的识别号是 U1804496。 新办公室位于成都。 "
     },
     {
       "docId": "doc-12648430-107",
@@ -2811,7 +2850,7 @@
       "detectorId": "street-address",
       "text": "식별자로 3665",
       "confidence": 0.3,
-      "context": "조번호 011016-8355624 입금이 확인되었습니다.⏎3. 파일에는 식별자로 36652910559349 가 기재되어 있습니다.⏎"
+      "context": "조번호 011016-8355624 입금이 확인되었습니다.⏎3. 파일에는 식별자로 36652910559349 가 기재되어 있습니다.⏎4. 한빛물류의 청구서가 어제"
     },
     {
       "docId": "doc-12648430-108",
@@ -2851,7 +2890,7 @@
       "detectorId": "postal-code",
       "text": "21255",
       "confidence": 0.3,
-      "context": "et til torsdag.⏎⏎Venlig hilsen,⏎Tel: +1 21255-50123⏎user+tag@startup.io⏎"
+      "context": "enlig hilsen,⏎Mikkel Østergaard⏎Tel: +1 21255-50123⏎user+tag@startup.io⏎"
     },
     {
       "docId": "doc-12648430-111",
@@ -2981,7 +3020,7 @@
       "detectorId": "postal-code",
       "text": "20794",
       "confidence": 0.3,
-      "context": " پنجشنبه موکول شد.⏎⏎با احترام،⏎Tel: +44 20794-60958⏎user+tag@gmail.com⏎"
+      "context": "کول شد.⏎⏎با احترام،⏎مریم احمدی⏎Tel: +44 20794-60958⏎user+tag@gmail.com⏎"
     },
     {
       "docId": "doc-12648430-118",
@@ -2991,7 +3030,7 @@
       "detectorId": "generic-secret",
       "text": "addr1w3074fmjphqvc8f49ttp208lk8xa00j08tutkvmfxkg0agrr38etwzd5467zf99d66rt3fkpyrgl6xk0h32p3zr5qajs5j6l43",
       "confidence": 0.3,
-      "context": "请在周五之前把材料发送到 addr1w3074fmjphqvc8f49ttp208lk8xa00j08tutkvmfxkg0agrr38etwzd5467zf99d66rt3fkpyrgl6xk0h32p3zr5qajs5j6l43。⏎HbA1c 22.8 g/dL [23-73]⏎感谢您的快速回复。⏎"
+      "context": "请在周五之前把材料发送到 addr1w3074fmjphqvc8f49ttp208lk8xa00j08tutkvmfxkg0agrr38etwzd5467zf99d66rt3fkpyrgl6xk0h32p3zr5qajs5j6l43。⏎HbA1c 22.8 g/dL [23-73]⏎联系人:陈美玲。⏎感谢您的快"
     },
     {
       "docId": "doc-12648430-119",
@@ -3001,7 +3040,7 @@
       "detectorId": "postal-code",
       "text": "17-122",
       "confidence": 0.3,
-      "context": " a fost înregistrată.⏎HbA1c 19.9 ng/mL [17-122]⏎Ședința a fost mutată joi.⏎"
+      "context": " a fost înregistrată.⏎HbA1c 19.9 ng/mL [17-122]⏎Persoana de contact: Ioana Petrescu.⏎Ș"
     },
     {
       "docId": "doc-12648430-120",
@@ -3151,7 +3190,7 @@
       "detectorId": "postal-code",
       "text": "68-107",
       "confidence": 0.3,
-      "context": "13 como identificador.⏎HbA1c 29.9 g/dL [68-107]⏎El contrato está listo para firmar.⏎"
+      "context": "13 como identificador.⏎HbA1c 29.9 g/dL [68-107]⏎Sergio Valverde presentará los resulta"
     },
     {
       "docId": "doc-12648430-135",
@@ -3176,6 +3215,286 @@
   ],
   "falseNegatives": [
     {
+      "docId": "doc-12648430-0",
+      "language": "en",
+      "docType": "medical",
+      "type": "PERSON",
+      "scheme": "ner-person",
+      "text": "Eleanor Brooks",
+      "obfuscated": false,
+      "context": "17009⏎Please forward the signed copy to Eleanor Brooks.⏎The updated draft is attached for your"
+    },
+    {
+      "docId": "doc-12648430-2",
+      "language": "da",
+      "docType": "contract",
+      "type": "ORG",
+      "scheme": "ner-org",
+      "text": "Bølgekraft Teknik",
+      "obfuscated": false,
+      "context": "hwmJQaJRjmVIoBwj som identifikation.⏎4. Bølgekraft Teknik har accepteret det reviderede tilbud.⏎5"
+    },
+    {
+      "docId": "doc-12648430-2",
+      "language": "da",
+      "docType": "contract",
+      "type": "PERSON",
+      "scheme": "ner-person",
+      "text": "Rasmus Bruun",
+      "obfuscated": false,
+      "context": "lbud.⏎5. Send den underskrevne kopi til Rasmus Bruun.⏎"
+    },
+    {
+      "docId": "doc-12648430-4",
+      "language": "uk",
+      "docType": "medical",
+      "type": "PERSON",
+      "scheme": "ner-person",
+      "text": "Андрій Ковальчук",
+      "obfuscated": false,
+      "context": "⏎HbA1c 186.0 % [23-47]⏎Контактна особа: Андрій Ковальчук.⏎Нараду перенесено на четвер.⏎"
+    },
+    {
+      "docId": "doc-12648430-11",
+      "language": "fr",
+      "docType": "prose",
+      "type": "LOCATION",
+      "scheme": "ner-location",
+      "text": "Lyon",
+      "obfuscated": false,
+      "context": " déplacée à jeudi. Le nouveau bureau de Lyon ouvrira en mars. Antoine Perrin a valid"
+    },
+    {
+      "docId": "doc-12648430-11",
+      "language": "fr",
+      "docType": "prose",
+      "type": "PERSON",
+      "scheme": "ner-person",
+      "text": "Antoine Perrin",
+      "obfuscated": false,
+      "context": "nouveau bureau de Lyon ouvrira en mars. Antoine Perrin a validé la maquette hier. "
+    },
+    {
+      "docId": "doc-12648430-12",
+      "language": "nl",
+      "docType": "medical",
+      "type": "PERSON",
+      "scheme": "ner-person",
+      "text": "Daan Vermeulen",
+      "obfuscated": false,
+      "context": "entificatie.⏎HbA1c 377.0 mg/dL [31-133]⏎Daan Vermeulen presenteert vrijdag de kwartaalcijfers."
+    },
+    {
+      "docId": "doc-12648430-15",
+      "language": "zh",
+      "docType": "email",
+      "type": "LOCATION",
+      "scheme": "ner-location",
+      "text": "深圳",
+      "obfuscated": false,
+      "context": "请在周五之前把材料发送到 334136​198007010868。⏎新办公室位于深圳。⏎感谢您的快速回复。⏎⏎此致，⏎李静⏎Tel: +55 81213-45678"
+    },
+    {
+      "docId": "doc-12648430-15",
+      "language": "zh",
+      "docType": "email",
+      "type": "PERSON",
+      "scheme": "ner-person",
+      "text": "李静",
+      "obfuscated": false,
+      "context": "​198007010868。⏎新办公室位于深圳。⏎感谢您的快速回复。⏎⏎此致，⏎李静⏎Tel: +55 81213-45678⏎x.y.z@firma.de⏎"
+    },
+    {
+      "docId": "doc-12648430-16",
+      "language": "fa",
+      "docType": "cv",
+      "type": "PERSON",
+      "scheme": "ner-person",
+      "text": "نازنین موسوی",
+      "obfuscated": false,
+      "context": "Curriculum Vitae⏎نازنین موسوی⏎Email: first.middle.last@sub.domain.net"
+    },
+    {
+      "docId": "doc-12648430-17",
+      "language": "el",
+      "docType": "medical",
+      "type": "PERSON",
+      "scheme": "ner-person",
+      "text": "Κατερίνα Βασιλείου",
+      "obfuscated": false,
+      "context": "NOMED 49718371004⏎Τα έγγραφα υπογράφει: Κατερίνα Βασιλείου.⏎Η συνάντηση μεταφέρθηκε για την Πέμπτη"
+    },
+    {
+      "docId": "doc-12648430-18",
+      "language": "es",
+      "docType": "contract",
+      "type": "ORG",
+      "scheme": "ner-org",
+      "text": "Grupo Almadera",
+      "obfuscated": false,
+      "context": " +1 212 555 012 3 antes del viernes.⏎4. Grupo Almadera aceptó la oferta revisada.⏎5. Lucía Her"
+    },
+    {
+      "docId": "doc-12648430-18",
+      "language": "es",
+      "docType": "contract",
+      "type": "PERSON",
+      "scheme": "ner-person",
+      "text": "Lucía Herrera",
+      "obfuscated": false,
+      "context": " Almadera aceptó la oferta revisada.⏎5. Lucía Herrera aprobó el borrador ayer.⏎"
+    },
+    {
+      "docId": "doc-12648430-20",
+      "language": "he",
+      "docType": "cv",
+      "type": "PERSON",
+      "scheme": "ner-person",
+      "text": "איתי כהן",
+      "obfuscated": false,
+      "context": "Curriculum Vitae⏎איתי כהן⏎Email: müller@sub.domain.net⏎Tel: +1415"
+    },
+    {
+      "docId": "doc-12648430-23",
+      "language": "es",
+      "docType": "prose",
+      "type": "LOCATION",
+      "scheme": "ner-location",
+      "text": "Zaragoza",
+      "obfuscated": false,
+      "context": "ias por la respuesta rápida. El envío a Zaragoza tarda cuatro días. La factura de Grupo "
+    },
+    {
+      "docId": "doc-12648430-23",
+      "language": "es",
+      "docType": "prose",
+      "type": "ORG",
+      "scheme": "ner-org",
+      "text": "Grupo Almadera",
+      "obfuscated": false,
+      "context": "ragoza tarda cuatro días. La factura de Grupo Almadera llegó ayer. "
+    },
+    {
+      "docId": "doc-12648430-24",
+      "language": "de",
+      "docType": "medical",
+      "type": "PERSON",
+      "scheme": "ner-person",
+      "text": "Annika Schröder",
+      "obfuscated": false,
+      "context": "8102⏎Bitte senden Sie die Unterlagen an Annika Schröder.⏎Vielen Dank für die schnelle Rückmeldu"
+    },
+    {
+      "docId": "doc-12648430-26",
+      "language": "uk",
+      "docType": "contract",
+      "type": "ORG",
+      "scheme": "ner-org",
+      "text": "Група Калина",
+      "obfuscated": false,
+      "context": "к ідентифікатор.⏎4. Новий постачальник: Група Калина.⏎5. Документи підписує Соломія Ткаченко"
+    },
+    {
+      "docId": "doc-12648430-26",
+      "language": "uk",
+      "docType": "contract",
+      "type": "PERSON",
+      "scheme": "ner-person",
+      "text": "Соломія Ткаченко",
+      "obfuscated": false,
+      "context": "ик: Група Калина.⏎5. Документи підписує Соломія Ткаченко.⏎"
+    },
+    {
+      "docId": "doc-12648430-27",
+      "language": "sv",
+      "docType": "prose",
+      "type": "PERSON",
+      "scheme": "ner-person",
+      "text": "Astrid Lindqvist",
+      "obfuscated": false,
+      "context": "öre fredag. Tack för det snabba svaret. Astrid Lindqvist presenterar kvartalssiffrorna på fredag"
+    },
+    {
+      "docId": "doc-12648430-28",
+      "language": "ro",
+      "docType": "cv",
+      "type": "PERSON",
+      "scheme": "ner-person",
+      "text": "Ioana Petrescu",
+      "obfuscated": false,
+      "context": "Curriculum Vitae⏎Ioana Petrescu⏎Livrarea către Brașov durează patru zil"
+    },
+    {
+      "docId": "doc-12648430-28",
+      "language": "ro",
+      "docType": "cv",
+      "type": "LOCATION",
+      "scheme": "ner-location",
+      "text": "Brașov",
+      "obfuscated": false,
+      "context": "lum Vitae⏎Ioana Petrescu⏎Livrarea către Brașov durează patru zile.⏎Email: o'brien@sub."
+    },
+    {
+      "docId": "doc-12648430-30",
+      "language": "ru",
+      "docType": "email",
+      "type": "PERSON",
+      "scheme": "ner-person",
+      "text": "Дмитрий Волков",
+      "obfuscated": false,
+      "context": "ак идентификатор.⏎Документы подписывает Дмитрий Волков.⏎Совещание перенесено на четверг.⏎⏎С ув"
+    },
+    {
+      "docId": "doc-12648430-30",
+      "language": "ru",
+      "docType": "email",
+      "type": "PERSON",
+      "scheme": "ner-person",
+      "text": "Анна Соколова",
+      "obfuscated": false,
+      "context": "ие перенесено на четверг.⏎⏎С уважением,⏎Анна Соколова⏎Tel: +81 901 234 567 8⏎first.middle.las"
+    },
+    {
+      "docId": "doc-12648430-31",
+      "language": "sv",
+      "docType": "cv",
+      "type": "PERSON",
+      "scheme": "ner-person",
+      "text": "Oskar Nyström",
+      "obfuscated": false,
+      "context": "Curriculum Vitae⏎Oskar Nyström⏎Email: first.middle.last@gmail.com⏎Tel:"
+    },
+    {
+      "docId": "doc-12648430-33",
+      "language": "de",
+      "docType": "email",
+      "type": "PERSON",
+      "scheme": "ner-person",
+      "text": "Annika Schröder",
+      "obfuscated": false,
+      "context": "ben.⏎Bitte senden Sie die Unterlagen an Annika Schröder.⏎Der Vertrag liegt zur Unterschrift ber"
+    },
+    {
+      "docId": "doc-12648430-33",
+      "language": "de",
+      "docType": "email",
+      "type": "PERSON",
+      "scheme": "ner-person",
+      "text": "Lukas Brandt",
+      "obfuscated": false,
+      "context": "hrift bereit.⏎⏎Mit freundlichen Grüßen,⏎Lukas Brandt⏎Tel: +55 81213-45678⏎jane_doe@startup.i"
+    },
+    {
+      "docId": "doc-12648430-34",
+      "language": "ro",
+      "docType": "medical",
+      "type": "PERSON",
+      "scheme": "ner-person",
+      "text": "Cristian Vasilescu",
+      "obfuscated": false,
+      "context": "OMED 2697926275001⏎Persoana de contact: Cristian Vasilescu.⏎Mulțumim pentru răspunsul rapid.⏎"
+    },
+    {
       "docId": "doc-12648430-35",
       "language": "nl",
       "docType": "csv",
@@ -3186,214 +3505,314 @@
       "context": "MNZC9qBa5zCqyucyVTZ5p2Ez1gdXx6HcV1,ok⏎2,9931-240,87mvekt9BDyfGL28gB2N4cYP7paanGpmr4NSuPu"
     },
     {
-      "docId": "doc-12648430-151",
-      "language": "es",
-      "docType": "csv",
-      "type": "POSTAL_CODE",
-      "scheme": "postal",
-      "text": "56176-6397",
+      "docId": "doc-12648430-38",
+      "language": "en",
+      "docType": "email",
+      "type": "PERSON",
+      "scheme": "ner-person",
+      "text": "Martha Ellison",
       "obfuscated": false,
-      "context": "83100-5,ok⏎2,261968100-0,94921575T,ok⏎3,56176-6397,23-36316784-5,ok⏎"
+      "context": "g was moved to Thursday.⏎⏎Best regards,⏎Martha Ellison⏎Tel: +44 20794-60958⏎first.middle.last@"
     },
     {
-      "docId": "doc-12648430-161",
-      "language": "it",
-      "docType": "csv",
-      "type": "POSTAL_CODE",
-      "scheme": "postal",
-      "text": "630-4728",
-      "obfuscated": false,
-      "context": "row,contact,identifier,status⏎1,630-4728,144.248.98.3,ok⏎2,X6G 4B3,GFTJKD40S49H9"
-    },
-    {
-      "docId": "doc-12648430-161",
-      "language": "it",
-      "docType": "csv",
-      "type": "POSTAL_CODE",
-      "scheme": "postal",
-      "text": "X6G 4B3",
-      "obfuscated": false,
-      "context": "ier,status⏎1,630-4728,144.248.98.3,ok⏎2,X6G 4B3,GFTJKD40S49H999W,ok⏎"
-    },
-    {
-      "docId": "doc-12648430-217",
+      "docId": "doc-12648430-39",
       "language": "ru",
-      "docType": "csv",
-      "type": "POSTAL_CODE",
-      "scheme": "postal",
-      "text": "733-1514",
+      "docType": "cv",
+      "type": "PERSON",
+      "scheme": "ner-person",
+      "text": "Анна Соколова",
       "obfuscated": false,
-      "context": "contact,identifier,status⏎1,ZZQKBQZJEWG,733-1514,ok⏎2,EL499711334,https://db.internal.co"
+      "context": "Curriculum Vitae⏎Анна Соколова⏎Новый офис: Казань.⏎Email: x.y.z@xn--bc"
     },
     {
-      "docId": "doc-12648430-243",
-      "language": "pl",
-      "docType": "csv",
-      "type": "POSTAL_CODE",
-      "scheme": "postal",
-      "text": "X4M 6E3",
+      "docId": "doc-12648430-39",
+      "language": "ru",
+      "docType": "cv",
+      "type": "LOCATION",
+      "scheme": "ner-location",
+      "text": "Казань",
       "obfuscated": false,
-      "context": "ok⏎2,TG2G4JjoGekq4dia8stRdRaq295UagvQ5Z,X4M 6E3,ok⏎"
+      "context": "riculum Vitae⏎Анна Соколова⏎Новый офис: Казань.⏎Email: x.y.z@xn--bcher-kva.de⏎Tel: +81"
     },
     {
-      "docId": "doc-12648430-370",
-      "language": "da",
-      "docType": "csv",
-      "type": "POSTAL_CODE",
-      "scheme": "postal",
-      "text": "89651-7031",
-      "obfuscated": false,
-      "context": "secret@build.ci.dev/app,LU56173253,ok⏎2,89651-7031,Y4EUXAJL5LA3MXUK2,ok⏎3,SI85692999,hf_oR"
-    },
-    {
-      "docId": "doc-12648430-392",
-      "language": "fr",
-      "docType": "csv",
-      "type": "POSTAL_CODE",
-      "scheme": "postal",
-      "text": "H3Y 0K7",
-      "obfuscated": false,
-      "context": "w,contact,identifier,status⏎1,56990-016,H3Y 0K7,ok⏎2,CNIE: Y002609,+55 81213-45678,ok⏎3"
-    },
-    {
-      "docId": "doc-12648430-472",
-      "language": "da",
-      "docType": "csv",
-      "type": "POSTAL_CODE",
-      "scheme": "postal",
-      "text": "199224",
-      "obfuscated": false,
-      "context": "hKHdAHo27Kv9SJwDGyugdzPwbwwLangBb5,ok⏎2,199224,PS17UOKCT21M1LLCSBICN82QMT75H,ok⏎"
-    },
-    {
-      "docId": "doc-12648430-535",
-      "language": "uk",
-      "docType": "csv",
-      "type": "POSTAL_CODE",
-      "scheme": "postal",
-      "text": "X2E 2L4",
-      "obfuscated": false,
-      "context": "row,contact,identifier,status⏎1,X2E 2L4,ghp_HVJaLPnJk5H2a2UQYaoDMnlMEzDikg2hc1m"
-    },
-    {
-      "docId": "doc-12648430-645",
-      "language": "es",
-      "docType": "csv",
-      "type": "POSTAL_CODE",
-      "scheme": "postal",
-      "text": "54381-8428",
-      "obfuscated": false,
-      "context": "hkiXwJ-d3mNHqaPQXF1X,OTRB8208196H4,ok⏎2,54381-8428,_service@firma.de,ok⏎"
-    },
-    {
-      "docId": "doc-12648430-655",
-      "language": "fi",
-      "docType": "csv",
-      "type": "POSTAL_CODE",
-      "scheme": "postal",
-      "text": "55332-610",
-      "obfuscated": false,
-      "context": "hp_A2HF1VGetNk5UPYZirfqtjBBmslLwK1BYSQJ,55332-610,ok⏎3,eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVC"
-    },
-    {
-      "docId": "doc-12648430-760",
-      "language": "de",
-      "docType": "csv",
-      "type": "POSTAL_CODE",
-      "scheme": "postal",
-      "text": "549276",
-      "obfuscated": false,
-      "context": ",identifier,status⏎1,GL7324915947288142,549276,ok⏎2,björn.b@sub.domain.net,GX7NZ96CR8,"
-    },
-    {
-      "docId": "doc-12648430-941",
-      "language": "nl",
-      "docType": "csv",
-      "type": "POSTAL_CODE",
-      "scheme": "postal",
-      "text": "313203",
-      "obfuscated": false,
-      "context": "3574750569,ok⏎2,user+tag@sub.domain.net,313203,ok⏎3,ghp_hAXqT1wrWwIA7aWOrEVOH4cE3dWwwI"
-    },
-    {
-      "docId": "doc-12648430-1035",
-      "language": "sv",
-      "docType": "csv",
-      "type": "POSTAL_CODE",
-      "scheme": "postal",
-      "text": "4340 XZ",
-      "obfuscated": false,
-      "context": "2/appdb,528238012,ok⏎3,BE98746937224025,4340 XZ,ok⏎"
-    },
-    {
-      "docId": "doc-12648430-1064",
-      "language": "de",
-      "docType": "csv",
-      "type": "POSTAL_CODE",
-      "scheme": "postal",
-      "text": "4165 AB",
-      "obfuscated": false,
-      "context": "identifier,status⏎1,_service@corp.co.uk,4165 AB,ok⏎2,0x73A913f0f3Dc88758f73C471BE0A0dc8"
-    },
-    {
-      "docId": "doc-12648430-1082",
-      "language": "hi",
-      "docType": "csv",
-      "type": "POSTAL_CODE",
-      "scheme": "postal",
-      "text": "74757",
-      "obfuscated": false,
-      "context": "dentifier,status⏎1,x.y.z@sub.domain.net,74757,ok⏎2,554876052164,HMGTC5219J,ok⏎"
-    },
-    {
-      "docId": "doc-12648430-1370",
-      "language": "sv",
-      "docType": "csv",
-      "type": "POSTAL_CODE",
-      "scheme": "postal",
-      "text": "787-9449",
-      "obfuscated": false,
-      "context": "row,contact,identifier,status⏎1,787-9449,ghp_gW8zCQVP22EPFwgI4UZ1wZx08nJ6Oz0wr4O"
-    },
-    {
-      "docId": "doc-12648430-1385",
+      "docId": "doc-12648430-42",
       "language": "th",
-      "docType": "csv",
-      "type": "POSTAL_CODE",
-      "scheme": "postal",
-      "text": "47758",
+      "docType": "cv",
+      "type": "PERSON",
+      "scheme": "ner-person",
+      "text": "อานนท์ จันทร์เพ็ญ",
       "obfuscated": false,
-      "context": ",4539000604408643,ok⏎2,5.3 mg/dL [9-44],47758,ok⏎"
+      "context": "Curriculum Vitae⏎อานนท์ จันทร์เพ็ญ⏎เมืองปลายทาง: นครราชสีมา⏎Email: jane_do"
     },
     {
-      "docId": "doc-12648430-1854",
-      "language": "pl",
-      "docType": "csv",
-      "type": "POSTAL_CODE",
-      "scheme": "postal",
-      "text": "SW1A 1AA",
+      "docId": "doc-12648430-42",
+      "language": "th",
+      "docType": "cv",
+      "type": "LOCATION",
+      "scheme": "ner-location",
+      "text": "นครราชสีมา",
       "obfuscated": false,
-      "context": "q0fmg6ym3sjle8qz,ok⏎2,78EJTF5G2EXZ23AXA,SW1A 1AA,ok⏎"
+      "context": "m Vitae⏎อานนท์ จันทร์เพ็ญ⏎เมืองปลายทาง: นครราชสีมา⏎Email: jane_doe@gmail.com⏎Tel: +44 7911"
     },
     {
-      "docId": "doc-12648430-1891",
+      "docId": "doc-12648430-44",
+      "language": "he",
+      "docType": "prose",
+      "type": "LOCATION",
+      "scheme": "ner-location",
+      "text": "חיפה",
+      "obfuscated": false,
+      "context": "dpYD0FKWdSRPFDLUGXqs כמזהה. המשרד החדש: חיפה. "
+    },
+    {
+      "docId": "doc-12648430-45",
+      "language": "fi",
+      "docType": "email",
+      "type": "LOCATION",
+      "scheme": "ner-location",
+      "text": "Turku",
+      "obfuscated": false,
+      "context": "678 on vastaanotettu.⏎Toimituskaupunki: Turku.⏎Kokous siirrettiin torstaihin.⏎⏎Ystävä"
+    },
+    {
+      "docId": "doc-12648430-45",
+      "language": "fi",
+      "docType": "email",
+      "type": "PERSON",
+      "scheme": "ner-person",
+      "text": "Onni Heikkinen",
+      "obfuscated": false,
+      "context": "in torstaihin.⏎⏎Ystävällisin terveisin,⏎Onni Heikkinen⏎Tel: +3 36123-45678⏎first.middle.last@x"
+    },
+    {
+      "docId": "doc-12648430-58",
+      "language": "el",
+      "docType": "cv",
+      "type": "PERSON",
+      "scheme": "ner-person",
+      "text": "Γιώργος Αντωνίου",
+      "obfuscated": false,
+      "context": "Curriculum Vitae⏎Γιώργος Αντωνίου⏎Πόλη παράδοσης: Βόλος.⏎Email: x.y.z@sub"
+    },
+    {
+      "docId": "doc-12648430-58",
+      "language": "el",
+      "docType": "cv",
+      "type": "LOCATION",
+      "scheme": "ner-location",
+      "text": "Βόλος",
+      "obfuscated": false,
+      "context": " Vitae⏎Γιώργος Αντωνίου⏎Πόλη παράδοσης: Βόλος.⏎Email: x.y.z@sub.domain.net⏎Tel: +5581"
+    },
+    {
+      "docId": "doc-12648430-59",
+      "language": "en",
+      "docType": "medical",
+      "type": "PERSON",
+      "scheme": "ner-person",
+      "text": "Daniel Croft",
+      "obfuscated": false,
+      "context": "67101⏎Please forward the signed copy to Daniel Croft.⏎Thanks again for the quick turnaround "
+    },
+    {
+      "docId": "doc-12648430-60",
+      "language": "ru",
+      "docType": "cv",
+      "type": "PERSON",
+      "scheme": "ner-person",
+      "text": "Сергей Ковалёв",
+      "obfuscated": false,
+      "context": "Curriculum Vitae⏎Сергей Ковалёв⏎Новый офис: Екатеринбург.⏎Email: jane_d"
+    },
+    {
+      "docId": "doc-12648430-60",
+      "language": "ru",
+      "docType": "cv",
+      "type": "LOCATION",
+      "scheme": "ner-location",
+      "text": "Екатеринбург",
+      "obfuscated": false,
+      "context": "iculum Vitae⏎Сергей Ковалёв⏎Новый офис: Екатеринбург.⏎Email: jane_doe@q2.dev⏎Tel: +44 20794-"
+    },
+    {
+      "docId": "doc-12648430-62",
+      "language": "ru",
+      "docType": "medical",
+      "type": "PERSON",
+      "scheme": "ner-person",
+      "text": "Ольга Виноградова",
+      "obfuscated": false,
+      "context": "c 101.0 mg/dL [71-111]⏎Контактное лицо: Ольга Виноградова.⏎Совещание перенесено на четверг.⏎"
+    },
+    {
+      "docId": "doc-12648430-64",
+      "language": "es",
+      "docType": "cv",
+      "type": "PERSON",
+      "scheme": "ner-person",
+      "text": "Pablo Cifuentes",
+      "obfuscated": false,
+      "context": "Curriculum Vitae⏎Pablo Cifuentes⏎Email: björn.b@startup.io⏎Tel: +44 7911"
+    },
+    {
+      "docId": "doc-12648430-66",
+      "language": "uk",
+      "docType": "email",
+      "type": "ORG",
+      "scheme": "ner-org",
+      "text": "Група Калина",
+      "obfuscated": false,
+      "context": "1VgU8ZA зараховано.⏎Новий постачальник: Група Калина.⏎Дякуємо за швидку відповідь.⏎⏎З поваго"
+    },
+    {
+      "docId": "doc-12648430-66",
+      "language": "uk",
+      "docType": "email",
+      "type": "PERSON",
+      "scheme": "ner-person",
+      "text": "Богдан Кравченко",
+      "obfuscated": false,
+      "context": "якуємо за швидку відповідь.⏎⏎З повагою,⏎Богдан Кравченко⏎Tel: +44 791 112 345 6⏎a@gmail.com⏎"
+    },
+    {
+      "docId": "doc-12648430-67",
+      "language": "he",
+      "docType": "medical",
+      "type": "PERSON",
+      "scheme": "ner-person",
+      "text": "דניאל שפירא",
+      "obfuscated": false,
+      "context": "62.0 % [54-105]⏎הצגת התוצאות ביום שישי: דניאל שפירא.⏎תודה על המענה המהיר.⏎"
+    },
+    {
+      "docId": "doc-12648430-70",
       "language": "zh",
-      "docType": "csv",
-      "type": "POSTAL_CODE",
-      "scheme": "postal",
-      "text": "495-8378",
+      "docType": "email",
+      "type": "PERSON",
+      "scheme": "ner-person",
+      "text": "陈美玲",
       "obfuscated": false,
-      "context": "hp_iEvV0leommqMOOnpbqgSbmz6fkWWMX2C65w1,495-8378,ok⏎"
+      "context": "参考号为 IE5510585WH 的付款已经到账。⏎会议改到了周四。⏎⏎此致，⏎陈美玲⏎Tel: +558121345678⏎jane_doe@münchen.de⏎"
     },
     {
-      "docId": "doc-12648430-1949",
-      "language": "de",
-      "docType": "csv",
-      "type": "POSTAL_CODE",
-      "scheme": "postal",
-      "text": "97074-7078",
+      "docId": "doc-12648430-72",
+      "language": "pl",
+      "docType": "medical",
+      "type": "PERSON",
+      "scheme": "ner-person",
+      "text": "Agnieszka Nowicka",
       "obfuscated": false,
-      "context": ".internal:5432/appdb,4.138.147.211,ok⏎3,97074-7078,15stuxxtTg2qpQ3cuUXn9B5W2jMZRznQxVXUpcP"
+      "context": "-128]⏎SNOMED 22872007⏎Osoba kontaktowa: Agnieszka Nowicka.⏎Dziękuję za szybką odpowiedź.⏎"
+    },
+    {
+      "docId": "doc-12648430-75",
+      "language": "de",
+      "docType": "cv",
+      "type": "PERSON",
+      "scheme": "ner-person",
+      "text": "Katharina Vogel",
+      "obfuscated": false,
+      "context": "Curriculum Vitae⏎Katharina Vogel⏎Email: test123@firma.de⏎Tel: +819012345"
+    },
+    {
+      "docId": "doc-12648430-76",
+      "language": "th",
+      "docType": "prose",
+      "type": "ORG",
+      "scheme": "ner-org",
+      "text": "โรงงานช้างเผือก",
+      "obfuscated": false,
+      "context": "ารชำระเงินอ้างอิง 6011416729895948 แล้ว โรงงานช้างเผือก ตอบรับข้อเสนอฉบับแก้ไขแล้ว ประวิทย์ แสง"
+    },
+    {
+      "docId": "doc-12648430-76",
+      "language": "th",
+      "docType": "prose",
+      "type": "PERSON",
+      "scheme": "ner-person",
+      "text": "ประวิทย์ แสงทอง",
+      "obfuscated": false,
+      "context": "งานช้างเผือก ตอบรับข้อเสนอฉบับแก้ไขแล้ว ประวิทย์ แสงทอง จะนำเสนอผลประกอบการวันศุกร์ "
+    },
+    {
+      "docId": "doc-12648430-77",
+      "language": "da",
+      "docType": "cv",
+      "type": "PERSON",
+      "scheme": "ner-person",
+      "text": "Anders Holm",
+      "obfuscated": false,
+      "context": "Curriculum Vitae⏎Anders Holm⏎Levering til Aarhus tager fire dage.⏎Em"
+    },
+    {
+      "docId": "doc-12648430-77",
+      "language": "da",
+      "docType": "cv",
+      "type": "LOCATION",
+      "scheme": "ner-location",
+      "text": "Aarhus",
+      "obfuscated": false,
+      "context": "rriculum Vitae⏎Anders Holm⏎Levering til Aarhus tager fire dage.⏎Email: john.doe@münche"
+    },
+    {
+      "docId": "doc-12648430-78",
+      "language": "it",
+      "docType": "prose",
+      "type": "ORG",
+      "scheme": "ner-org",
+      "text": "Logistica Adriamar",
+      "obfuscated": false,
+      "context": "La riunione è stata spostata a giovedì. Logistica Adriamar ha accettato l'offerta rivista. La nuov"
+    },
+    {
+      "docId": "doc-12648430-78",
+      "language": "it",
+      "docType": "prose",
+      "type": "LOCATION",
+      "scheme": "ner-location",
+      "text": "Palermo",
+      "obfuscated": false,
+      "context": "ato l'offerta rivista. La nuova sede di Palermo apre a marzo. "
+    },
+    {
+      "docId": "doc-12648430-80",
+      "language": "el",
+      "docType": "email",
+      "type": "LOCATION",
+      "scheme": "ner-location",
+      "text": "Λάρισα",
+      "obfuscated": false,
+      "context": "wD μέχρι την Παρασκευή.⏎Πόλη παράδοσης: Λάρισα.⏎Ευχαριστούμε για την άμεση απάντηση.⏎⏎"
+    },
+    {
+      "docId": "doc-12648430-80",
+      "language": "el",
+      "docType": "email",
+      "type": "PERSON",
+      "scheme": "ner-person",
+      "text": "Δημήτρης Σταθόπουλος",
+      "obfuscated": false,
+      "context": "ε για την άμεση απάντηση.⏎⏎Με εκτίμηση,⏎Δημήτρης Σταθόπουλος⏎Tel: +861 391 234 567 8⏎test123@münchen"
+    },
+    {
+      "docId": "doc-12648430-83",
+      "language": "el",
+      "docType": "email",
+      "type": "ORG",
+      "scheme": "ner-org",
+      "text": "Μεταφορές Δίας",
+      "obfuscated": false,
+      "context": "ρήθηκε.⏎Το τιμολόγιο εκδίδει η εταιρεία Μεταφορές Δίας.⏎Ευχαριστούμε για την άμεση απάντηση.⏎⏎"
+    },
+    {
+      "docId": "doc-12648430-83",
+      "language": "el",
+      "docType": "email",
+      "type": "PERSON",
+      "scheme": "ner-person",
+      "text": "Κατερίνα Βασιλείου",
+      "obfuscated": false,
+      "context": "ε για την άμεση απάντηση.⏎⏎Με εκτίμηση,⏎Κατερίνα Βασιλείου⏎Tel: +905321234567⏎müller@q2.dev⏎"
     }
   ]
 }

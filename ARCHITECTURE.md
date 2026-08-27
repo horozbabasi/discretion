@@ -713,18 +713,46 @@ nothing downstream can read the current figure as a settled result.
 places — and ship as Bloom filters at 3.2 MB. SPEC.md asks for
 "compressed sets or a succinct data structure", and two things argued
 for the filter over a list. Size is the obvious one: the same entries
-are roughly 12 MB as plaintext. The other is that a gazetteer of
-people's names IS personal data about identifiable living people; CC0
-and CC BY waive copyright and database rights, they do not make that
-untrue. Membership testing is the only capability Stage 2b needs, and a
-filter answers "is this a known name?" without redistributing a list of
-who those people are.
+are roughly 12 MB as plaintext. The other is a data-protection
+argument that needs stating in explicit terms, because it is easy to
+wave past: a gazetteer of people's names IS personal data about
+identifiable living people. CC0 and CC BY are COPYRIGHT instruments.
+They waive copyright and database rights; they do not, and cannot,
+waive a data subject's rights, and they grant this project no
+permission to redistribute personal data merely because the upstream
+licence is permissive. Those are different bodies of law, and a
+permissive licence answers only one of them.
+
+Membership testing is the only capability Stage 2b needs. A filter
+answers "is this a known name?" without redistributing a list of who
+those people are: the artifact is a bit array from which the source
+names cannot be enumerated, so the project ships the capability without
+shipping the personal data. That is the reason to prefer it even where
+size would not force the choice.
 
 The trade is a bounded false-positive rate and NO false negatives. That
 asymmetry fits the weight SPEC.md assigns the evidence — "gazetteer hit
 alone is medium confidence" — because a hit is corroboration while a
-miss is conclusive. Sized for 0.1%; measured at 0.000% on 20,000 random
-tokens.
+miss is conclusive.
+
+Parameters, since "0.1%" should be checkable rather than trusted: 14.38
+bits per entry and k=10 probes, which imply 0.1000%. Measured 0.1000%
+(PERSON), 0.1040% (LOCATION) and 0.0875% (ORG) over 200,000 distinct
+random tokens. The filters are sized AT their target, not over it, so
+there is no over-provisioning cost to reclaim.
+
+An earlier revision of this document published 0.000%, which was a
+BROKEN MEASUREMENT and not a good result. The probe used a textbook LCG
+whose multiply, `seed * 1103515245`, exceeds 2^53 and silently loses
+precision in double arithmetic; it produced 1,731 distinct tokens from
+20,000 draws, so it re-probed the same handful of strings and found
+nothing. At 0.1% those few distinct probes predict about 1.7 hits, so
+zero was unremarkable noise rather than evidence of anything. The
+lesson generalizes past this filter: a measurement far BETTER than its
+design target is a defect report about the measurement, and the repo's
+seeded work uses mulberry32 for exactly this reason. The regression
+test now asserts the probe's own distinctness before it asserts a
+rate.
 
 Sources were restricted to the two the licensing review verified from
 primary sources: Wikidata (CC0) for names, brands and businesses, and
@@ -903,6 +931,70 @@ Deferred by design: Web Worker hosting and model bundling into the
 extension (M9, per D16 core stays environment-agnostic), gazetteers and
 verification (M7), calibration of the raw softmax `rawConfidence` and
 overlap fusion (M8).
+
+## Status after M7
+
+Stage 3 context scoring is complete and measured, Stage 2b gazetteers
+ship, and Stage 2c was removed on its own criterion (D20). The pipeline
+is now composed behind one entry point, `detect()`, which runs Stages
+0–3 and threads Stage 3 evidence into Stage 1's validators — a caller
+who forgets that hook silently gets a weaker pipeline, which is not a
+detail consumers should be trusted with.
+
+What Stage 3 contains: structural cues (JSON/YAML/.env/code assignment/
+CSV headers/markdown tables/prose form labels, plus the shapes people
+actually paste — curl headers, git diffs, `.npmrc`, Kubernetes block
+scalars, `.netrc`, docker `-e`, CLI flags, SDK setters, minified JSON,
+CJK full-width colons); trigger matching over 32 languages and 7,342
+terms; document format and subject-domain profiling on independent
+axes; thirteen negative rules; and the scoring pass with co-occurrence
+and repetition. 788 tests.
+
+**The measured result.** M7's exit criterion in SPEC.md is the precision
+improvement on hard negatives: **332 → 190 false positives, −42.8%**.
+base64 blobs went to zero, placeholder code more than halved, labelled
+examples fell by a quarter. Per type: EMAIL 81.3% → 98.5%, POSTAL_CODE
+5.9% → 20.0%, NATIONAL_ID 67.2% → 71.8%, API_KEY 92.3% → 95.9%,
+SWIFT_BIC 88.2% → 100%. No recall regression anywhere except the
+recorded GENERIC_SECRET gap.
+
+**The dominant lesson of this milestone was about suppression.** Four
+rounds of adversarial review ran 562 executed inputs against rules that
+all looked reasonable when written, and every one of them leaked: Danish
+CPR and Korean RRN in parentheses, SSNs swallowed by an authority scan
+that ran past `|` and `;`, Luhn-valid Amex PANs on git-diff `+` lines,
+Argentine DNI and Swiss AHV read as version numbers, real identifiers
+un-redacted inside HTML and XML markup. The recurring defect was
+evidence too loose about SCOPE — a line instead of an adjacency, a type
+instead of a position, a prefix character instead of a parse — and the
+standing rule it produced is D18: no suppression rule ships until
+someone has CONSTRUCTED and EXECUTED a real sensitive value it wrongly
+suppresses. A later round then measured the opposite edge and found two
+rules over-tightened into uselessness, which is why the regression suite
+pins both directions.
+
+**Open, carried into M8, and neither is a surprise.** GENERIC_SECRET at
+1.9% precision / 56.9% recall (D19): secrets introduced by labeling
+language in prose across languages, which SPEC's "entropy AND an
+assignment signal" excludes by construction, and which cannot be fixed
+by a binary suppress-or-allow call. POSTAL_CODE at 20.0% precision:
+much improved from 5.9% but still the weakest type in the pipeline, and
+the residue is genuinely ambiguous — short digit runs whose only
+distinguishing evidence is a per-country format table with no checksum
+behind it.
+
+**Deferred by design, not overlooked.** Cross-type overlap resolution is
+Stage 4's: TAX_ID cross-scheme collisions, URL_WITH_CREDENTIALS against
+CONNECTION_STRING, LOCATION inside STREET_ADDRESS, and the four
+containment rules the error taxonomy proposed and this milestone
+declined to ship. The taxonomy's own highest-priority residual is a
+SPAN-HYGIENE prerequisite — url-with-credentials and connection-string
+spans were measured straddling CSV and line boundaries — and containment
+suppression is only ever as safe as the covering span is correct, so
+that comes first. Also outstanding: the rules scan ASCII digits and
+neither fire nor leak on Arabic-Indic or Devanagari digits, whose
+correct fix is a folding transform in Stage 0 rather than widening
+suppression rules into scripts where they are least tested.
 
 ## Standing contracts (established in M1)
 

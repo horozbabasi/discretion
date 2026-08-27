@@ -12,6 +12,7 @@
  * the world.
  */
 import { describe, expect, it } from 'vitest';
+import { generate } from '../src/index.js';
 import { gazetteerSizes, isGazetteerType, lookupGazetteer } from '../src/gazetteer/index.js';
 
 describe('gazetteer — coverage', () => {
@@ -54,19 +55,34 @@ describe('gazetteer — the miss side, which is conclusive', () => {
   });
 
   it('keeps the false-positive rate near its design target', () => {
-    // A Bloom filter never returns a false negative, so this is the only error
-    // mode. Measured rather than asserted: the filters are sized for 0.1%.
-    let seed = 12345;
-    const next = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+    // A Bloom filter never returns a false negative, so this is its only error
+    // mode, and it is measured rather than asserted.
+    //
+    // The PRNG matters more than it looks. An earlier version of this test
+    // used a textbook LCG, `seed * 1103515245 + 12345`, whose multiply
+    // exceeds 2^53 and silently loses precision: it produced 1,731 DISTINCT
+    // tokens from 20,000 draws, so it was probing the same handful of strings
+    // over and over and reported 0.000%. mulberry32 is the generator the rest
+    // of the repo already uses for seeded work, and it stays inside 32-bit
+    // integer arithmetic.
+    const rng = generate.mulberry32(20260828);
+    const samples = 50_000;
+    const distinct = new Set<string>();
     let hits = 0;
-    const samples = 5000;
     for (let i = 0; i < samples; i += 1) {
       let token = '';
-      const length = 7 + Math.floor(next() * 5);
-      for (let j = 0; j < length; j += 1) token += String.fromCharCode(97 + Math.floor(next() * 26));
+      const length = 7 + Math.floor(rng() * 6);
+      for (let j = 0; j < length; j += 1) token += String.fromCharCode(97 + Math.floor(rng() * 26));
+      distinct.add(token);
       if (lookupGazetteer(token, 'PERSON') !== undefined) hits += 1;
     }
-    expect(hits / samples).toBeLessThan(0.01);
+
+    // Guard the guard: a probe that repeats itself cannot measure anything.
+    expect(distinct.size).toBeGreaterThan(samples * 0.99);
+    // Sized for 0.1%; allow generous sampling slack without admitting a filter
+    // that is an order of magnitude off in either direction.
+    expect(hits / samples).toBeGreaterThan(0.0002);
+    expect(hits / samples).toBeLessThan(0.005);
   });
 
   it('ignores values too short or too long to be a name', () => {

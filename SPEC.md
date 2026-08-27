@@ -137,8 +137,27 @@ Bundled compressed lookup sets, checked in parallel with the model. Since size i
 - Medical, legal, and financial terminology used for context scoring, per language
 Store as compressed sets or a succinct data structure. Document the size cost of each dataset. Gazetteer hit alone is medium confidence; gazetteer plus model agreement is high.
 
---- Stage 2c: Verification pass ---
-Because compute and size budget are available, borderline candidates get a second look rather than being decided by a single score.
+--- Stage 2c: Verification pass --- REMOVED AT M7, ON ITS OWN CRITERION ---
+THIS STAGE DOES NOT EXIST IN THE PIPELINE. It was specified below, built at
+M7, measured, and removed under the final clause of its own specification.
+Retained here as the record of a settled decision; see ARCHITECTURE.md D20 and
+the BENCHMARKS.md M7 section for the parameters and the numbers.
+
+Measured over 861 documents, verification on versus off: PERSON, ORG and
+LOCATION precision, recall and false-positive counts were IDENTICAL to the
+candidate, while 1.28% of candidates entered the band (45 of 3,505) at +10.5%
+wall-clock. The reason is structural rather than a tuning failure: the stage
+only ADJUSTS confidence and never suppresses, while the eval scores every
+emitted prediction regardless of confidence, so a pure confidence adjustment
+is invisible to it by construction. It is not measurable until Stage 4 applies
+profile thresholds and confidence begins deciding what is emitted.
+
+Reinstating it is therefore an M8 decision to be made against a THRESHOLDED
+eval, not a default. Do not re-add it to the pipeline on the strength of the
+specification text below alone.
+
+The original specification, for reference:
+- Because compute and size budget are available, borderline candidates get a second look rather than being decided by a single score.
 - Candidates whose fused confidence falls in an ambiguous band (tune the band empirically) are re-checked by an independent method: a second model with different training data, a targeted classification prompt against a small bundled model, or a rule-based cross-check, whichever the eval shows performs best.
 - Only the ambiguous band is verified, so latency stays bounded. Measure and report what fraction of candidates enter verification and what it costs.
 - Report the precision improvement this stage delivers. If the eval shows it does not improve results, remove it and document why.
@@ -353,7 +372,7 @@ M3  eval package: corpus generator, hard negatives, metrics, error analysis. Rep
 M4  Vault, surrogate substitution with collision safety, streaming-safe restoration, egress guard. Property and fuzz tests.
 M5  packages/web on Stages 0–1 plus substitution. First working end-to-end demo.
 M6  Stage 2 NER: benchmark at least four candidate models on accuracy, select accuracy-first, integrate in a Web Worker, report per-language numbers and the size cost. Deliverable: BENCHMARKS.md — candidates considered, methodology, per-language results, selection reasoning.
-M7  Stage 2b gazetteers, Stage 2c verification pass, and Stage 3 context scoring. Re-run eval; report the precision improvement on hard negatives. Extend BENCHMARKS.md.
+M7  Stage 2b gazetteers, Stage 2c verification pass, and Stage 3 context scoring. Re-run eval; report the precision improvement on hard negatives. Extend BENCHMARKS.md. [DONE. Stage 2c was built, measured, and REMOVED under its own final clause — see the Stage 2c section above and ARCHITECTURE.md D20. Hard-negative false positives 332 → 190, −42.8%.]
 M8  Stage 4 fusion, calibration, explanations, sensitivity profiles. Publish the calibration curve. Exposure score engine in core, its severity-weight data file with documented rationale, tests including the monotonicity property, and the playground exposure panel. Extend BENCHMARKS.md.
 M9  Extension: manifest, adapters, content script, review UI, streaming restoration in the DOM. Paste guard; review panel shows the document exposure score.
 M10 Popup, options, i18n, accessibility, security hardening. Quick Redact, Local Insights, and the exposure session aggregate in the popup.

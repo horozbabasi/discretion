@@ -346,9 +346,17 @@ second because its data licence is stated inconsistently across its own
 sources.
 
 A filter never returns a false negative; its only error mode is a false
-positive, sized at 0.1% and **measured at 0.000% on 20,000 random tokens**.
-That asymmetry is what makes it safe to treat a hit as corroboration, which is
-the weight SPEC.md assigns it.
+positive. Parameters: **14.38 bits per entry, k=10 probes, implying 0.1000%**.
+Measured over 200,000 distinct random tokens: **0.1000%** (PERSON), 0.1040%
+(LOCATION), 0.0875% (ORG) — at target, not over-provisioned. That asymmetry is
+what makes it safe to treat a hit as corroboration, which is the weight SPEC.md
+assigns it.
+
+An earlier revision of this document reported 0.000%. That was a broken probe,
+not a good filter: its PRNG lost precision above 2^53 and generated only 1,731
+distinct tokens from 20,000 draws, which at 0.1% predicts under two hits. It is
+corrected here rather than quietly restated, and the regression test now checks
+its own sample distinctness before checking a rate.
 
 ### Stage 2c — built, measured, and removed
 
@@ -388,7 +396,12 @@ gazetteers) against the Stage 1 baseline, same 2,618-document corpus and seeds:
 | order-numbers | 47 | 47 | 0 |
 | version-numbers | 15 | 15 | 0 |
 | hex-artifacts | 1 | 1 | 0 |
-| **total** | **332** | **190** | **−42.8%** |
+| **total (all 7 categories)** | **332** | **190** | **−42.8%** |
+
+The seven rows sum to the totals exactly: 100+67+65+37+47+15+1 = 332, and
+0+50+59+18+47+15+1 = 190. The two zero-change rows at the bottom —
+`version-numbers` (15) and `hex-artifacts` (1) — carry 16 false positives in
+both columns and are easy to skip when checking the arithmetic by eye.
 
 `order-numbers` is unchanged **by design**: the reference-noun rule is a
 penalty rather than a suppression, because in medical and legal documents a
@@ -408,6 +421,31 @@ emission does not, and this eval does not threshold on confidence.
 | ORG | — | 80.0% | 60 |
 | LOCATION | — | 59.1% | 147 |
 | GENERIC_SECRET | 3.1% | **1.9%** | see the open failure above |
+
+### POSTAL_CODE — the weakest type that ships, carried into M8
+
+At **20.0%** precision it is much improved — 5.9% at the Stage 1 baseline, 922
+false positives down to 232 — and it is still the weakest type in the pipeline
+by a wide margin. It is named here rather than left in the table because a
+reader scanning per-type numbers should not have to notice it.
+
+Why it resists Stage 3. A postal code is a short digit run whose only
+distinguishing evidence is a per-country format table with no checksum behind
+it, so nothing about the value itself can corroborate it. Stage 3 removed the
+errors that context CAN settle — ports after a host, digits inside phone
+numbers, lab reference intervals, bracketed ranges — and what remains is
+genuinely ambiguous text: bare digit groups that match some country's format
+and sit in no informative context.
+
+Recall is also capped at 72.5% and unchanged by Stage 3, a Stage 1 fragment
+guard behaviour recorded at M3.
+
+This is **open M8 scope**, alongside GENERIC_SECRET. Calibration is the right
+machinery: a type whose evidence is weak by nature should carry a low
+calibrated confidence and fall below a profile threshold, rather than being
+argued into a binary suppress-or-allow decision it cannot support.
+
+### Everything else, unchanged and expected
 
 Unchanged and expected: TAX_ID (54.6%), URL_WITH_CREDENTIALS (37.6%),
 DRIVERS_LICENSE (26.3%), US_ROUTING_NUMBER (41.7%). Every one is a cross-type

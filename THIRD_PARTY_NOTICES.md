@@ -65,3 +65,33 @@ authorization of the copyright holder.
 
 Unicode and the Unicode Logo are registered trademarks of Unicode, Inc. in
 the United States and other countries.
+
+---
+
+## GeoNames
+
+`packages/data/src/gazetteers.ts` contains a membership filter derived from the
+GeoNames geographical database — the `cities15000`, `countryInfo` and
+`admin1CodesASCII` exports, including native-script alternate names.
+
+GeoNames data is licensed under the Creative Commons Attribution 4.0 License:
+<https://creativecommons.org/licenses/by/4.0/>
+
+Source: <https://download.geonames.org/export/dump/>
+
+The derived artifact is a Bloom filter over case- and diacritic-folded place
+names; it is a transformation of the source data and this attribution travels
+with it. CC BY 4.0 is not copyleft, so this notice is the only obligation it
+places on the project — the surrounding code remains MIT.
+
+## Wikidata
+
+The same file contains membership filters derived from Wikidata: given names
+(Q202444), family names (Q101352), brands (Q431289) and businesses (Q4830453).
+
+Wikidata's structured data is released under the Creative Commons CC0 1.0
+Universal Public Domain Dedication:
+<https://creativecommons.org/publicdomain/zero/1.0/>
+
+CC0 imposes no attribution requirement. This notice is recorded for provenance
+rather than obligation.

@@ -36,3 +36,6 @@ $RECYCLE.BIN/
 *.log
 npm-debug.log*
 .hf-cache/
+
+# Gazetteer build working directory (build-time downloads)
+.gazetteer-build/

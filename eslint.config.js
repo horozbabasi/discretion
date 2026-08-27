@@ -13,8 +13,9 @@ export default tseslint.config(
       '**/node_modules/**',
       '**/coverage/**',
       '.hf-cache/**',
-      // Generated Unicode data (large; owned by the generator script).
+      // Generated data (large; owned by their generator scripts).
       'packages/data/src/confusables.ts',
+      'packages/data/src/gazetteers.ts',
     ],
   },
   js.configs.recommended,
@@ -27,6 +28,14 @@ export default tseslint.config(
       // with noUncheckedIndexedAccess enabled, `!` is the sanctioned escape hatch.
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/consistent-type-imports': 'error',
+    },
+  },
+  {
+    // Build-time generator scripts run in Node and are never bundled, so the
+    // environment-agnostic rules that govern packages/core do not apply.
+    files: ['packages/*/scripts/**'],
+    languageOptions: {
+      globals: { Buffer: 'readonly', console: 'readonly', process: 'readonly', URL: 'readonly' },
     },
   },
   {

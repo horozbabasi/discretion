@@ -28,6 +28,7 @@ import { buildStructureIndex, type StructureIndex, type StructuredSlot } from '.
 import { buildTriggerIndex, foldForMatch, type LanguageTriggers, type TriggerIndex } from './triggers.js';
 import { profileDocument, type DomainLexicon } from './documentProfile.js';
 import { NEGATIVE_RULES, ruleApplies } from './negativeRules.js';
+import { isGazetteerType, lookupGazetteer } from '../gazetteer/index.js';
 import type {
   ContextContribution,
   ContextScoredCandidate,
@@ -63,6 +64,20 @@ const COOCCURRENCE = 0.1;
 const COOCCURRENCE_MIN_TYPES = 2;
 /** How far apart candidates may be and still reinforce each other. */
 const COOCCURRENCE_WINDOW = 240;
+
+/**
+ * Stage 2b agreement: the model proposed this span AND a bundled gazetteer
+ * knows the name.
+ *
+ * SPEC.md: "Gazetteer hit alone is medium confidence; gazetteer plus model
+ * agreement is high." Every candidate reaching this signal already came from
+ * a detector or the model, so what is being scored here is always the
+ * agreement case — which is why it is the largest positive weight after a
+ * key that names the type outright.
+ */
+const GAZETTEER_WHOLE = 0.2;
+/** Some words of a multi-word name are known, which is weaker corroboration. */
+const GAZETTEER_PARTIAL = 0.1;
 
 /** A name repeated through a technical document is likelier an identifier. */
 const REPETITION_PENALTY = -0.2;
@@ -106,6 +121,11 @@ const FORMAT_WEIGHTS: Partial<Record<DocumentFormat, Partial<Record<EntityType, 
 export interface ContextOptions {
   readonly triggerLexicons?: readonly LanguageTriggers[];
   readonly domainLexicon?: DomainLexicon;
+  /**
+   * Consult the Stage 2b gazetteers. Default true. Turned off in focused
+   * tests, and by callers measuring the pipeline without them.
+   */
+  readonly useGazetteers?: boolean;
 }
 
 export interface ContextAnalysis {
@@ -242,6 +262,7 @@ export function analyzeContext(text: string, options: ContextOptions = {}): Cont
     const slot = addStructureSignals(candidate, contributions);
     const hasTrigger = addTriggerSignals(candidate, contributions);
     addFormatSignal(type, contributions);
+    addGazetteerSignal(candidate, contributions);
     addCooccurrence(candidate, all, contributions);
     addRepetition(candidate, contributions);
 
@@ -331,6 +352,26 @@ export function analyzeContext(text: string, options: ContextOptions = {}): Cont
     const delta = nearest.distance <= TRIGGER_NEAR_CHARS ? TRIGGER_ADJACENT : TRIGGER_DISTANT;
     out.push({ signal: `trigger:${candidate.type}`, delta, detail: nearest.term });
     return true;
+  }
+
+  function addGazetteerSignal(
+    candidate: PipelineCandidate,
+    out: ContextContribution[],
+  ): void {
+    if (options.useGazetteers === false) return;
+    if (!isGazetteerType(candidate.type)) return;
+
+    const hit = lookupGazetteer(candidate.text, candidate.type);
+    if (hit === undefined) return;
+
+    // The matched name is the candidate's own text, so it must NOT go in the
+    // detail — explanations stay free of sensitive values. Only the shape of
+    // the agreement is recorded.
+    out.push({
+      signal: `gazetteer:${candidate.type}`,
+      delta: hit.whole ? GAZETTEER_WHOLE : GAZETTEER_PARTIAL,
+      detail: hit.whole ? 'full name known' : `${hit.matchedWords}/${hit.totalWords} words known`,
+    });
   }
 
   function addFormatSignal(type: EntityType, out: ContextContribution[]): void {

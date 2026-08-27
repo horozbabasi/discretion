@@ -102,6 +102,10 @@ export type {
   RuleContext,
 } from './context/types.js';
 
+// ── Stage 2b: gazetteers (M7) ──
+export { lookupGazetteer, gazetteerSizes, isGazetteerType } from './gazetteer/index.js';
+export type { GazetteerHit, GazetteerType } from './gazetteer/index.js';
+
 // ── The composed pipeline (M7) ──
 // Stages 0–3 in one call. This is what consumers should use; the individual
 // stage functions remain exported for tooling that wants one stage.

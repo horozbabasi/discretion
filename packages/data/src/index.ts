@@ -55,3 +55,7 @@ export type { SecretProvider } from './secretProviders.js';
 export { TRIGGER_LEXICONS } from './triggerLexicons.js';
 export type { TriggerLexicon } from './triggerLexicons.js';
 export { DOMAIN_LEXICONS } from './domainLexicons.js';
+
+// ── Stage 2b gazetteers (M7) ──
+export { GAZETTEERS } from './gazetteers.js';
+export type { GazetteerFilter, GazetteerName } from './gazetteers.js';

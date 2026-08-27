@@ -119,6 +119,49 @@ describe('negative rules — fail-open cases found by the M7 safety review', () 
   });
 });
 
+/**
+ * Round two of the M7 review, which ran 314 further inputs across the rules
+ * and found four more leak classes. Table-driven because the point is
+ * breadth: each row is a document shape a person genuinely pastes.
+ */
+describe('negative rules — round-two leak classes (M7 review)', () => {
+  const leaks: readonly [string, string, string, EntityType][] = [
+    // The authority scan ran past characters RFC 3986 forbids, so a delimiter
+    // that is not '/', '?' or '#' let the "authority" swallow the rest of the
+    // line — and everything in it.
+    ['pipe-delimited log line', 'INFO|2026-08-26|https://enroll.acme.com|200|ssn=240-01-2233|dur=41ms', '240-01-2233', 'NATIONAL_ID'],
+    ['semicolon-delimited CSV', 'hasta;portal;tckn\n4471;https://portal.saglik.gov.tr;30214566412', '30214566412', 'NATIONAL_ID'],
+    ['JDBC URL with parameters', 'url=jdbc:sqlserver://sql01.corp.local:1433;databaseName=hr;taxId=38694597107', '38694597107', 'TAX_ID'],
+    ['markdown table cell', '|881|https://enroll.acme.com|240-01-2233|', '240-01-2233', 'NATIONAL_ID'],
+    // The credential requirement was keyed on EMAIL, leaving every other type
+    // exposed in the same position.
+    ['national id as bare userinfo', 'Failing: https://30214566412@sso.saglik.gov.tr/oauth2/authorize', '30214566412', 'NATIONAL_ID'],
+    // '+' as a diff marker or list bullet is not a dialling prefix.
+    ['amex on an added diff line', '@@ -4,3 +4,4 @@\n 4024007183925829\n+378734493671000', '378734493671000', 'CREDIT_CARD'],
+    ['ssn on an added diff line', '@@ -12,6 +12,7 @@\n ssn,last\n+123-45-6789,Smith', '123-45-6789', 'NATIONAL_ID'],
+    ['routing number on an added diff line', '@@ -1,2 +1,3 @@\n 021000021\n+011401533', '011401533', 'US_ROUTING_NUMBER'],
+    ['amex in a markdown bullet', 'Cards to review:\n\n+ 3787 344936 71000\n', '3787 344936 71000', 'CREDIT_CARD'],
+    ['medical record number in a bullet', 'Follow-up:\n\n+ 7645329\n', '7645329', 'POSTAL_CODE'],
+    ['npi on an added diff line', '@@ -8,2 +8,3 @@ npi\n 1234567893\n+1093817462', '1093817462', 'US_NPI'],
+    // A phone number is one field; a column boundary ends it.
+    ['postal code in the column beside a phone', 'Mueller GmbH     +49 30 901820    10115', '10115', 'POSTAL_CODE'],
+    // A dotted token is not necessarily a host name.
+    ['zip in grep file:line output', 'exports/customers.csv:10001,Jane Miller,new york', '10001', 'POSTAL_CODE'],
+    ['zip under a dotted property path', 'kunde.adresse.plz:10115', '10115', 'POSTAL_CODE'],
+    ['zero-padded zip after a colon', 'customer.billing.zip:02139', '02139', 'POSTAL_CODE'],
+    ['postal code in a legacy colon export', 'meier.anna:10115:Berlin:DE', '10115', 'POSTAL_CODE'],
+    // Zero-padded bounds are postal codes, not reference intervals.
+    ['polish postal code in parentheses', 'Paczka 3 Warszawa (02-495) ul. Polczynska 121', '02-495', 'POSTAL_CODE'],
+    ['danish cpr in parentheses', 'Anders Jensen (010190-1234) - startdato', '010190-1234', 'NATIONAL_ID'],
+  ];
+
+  for (const [label, doc, value, type] of leaks) {
+    it(`keeps a real identifier: ${label}`, () => {
+      expect(suppressors(doc, value, type)).toEqual([]);
+    });
+  }
+});
+
 describe('negative rules — boundaries', () => {
   it('does not suppress an address in a URI path or query', () => {
     const query = 'https://x.com/c?email=john.doe@example.com';

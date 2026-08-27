@@ -64,11 +64,19 @@ function localSpan(ctx: RuleContext): { start: number; end: number } {
   return { start: ctx.start - ctx.line.start, end: ctx.end - ctx.line.start };
 }
 
+interface PhoneRun {
+  readonly run: string;
+  /** Digits of the run lying before the candidate. */
+  readonly digitsBefore: number;
+  /** Digits of the run lying after the candidate. */
+  readonly digitsAfter: number;
+}
+
 /**
  * The maximal run of telephone-shaped characters containing the candidate.
  * Returns undefined when the candidate is not made only of such characters.
  */
-function phoneRunAround(ctx: RuleContext): string | undefined {
+function phoneRunAround(ctx: RuleContext): PhoneRun | undefined {
   const { text } = ctx.line;
   const { start, end } = localSpan(ctx);
   const value = text.slice(start, end);
@@ -78,7 +86,35 @@ function phoneRunAround(ctx: RuleContext): string | undefined {
   let to = end;
   while (from > 0 && PHONE_RUN_CHAR.test(text[from - 1] ?? '')) from -= 1;
   while (to < text.length && PHONE_RUN_CHAR.test(text[to] ?? '')) to += 1;
-  return text.slice(from, to);
+
+  return {
+    run: text.slice(from, to),
+    digitsBefore: countDigits(text.slice(from, start)),
+    digitsAfter: countDigits(text.slice(end, to)),
+  };
+}
+
+/**
+ * Labels whose last component marks a host name rather than a file or a
+ * property path. A bare "looks dotted" test reads `customers.csv:10001` and
+ * `kunde.adresse.plz:10115` as host and port, which suppresses real postal
+ * codes (M7 safety review). Two-letter labels are accepted wholesale as
+ * country-code TLDs; everything else must be named.
+ */
+const KNOWN_TLDS = new Set([
+  'com', 'org', 'net', 'edu', 'gov', 'mil', 'int', 'info', 'biz', 'name',
+  'io', 'dev', 'app', 'cloud', 'sh', 'ai', 'co', 'tech', 'online', 'site',
+  'xyz', 'me', 'tv', 'cc', 'gg',
+  // Internal and reserved suffixes, which is where host:port genuinely appears.
+  'local', 'localhost', 'internal', 'corp', 'lan', 'home', 'intranet',
+  'test', 'example', 'invalid', 'localdomain',
+]);
+
+function looksLikeHostName(candidateHost: string): boolean {
+  const match = /([A-Za-z0-9][A-Za-z0-9-]*)\.([A-Za-z]{2,24})$/.exec(candidateHost);
+  const tld = match?.[2]?.toLowerCase();
+  if (tld === undefined) return false;
+  return tld.length === 2 || KNOWN_TLDS.has(tld);
 }
 
 /**
@@ -97,12 +133,21 @@ function uriAuthorityAround(ctx: RuleContext): string | undefined {
 
   const authorityStart = schemeAt + 3;
   let authorityEnd = authorityStart;
-  while (authorityEnd < text.length && !/[/?#\s"'`,<>]/.test(text[authorityEnd] ?? '')) {
+  // Scan only over characters RFC 3986 actually permits in an authority.
+  // The original scan ran until a delimiter it happened to list, so a '|' in
+  // a log line, a ';' in a JDBC URL or a CSV separator did not stop it and the
+  // "authority" swallowed the rest of the line — the M7 review executed
+  // 'INFO|…|https://enroll.acme-benefits.com|200|ssn=240-01-2233|…' and watched
+  // a valid SSN suppressed as part of the authority.
+  while (authorityEnd < text.length && AUTHORITY_CHAR.test(text[authorityEnd] ?? '')) {
     authorityEnd += 1;
   }
   if (start < authorityStart || end > authorityEnd) return undefined;
   return text.slice(authorityStart, authorityEnd);
 }
+
+/** Characters RFC 3986 permits in a URI authority component. */
+const AUTHORITY_CHAR = /[A-Za-z0-9._~%+@:[\]-]/;
 
 /** The innermost bracketed group containing the candidate, if any. */
 function bracketedAround(ctx: RuleContext): { inner: string; open: number } | undefined {
@@ -156,13 +201,34 @@ const phoneNumberInterior: NegativeRule = {
   principle:
     'A digit group that forms part of a run beginning with an international dialling prefix (+) is part of a telephone number, not an independent identifier.',
   risk:
-    'An identifier written immediately after a phone number with no separating punctuation would be suppressed. Requiring the run to begin with "+" and to hold no more digits than a phone number can (≤15, per E.164) keeps that narrow.',
+    'An identifier written immediately after a phone number with no separating punctuation would be suppressed. The dialling-prefix, single-field and interiority conditions below each independently narrow that.',
   test(ctx) {
-    const run = phoneRunAround(ctx);
-    if (run === undefined) return false;
-    if (!run.trimStart().startsWith('+')) return false;
+    const phone = phoneRunAround(ctx);
+    if (phone === undefined) return false;
+    const run = phone.run.trim();
+
+    // A dialling prefix is '+' followed IMMEDIATELY by a digit. Without this,
+    // '+' at the start of a git diff line or a markdown bullet reads as a
+    // country code: the M7 review executed '+ 3787 344936 71000' (a Luhn-valid
+    // Amex PAN in a bullet list) and '+123-45-6789' (an SSN on an added diff
+    // line) and watched both get suppressed.
+    if (!/^\+\d/.test(run)) return false;
+
+    // A telephone number is ONE field. A tab or a run of two or more spaces is
+    // a column boundary, so what lies beyond it belongs to a different column
+    // — the review found German postal codes suppressed because they sat in
+    // the column next to a '+49' phone column in a space-aligned paste.
+    if (/\t|\s{2,}/.test(run)) return false;
+
     const digits = countDigits(run);
-    return digits >= 7 && digits <= 15;
+    if (digits < 7 || digits > 15) return false;
+
+    // INTERIORITY. The rule's whole claim is that the candidate is PART OF a
+    // longer phone number. If the candidate accounts for every digit in the
+    // run, it is not interior to anything and the claim is false — that is
+    // how a standalone routing number, NPI or card on a '+' line was being
+    // suppressed.
+    return phone.digitsBefore + phone.digitsAfter >= 1;
   },
 };
 
@@ -197,9 +263,22 @@ const uriAuthorityMember: NegativeRule = {
     // (It was previously safe only by accident: the EMAIL detector's span
     // includes the leading `//`, which fell outside the authority. Relying on
     // a span defect is not a safety argument — hence the explicit condition.)
-    if (ctx.type === 'EMAIL' && !/^[^@/]*:[^@/]*@/.test(authority)) return false;
+    //
+    // The requirement is keyed on POSITION, not on entity type. Keying it on
+    // EMAIL alone left the same hole open for every other type: the review
+    // executed a Turkish TC Kimlik number used as a bare userinfo username
+    // (`https://30214566412@sso…/oauth2/authorize`) and found the national
+    // identifier suppressed with nothing else reporting it.
+    const at = authority.lastIndexOf('@');
+    if (at === -1) return true; // No userinfo: the candidate is a host or port.
 
-    return true;
+    const authorityStart = ctx.line.text.lastIndexOf('://', localSpan(ctx).start) + 3;
+    const inUserinfo = localSpan(ctx).start < authorityStart + at;
+    if (!inUserinfo) return true; // Host or port side of the '@'.
+
+    // Userinfo: yield it only when a password component makes the whole URI
+    // detectable by the credentialled-URL and connection-string detectors.
+    return /^[^@/]*:[^@/]*@/.test(authority);
   },
 };
 
@@ -222,11 +301,17 @@ const hostPort: NegativeRule = {
     const { text } = ctx.line;
     const { start, end } = localSpan(ctx);
     const value = text.slice(start, end);
-    if (!/^\d{2,5}$/.test(value)) return false;
+
+    // A written port is never zero-padded; short postal codes routinely are
+    // (the review executed a Cambridge MA ZIP, 02139, being suppressed).
+    if (!/^[1-9]\d{1,4}$/.test(value)) return false;
     if (Number(value) > MAX_PORT) return false;
     if (text[start - 1] !== ':') return false;
-    const before = text.slice(0, start - 1);
-    return /[A-Za-z0-9](?:[A-Za-z0-9-]*\.)+[A-Za-z]{2,}$/.test(before);
+
+    // The left side must be a HOST, not any dotted token. Without this,
+    // `exports/customers.csv:10001` and `kunde.adresse.plz:10115` both read as
+    // host and port and suppressed real postal codes.
+    return looksLikeHostName(text.slice(0, start - 1));
   },
 };
 
@@ -268,9 +353,17 @@ const bracketedNumericRange: NegativeRule = {
     const range = /^\s*(\d{1,4})(?:[.,]\d+)?\s*-\s*(\d{1,4})(?:[.,]\d+)?\s*$/.exec(bracket.inner);
     if (range === null) return false;
 
-    const low = Number(range[1]);
-    const high = Number(range[2]);
-    if (!(low <= high)) return false;
+    const lowText = range[1] ?? '';
+    const highText = range[2] ?? '';
+
+    // A reference-interval bound is never zero-padded, while short postal
+    // codes are zero-padded by definition. The review executed Polish postal
+    // codes — `Paczka 3 Warszawa (02-495)` — surviving the size and ascending
+    // checks and still being suppressed, because a digit earlier in the line
+    // satisfied the measurement test.
+    if (/^0\d/.test(lowText) || /^0\d/.test(highText)) return false;
+
+    if (!(Number(lowText) <= Number(highText))) return false;
 
     return measurementPrecedes(ctx.line.text, bracket.open);
   },

@@ -50,3 +50,7 @@ export const CONFUSABLES_ENTRY_COUNT = CONFUSABLES_RAW.length;
 // ── Stage 1 secret provider table (M2) ──
 export { SECRET_PROVIDERS, SECRET_CHARSET_PATTERN } from './secretProviders.js';
 export type { SecretProvider } from './secretProviders.js';
+
+// ── Stage 3 context lexicons (M7) ──
+export { TRIGGER_LEXICONS } from './triggerLexicons.js';
+export type { TriggerLexicon } from './triggerLexicons.js';

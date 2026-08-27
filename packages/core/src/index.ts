@@ -81,6 +81,33 @@ export type {
   TokenPrediction,
 } from './ner/types.js';
 
+// ── Stage 3: context scoring (M7) ──
+export { analyzeContext } from './context/score.js';
+export type { ContextAnalysis, ContextOptions } from './context/score.js';
+export { buildStructureIndex } from './context/structure.js';
+export type { StructureIndex, StructuredSlot, StructureKind } from './context/structure.js';
+export { buildTriggerIndex, foldForMatch } from './context/triggers.js';
+export type { LanguageTriggers, TriggerIndex, TriggerMatch } from './context/triggers.js';
+export { profileDocument } from './context/documentProfile.js';
+export type { DomainLexicon } from './context/documentProfile.js';
+export { NEGATIVE_RULES, ruleApplies } from './context/negativeRules.js';
+export type {
+  ContextContribution,
+  ContextScoredCandidate,
+  DocumentDomain,
+  DocumentFormat,
+  DocumentProfile,
+  NegativeRule,
+  PipelineCandidate,
+  RuleContext,
+} from './context/types.js';
+
+// ── The composed pipeline (M7) ──
+// Stages 0–3 in one call. This is what consumers should use; the individual
+// stage functions remain exported for tooling that wants one stage.
+export { detect } from './pipeline.js';
+export type { DetectOptions, DetectionOutcome } from './pipeline.js';
+
 // ── Stage: masking (M4) ──
 export { Vault, normalizedKey } from './mask/vault.js';
 export type { EgressAuditor } from './mask/vault.js';

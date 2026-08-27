@@ -25,8 +25,15 @@ const PROSE: DocumentProfile = {
   domainEvidence: [],
 };
 
-/** Rule ids that would suppress `value` (found in `doc`) as `type`. */
-function suppressors(doc: string, value: string, type: EntityType): string[] {
+/**
+ * Rule ids that FIRE on `value` (found in `doc`) as `type`, optionally
+ * narrowed to those that actually suppress.
+ *
+ * The distinction is the point of several rules below: a rule whose action is
+ * a penalty reduces confidence and leaves the candidate emitted, which is how
+ * the review required the riskiest signals to behave.
+ */
+function firing(doc: string, value: string, type: EntityType, onlySuppressing: boolean): string[] {
   const start = doc.indexOf(value);
   expect(start, `fixture must contain ${value}`).toBeGreaterThanOrEqual(0);
   const end = start + value.length;
@@ -44,7 +51,22 @@ function suppressors(doc: string, value: string, type: EntityType): string[] {
     line: { text: doc.slice(lineStart, lineEnd), start: lineStart, end: lineEnd },
   };
 
-  return NEGATIVE_RULES.filter((rule) => ruleApplies(rule, type) && rule.test(ctx)).map((r) => r.id);
+  return NEGATIVE_RULES.filter(
+    (rule) =>
+      ruleApplies(rule, type) &&
+      (!onlySuppressing || rule.action === 'suppress') &&
+      rule.test(ctx),
+  ).map((r) => r.id);
+}
+
+/** Rule ids that would DROP the candidate entirely. */
+function suppressors(doc: string, value: string, type: EntityType): string[] {
+  return firing(doc, value, type, true);
+}
+
+/** Rule ids that fire at all, penalties included. */
+function penalties(doc: string, value: string, type: EntityType): string[] {
+  return firing(doc, value, type, false);
 }
 
 describe('negative rules — the measured false-positive classes still die', () => {
@@ -287,6 +309,86 @@ describe('negative rules — boundaries', () => {
     for (const rule of NEGATIVE_RULES) {
       expect(rule.risk.length, `${rule.id} must state its risk`).toBeGreaterThan(40);
       expect(rule.principle.length, `${rule.id} must state its principle`).toBeGreaterThan(40);
+    }
+  });
+});
+
+/**
+ * Rules derived from the M7 error taxonomy, each corrected by the safety
+ * review before shipping. The review raised 17 problems across the 13
+ * proposed rules; the cases below pin the corrections, and the four
+ * containment rules were excluded outright (see the note in negativeRules.ts).
+ */
+describe('negative rules — taxonomy rules, as corrected by the review', () => {
+  it('does not un-redact identifiers inside HTML or XML markup', () => {
+    // The proposed rule put '<' and '>' in its generic edge classes to catch
+    // passport MRZ filler. Those two characters are the entire syntax of HTML
+    // and XML: executed against the proposal, all five of these were
+    // suppressed — five real identifiers un-redacted in the commonest shape
+    // structured data is pasted in.
+    const markup: readonly [string, string, EntityType][] = [
+      ['<td>943 476 5919</td>', '943 476 5919', 'NATIONAL_ID'],
+      ['<ssn>123456789</ssn>', '123456789', 'NATIONAL_ID'],
+      ['<span>12345</span>', '12345', 'POSTAL_CODE'],
+      ['<taxId>38694597107</taxId>', '38694597107', 'TAX_ID'],
+      ['<td>123-45-6789</td>', '123-45-6789', 'NATIONAL_ID'],
+    ];
+    for (const [doc, value, type] of markup) {
+      expect(suppressors(doc, value, type), doc).toEqual([]);
+    }
+  });
+
+  it('still suppresses the MRZ filler the angle brackets were there for', () => {
+    const mrz = 'P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<';
+    expect(suppressors(mrz, 'ERIKSSON', 'NATIONAL_ID')).toContain('notation-delimiter');
+  });
+
+  it('does not treat a check-digit suffix as a fragment boundary', () => {
+    // Chilean RUT and Argentine CUIT write the check digit after a hyphen,
+    // which the proposed right-edge class read as "part of something longer".
+    expect(suppressors('RUT 12345678-5 registrado', '12345678', 'NATIONAL_ID')).toEqual([]);
+    expect(suppressors('CUIT 20-12345678-3', '20-12345678-3', 'TAX_ID')).toEqual([]);
+  });
+
+  it('leaves checksummed types out of the digit-run rule', () => {
+    // A passing checksum is evidence FOR the candidate; grouped identifiers
+    // are written exactly as a run of space-separated digit groups.
+    expect(suppressors('Numero 123 456 789 registrado', '123 456 789', 'NATIONAL_ID')).toEqual([]);
+  });
+
+  it('penalises but never suppresses a validated value in an example frame', () => {
+    // "for example, my national ID is <real ID>" is a real thing people write.
+    const doc = 'For example, my national ID is 123456789';
+    expect(suppressors(doc, '123456789', 'NATIONAL_ID')).toEqual([]);
+    expect(penalties(doc, '123456789', 'NATIONAL_ID')).toContain('example-frame-validated');
+    // A shape-only type has no competing evidence, so it is suppressed.
+    expect(suppressors('For example, postcode 12345', '12345', 'POSTAL_CODE')).toContain('example-frame');
+  });
+
+  it('never suppresses a medical or legal record number', () => {
+    // "case number" and "claim number" are the sensitive record identifier in
+    // exactly the documents where it matters most, so this is a penalty only.
+    expect(suppressors('Patient case number 1234567893 reviewed', '1234567893', 'HEALTH_DATA')).toEqual([]);
+    expect(suppressors('Claim number 021000021 filed', '021000021', 'US_ROUTING_NUMBER')).toEqual([]);
+    const order = 'Order number 1234567890 shipped';
+    expect(suppressors(order, '1234567890', 'NATIONAL_ID')).toEqual([]);
+    expect(penalties(order, '1234567890', 'NATIONAL_ID')).toContain('enumeration-label');
+  });
+
+  it('suppresses inlined binary payloads and placeholder vendor keys', () => {
+    const dataUri = 'const icon = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUg"';
+    expect(suppressors(dataUri, 'iVBORw0KGgoAAAANSUhEUg', 'GENERIC_SECRET')).toContain('data-uri-payload');
+    const placeholder = 'STRIPE=sk_live_XXXXXXXXXXXXXXXX';
+    expect(suppressors(placeholder, 'sk_live_XXXXXXXXXXXXXXXX', 'API_KEY')).toContain('uninformative-key-body');
+  });
+
+  it('ships no containment rule: overlap resolution belongs to Stage 4', () => {
+    // Four proposed rules suppressed a candidate because another candidate's
+    // span covered it. D19 assigns that to Stage 4, and the taxonomy's own
+    // highest-priority residual is a span-hygiene prerequisite — containment
+    // suppression is only as safe as the covering span is correct.
+    for (const rule of NEGATIVE_RULES) {
+      expect(rule.id).not.toMatch(/subsumption|containment|subsumed|propagat/);
     }
   });
 });

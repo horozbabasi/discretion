@@ -495,6 +495,227 @@ const versionNumber: NegativeRule = {
   },
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Rules from the M7 error taxonomy (each corrected by the safety review)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Types whose detector has no checksum — shape and a format table only. */
+const SHAPE_ONLY_TYPES: readonly EntityType[] = ['POSTAL_CODE', 'DRIVERS_LICENSE', 'HEALTH_DATA'];
+
+/**
+ * A candidate that is a fragment of a longer delimited token.
+ *
+ * A fragment guard must be symmetric: if a separator plus a digit immediately
+ * BEFORE a candidate proves it is part of something longer, the same shape
+ * immediately AFTER proves it too.
+ *
+ * CORRECTED. The proposed right-edge class included `-`, which collides with
+ * the check-digit suffix convention several real schemes use — Chilean RUT
+ * `12345678-5`, Argentine CUIT `20-12345678-3`, Brazilian CPF. The hyphen is
+ * gone, and the rule is confined to types with no checksum: for a scheme that
+ * validates, a PASSING CHECKSUM is positive evidence the characters are the
+ * whole identifier, and this rule has no standing against it.
+ */
+const fragmentBoundary: NegativeRule = {
+  id: 'fragment-boundary',
+  appliesTo: SHAPE_ONLY_TYPES,
+  action: 'suppress',
+  principle:
+    'A candidate immediately followed by a path or time separator plus a digit, or immediately preceded by one, is a fragment of a longer delimited token rather than a whole identifier.',
+  risk:
+    'An unvalidated identifier written directly against a separator and a digit would be suppressed. The hyphen is excluded because check-digit suffixes use it, and checksummed types are out of scope entirely.',
+  test(ctx) {
+    const { text } = ctx.line;
+    const { start, end } = localSpan(ctx);
+    // The left edge requires a DIGIT before the separator, mirroring the right
+    // edge. Without that symmetry `/[:/]$/` fired on every colon-delimited
+    // field and re-opened postal-code leaks that round two had closed: a ZIP in
+    // grep output (`customers.csv:10001`), one under a dotted property path
+    // (`kunde.adresse.plz:10115`) and one in a colon-delimited export all carry
+    // a colon to their left, and none of them is a fragment of a longer number.
+    return /^[/:.]\d/.test(text.slice(end)) || /\d[:/]$/.test(text.slice(0, start));
+  },
+};
+
+/**
+ * A short digit group that is one member of a run of digit groups.
+ *
+ * CORRECTED. The proposal applied this to NATIONAL_ID and TAX_ID as well,
+ * which the review identified as a leak for exactly the reason above: a
+ * checksum that passes is evidence FOR the candidate, and grouped identifiers
+ * (a spaced IBAN, a grouped national number) are written precisely this way.
+ * POSTAL_CODE alone — shape-only, and the type the errors were measured on.
+ */
+const digitGroupRunMember: NegativeRule = {
+  id: 'digit-group-run-member',
+  appliesTo: ['POSTAL_CODE'],
+  action: 'suppress',
+  principle:
+    'A short digit group flanked by other digit groups separated only by single spaces is one component of a longer grouped number, not a standalone postal code.',
+  risk:
+    'A postal code written with only a space between it and an adjacent number — a house number before it, for instance — would be suppressed. Confined to the one type with no validator.',
+  test(ctx) {
+    const { text } = ctx.line;
+    const { start, end } = localSpan(ctx);
+    if (!/^\d{2,5}$/.test(text.slice(start, end))) return false;
+    return /\d\s$/.test(text.slice(0, start)) && /^\s\d/.test(text.slice(end));
+  },
+};
+
+/** A run of MRZ filler characters, which no natural-language text produces. */
+const MRZ_FILLER = /<{3,}/;
+
+/**
+ * A candidate abutting the delimiters of a different notation.
+ *
+ * CORRECTED, and this was the most dangerous item in the review. The proposal
+ * put `<` and `>` in the generic edge classes to catch passport MRZ filler —
+ * but those two characters are the entire syntax of HTML and XML. Executed
+ * against the rule as proposed, `<td>943 476 5919</td>`, `<ssn>123456789</ssn>`,
+ * `<span>12345</span>`, `<taxId>38694597107</taxId>` and `<td>123-45-6789</td>`
+ * were ALL suppressed: five real identifiers un-redacted, in the single most
+ * common shape structured data is pasted in. The angle brackets are gone from
+ * the generic classes, and MRZ is its own predicate requiring a run of three
+ * or more `<`.
+ */
+const notationDelimiter: NegativeRule = {
+  id: 'notation-delimiter',
+  appliesTo: ['POSTAL_CODE', 'SWIFT_BIC', 'NATIONAL_ID', 'TAX_ID'],
+  action: 'suppress',
+  principle:
+    'A candidate abutting the delimiters of another notation — a bracketed range, a sexagesimal coordinate, or a run of passport MRZ filler — is a fragment of that notation.',
+  risk:
+    'An identifier deliberately bracketed for emphasis, such as a ticket writing an ID as [NNNNN], would be suppressed. Angle brackets are excluded so that HTML and XML markup cannot trigger it.',
+  test(ctx) {
+    const { text } = ctx.line;
+    const { start, end } = localSpan(ctx);
+    const window = text.slice(Math.max(0, start - 40), end + 40);
+    if (MRZ_FILLER.test(window)) return true;
+    // Square brackets are deliberately NOT here. `bracketed-numeric-range`
+    // already owns them, under conditions the safety review forced it to earn:
+    // a real unit, an ascending range, no zero padding. A blanket "anything in
+    // brackets" test is strictly weaker, and it suppressed a descending pair
+    // that an earlier round established must be kept — while the review itself
+    // names bracketing an identifier for emphasis as real usage.
+    return /[°′″]$/.test(text.slice(0, start)) || /^[°′″]/.test(text.slice(end));
+  },
+};
+
+/**
+ * A high-entropy run inside an inlined binary payload.
+ *
+ * A data URI declares its own encoding, and everything after the declaration
+ * is image or font bytes rather than a credential.
+ */
+const dataUriPayload: NegativeRule = {
+  id: 'data-uri-payload',
+  appliesTo: ['GENERIC_SECRET'],
+  action: 'suppress',
+  principle:
+    'A high-entropy run introduced by an explicit content-transfer declaration is an inlined binary payload, not a secret.',
+  risk:
+    'A credential deliberately smuggled inside a data URI, or a secrets file pasted as one, would be missed. The declaration must be an actual base64 content-transfer preamble, which ordinary prose does not contain.',
+  test(ctx) {
+    const { start } = localSpan(ctx);
+    return /;base64,[A-Za-z0-9+/=]*$/i.test(ctx.line.text.slice(0, start));
+  },
+};
+
+/**
+ * A vendor-prefixed token whose body carries no information.
+ *
+ * A credential is a carrier of entropy. `sk_live_XXXXXXXXXXXX` presents a real
+ * prefix and then says nothing, which is what documentation does.
+ */
+const uninformativeKeyBody: NegativeRule = {
+  id: 'uninformative-key-body',
+  appliesTo: ['API_KEY'],
+  action: 'suppress',
+  principle:
+    'A token carrying a recognised vendor prefix whose remaining body is a single repeated character is a documentation placeholder, not a key.',
+  risk:
+    'A genuine key whose random body happened to be one repeated character. For an 8-character body that is about 62 in 62^8, which is far rarer than the placeholder it removes.',
+  test(ctx) {
+    const value = ctx.line.text.slice(localSpan(ctx).start, localSpan(ctx).end);
+    const body = value.replace(/^[A-Za-z]+[_-]/, '').replace(/^[A-Za-z]{2,4}_/, '');
+    if (body.length < 8) return false;
+    return new Set(body.toLowerCase()).size <= 1;
+  },
+};
+
+/**
+ * A commercial or administrative label governing the number after it.
+ *
+ * CORRECTED to a PENALTY rather than a suppression. The review was explicit
+ * that this rule carries the most genuine risk of the set: in healthcare and
+ * legal text a "case number" or "claim number" can be exactly the sensitive
+ * record identifier, so a hard suppression would remove real findings from
+ * precisely the documents where they matter most. As a penalty the evidence
+ * still counts and Stage 4 can weigh it.
+ */
+const enumerationLabel: NegativeRule = {
+  id: 'enumeration-label',
+  appliesTo: ['NATIONAL_ID', 'TAX_ID', 'HEALTH_DATA', 'US_ROUTING_NUMBER', 'US_NPI'],
+  action: -0.2,
+  principle:
+    'A transaction-sequence noun immediately before a bare digit run governs it: the digits after "order" are an order number.',
+  risk:
+    'In medical and legal documents a case or claim number IS the sensitive record identifier, which is why this reduces confidence rather than suppressing.',
+  test(ctx) {
+    const { start, end } = localSpan(ctx);
+    if (!/^[\d\s.-]+$/.test(ctx.line.text.slice(start, end))) return false;
+    return ENUMERATION_NOUN.test(ctx.line.text.slice(0, start));
+  },
+};
+
+/**
+ * Enumeration nouns across the languages the trigger lexicons cover.
+ *
+ * `claim` and `case` are deliberately ABSENT: the review named them as the
+ * terms whose medical and legal senses are sensitive record identifiers.
+ */
+const ENUMERATION_NOUN =
+  /\b(?:order|invoice|receipt|tracking|shipment|consignment|ticket|reference|ref|purchase order|sku|batch|lot|serial|work order|rma|quote|bestellung|bestellnummer|rechnung|sendungsnummer|auftrag|vorgang|charge|seriennummer|commande|facture|suivi|référence|reference|pedido|factura|seguimiento|referencia|lote|fatura|rastreamento|ordine|fattura|spedizione|riferimento|lotto|bestelling|factuur|zending|zamówienie|faktura|заказ|счёт|накладная|sipariş|fatura|注文|請求書|订单|发票|주문|송장)\s*(?:number|no\.?|nr\.?|num\.?|#|номер|nummer|numéro|número|numero)?\s*[:#-]?\s*$/i;
+
+/**
+ * A value the document itself frames as an illustration.
+ *
+ * CORRECTED into two rules by action. The review called this risk
+ * "substantial and asymmetric": a user writing "for example, my national ID
+ * is <real ID>" is handing over a real identifier inside an example frame.
+ * So a validated candidate is only PENALIZED, never suppressed — a checksum
+ * that passes outweighs a framing word. Shape-only candidates, which have no
+ * such evidence, are suppressed.
+ */
+const EXAMPLE_FRAME =
+  /\b(?:for example|e\.?g\.?|example|examples|sample|specimen|demo|sandbox|tutorial|documentation|placeholder|dummy|fake|mock|beispiel|zum beispiel|par exemple|exemple|por ejemplo|ejemplo|per esempio|esempio|por exemplo|exemplo|bijvoorbeeld|voorbeeld|na przykład|przykład|например|пример|örneğin|örnek|例えば|例|例如|예를 들어|예시)\b[^.!?\n]{0,60}$/i;
+
+const exampleFrameShapeOnly: NegativeRule = {
+  id: 'example-frame',
+  appliesTo: ['POSTAL_CODE', 'DRIVERS_LICENSE'],
+  action: 'suppress',
+  principle:
+    'A value the surrounding clause explicitly frames as an example, sample or placeholder is asserted by the document not to be live.',
+  risk:
+    'Someone writing "for example, my postcode is …" gives a real value inside an example frame. Confined to types with no validator, where there is no competing evidence to weigh.',
+  test(ctx) {
+    return EXAMPLE_FRAME.test(ctx.line.text.slice(0, localSpan(ctx).start));
+  },
+};
+
+const exampleFrameValidated: NegativeRule = {
+  id: 'example-frame-validated',
+  appliesTo: ['NATIONAL_ID', 'TAX_ID', 'CREDIT_CARD', 'IBAN', 'API_KEY', 'GENERIC_SECRET'],
+  action: -0.25,
+  principle:
+    'An example frame weakens a validated candidate but does not overturn it: a passing checksum is stronger evidence than a framing word.',
+  risk:
+    'None by construction — this reduces confidence and never suppresses, which is the whole reason it is separate from the shape-only rule.',
+  test(ctx) {
+    return EXAMPLE_FRAME.test(ctx.line.text.slice(0, localSpan(ctx).start));
+  },
+};
+
 /**
  * The full rule set, in evaluation order.
  *
@@ -508,7 +729,35 @@ export const NEGATIVE_RULES: readonly NegativeRule[] = [
   hostPort,
   bracketedNumericRange,
   versionNumber,
+  fragmentBoundary,
+  digitGroupRunMember,
+  notationDelimiter,
+  dataUriPayload,
+  uninformativeKeyBody,
+  enumerationLabel,
+  exampleFrameShapeOnly,
+  exampleFrameValidated,
 ];
+
+/**
+ * DELIBERATELY NOT HERE: containment.
+ *
+ * The M7 error taxonomy proposed four further rules that suppress a candidate
+ * because ANOTHER candidate's span covers it — a format-only detector yielding
+ * to a validated one, non-sensitivity propagating across schemes, an NER span
+ * inside a structured Stage 1 span. Together they account for the largest
+ * measured error class in the corpus, and they are all excluded.
+ *
+ * Two reasons, both ratified rather than assumed. First, ARCHITECTURE.md D19:
+ * deciding which of two overlapping type claims wins is Stage 4 resolution,
+ * and Stage 3 pre-empting it was exactly the mistake the GENERIC_SECRET
+ * measurement exposed. Second, the taxonomy's own highest-priority residual is
+ * a SPAN-HYGIENE PREREQUISITE — url-with-credentials and connection-string
+ * spans were measured straddling CSV and line boundaries — and containment
+ * suppression is only ever as safe as the covering span is correct. Shipping
+ * it before that is fixed would let a bad span silently un-redact whatever it
+ * wrongly covers.
+ */
 
 /** True when the rule may act on this entity type. */
 export function ruleApplies(rule: NegativeRule, type: EntityType): boolean {

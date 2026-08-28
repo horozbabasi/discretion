@@ -545,3 +545,52 @@ users the multilingual work exists to serve. It is also strictly *reversible*
 in a way the alternative is not: precision is what calibration and fusion are
 for, whereas an input class the pipeline cannot see cannot be recovered
 downstream at all.
+
+### Republished baseline — Stages 0–3, post-fold
+
+**This supersedes every per-type figure in the M7 section.** Same corpus size
+and seeds (2,000 labeled + 600 hard-negative, `0xc0ffee`/`0xbeef`), but the
+corpus itself changed with the digit fold, so this is a new measurement rather
+than a comparable re-run.
+
+Scope, stated precisely because the next stage depends on it: **Stages 0–3 plus
+the Stage 2b gazetteers, and NOT Stage 4.** Overlap resolution is built and
+tested (ARCHITECTURE.md D22) but deliberately not wired into `detect()` — SPEC
+places resolution in Stage 4 alongside fusion, and its effect is measured
+together with fusion rather than folded in here. That makes these numbers the
+pre-calibration input: **the distribution Stage 4 must be fitted against.**
+
+| type | precision | recall | FP |
+| --- | ---: | ---: | ---: |
+| CONNECTION_STRING, IBAN, JWT, MAC_ADDRESS, PASSPORT_MRZ, PHONE, PRIVATE_KEY, SWIFT_BIC, UK_SORT_CODE, VAT_NUMBER, VIN, IN_IFSC, AU_BSB, BR_AGENCIA | 100% | 100% | 0 |
+| EMAIL | 99.0% | 100% | 6 |
+| CRYPTO_WALLET | 98.7% | 100% | 8 |
+| PERSON | 98.0% | 97.1% | 20 |
+| CREDIT_CARD | 96.8% | 100% | 5 |
+| STREET_ADDRESS | 95.9% | 100% | 8 |
+| API_KEY | 95.8% | 99.6% | 20 |
+| HEALTH_DATA | 92.9% | 100% | 32 |
+| ORG | 88.1% | 85.9% | 34 |
+| IP_ADDRESS | 87.8% | 100% | 32 |
+| US_NPI | 75.0% | 100% | 1 |
+| NATIONAL_ID | 68.2% | 100% | 268 |
+| LOCATION | 63.3% | 99.1% | 125 |
+| TAX_ID | 46.0% | 100% | 149 |
+| US_ROUTING_NUMBER | 35.7% | 100% | 9 |
+| URL_WITH_CREDENTIALS | 33.6% | 100% | 140 |
+| POSTAL_CODE | 23.5% | 75.8% | 224 |
+| DRIVERS_LICENSE | 20.0% | 100% | 12 |
+| GENERIC_SECRET | 2.0% | 56.8% | 2,075 |
+
+**Recall is now 100% for 26 of 34 types** — the digit fold is most of that.
+The exceptions are POSTAL_CODE (75.8%, a Stage 1 fragment-guard behaviour
+recorded at M3), GENERIC_SECRET (56.8%, D19), and the three NER types, which
+are model-limited.
+
+**The four weakest types are all overlap-driven, and all four are what Stage 4
+is for.** GENERIC_SECRET at 2.0%, URL_WITH_CREDENTIALS at 33.6%, TAX_ID at
+46.0%, POSTAL_CODE at 23.5%. The overlap census already showed where those
+false positives go: 2,047 of 2,053 GENERIC_SECRET overlaps have a validated
+type covering the same characters, and URL_WITH_CREDENTIALS loses 140 of 140
+equal-span contests to CONNECTION_STRING. Resolution addresses them by
+construction; the numbers for that land with fusion.

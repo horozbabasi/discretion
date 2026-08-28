@@ -1,6 +1,6 @@
 # Stage 1+2 combined — model jiting/xlm-roberta-base-ner-hrl_onnx (q8), same corpus and seeds as the Stage 1 baseline
 
-Corpus: 2618 documents, 6731 ground-truth entities, 10036 sensitive predictions. Mean document length 202 chars.
+Corpus: 2611 documents, 6645 ground-truth entities, 9860 sensitive predictions. Mean document length 200 chars.
 
 **This corpus is synthetic.** Values are generator-made, carriers are template sentences, and hard negatives are constructed categories. The numbers measure the detectors against this corpus, not against real-world text; real-world performance will differ, most likely downward on precision for the context-free detectors.
 
@@ -8,70 +8,70 @@ Corpus: 2618 documents, 6731 ground-truth entities, 10036 sensitive predictions.
 
 | type | GT | pred | P | R (partial) | R (exact) | F1 | FP | FN |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| API_KEY | 470 | 490 | 95.9% | 100.0% | 99.6% | 97.9% | 20 | 0 |
-| AU_BSB | 5 | 5 | 100.0% | 100.0% | 100.0% | 100.0% | 0 | 0 |
-| BR_AGENCIA | 11 | 11 | 100.0% | 100.0% | 100.0% | 100.0% | 0 | 0 |
-| CA_TRANSIT_NUMBER | 17 | 17 | 100.0% | 100.0% | 100.0% | 100.0% | 0 | 0 |
-| CONNECTION_STRING | 133 | 133 | 100.0% | 100.0% | 77.4% | 100.0% | 0 | 0 |
-| COORDINATES | 71 | 71 | 100.0% | 100.0% | 100.0% | 100.0% | 0 | 0 |
-| CREDIT_CARD | 165 | 171 | 96.5% | 100.0% | 100.0% | 98.2% | 6 | 0 |
-| CRYPTO_WALLET | 629 | 633 | 99.4% | 100.0% | 100.0% | 99.7% | 4 | 0 |
-| DRIVERS_LICENSE | 5 | 19 | 26.3% | 100.0% | 100.0% | 41.7% | 14 | 0 |
-| EMAIL | 644 | 654 | 98.5% | 100.0% | 100.0% | 99.2% | 10 | 0 |
-| GENERIC_SECRET | 72 | 2171 | 1.9% | 56.9% | 56.9% | 3.7% | 2130 | 31 |
-| HEALTH_DATA | 432 | 469 | 92.1% | 100.0% | 100.0% | 95.9% | 37 | 0 |
-| IBAN | 185 | 185 | 100.0% | 100.0% | 100.0% | 100.0% | 0 | 0 |
-| IN_IFSC | 16 | 16 | 100.0% | 100.0% | 100.0% | 100.0% | 0 | 0 |
-| IP_ADDRESS | 209 | 233 | 89.7% | 100.0% | 100.0% | 94.6% | 24 | 0 |
-| JWT | 155 | 155 | 100.0% | 100.0% | 97.4% | 100.0% | 0 | 0 |
-| LOCATION | 211 | 359 | 59.1% | 100.0% | 99.1% | 74.3% | 147 | 0 |
-| MAC_ADDRESS | 65 | 65 | 100.0% | 100.0% | 100.0% | 100.0% | 0 | 0 |
-| NATIONAL_ID | 509 | 838 | 71.8% | 100.0% | 99.8% | 83.6% | 236 | 0 |
-| ORG | 259 | 300 | 80.0% | 88.4% | 72.2% | 84.0% | 60 | 30 |
-| PASSPORT_MRZ | 37 | 37 | 100.0% | 100.0% | 0.0% | 100.0% | 0 | 0 |
-| PERSON | 923 | 991 | 98.7% | 98.5% | 89.7% | 98.6% | 13 | 14 |
-| PHONE | 604 | 604 | 100.0% | 100.0% | 100.0% | 100.0% | 0 | 0 |
-| POSTAL_CODE | 80 | 290 | 20.0% | 72.5% | 72.5% | 31.4% | 232 | 22 |
-| PRIVATE_KEY | 63 | 63 | 100.0% | 100.0% | 100.0% | 100.0% | 0 | 0 |
-| STREET_ADDRESS | 209 | 222 | 94.1% | 100.0% | 98.1% | 97.0% | 13 | 0 |
-| SWIFT_BIC | 75 | 75 | 100.0% | 100.0% | 100.0% | 100.0% | 0 | 0 |
-| TAX_ID | 143 | 284 | 54.6% | 100.0% | 100.0% | 70.6% | 129 | 0 |
+| API_KEY | 456 | 474 | 95.8% | 99.6% | 99.6% | 97.6% | 20 | 2 |
+| AU_BSB | 4 | 4 | 100.0% | 100.0% | 100.0% | 100.0% | 0 | 0 |
+| BR_AGENCIA | 8 | 8 | 100.0% | 100.0% | 100.0% | 100.0% | 0 | 0 |
+| CA_TRANSIT_NUMBER | 16 | 18 | 88.9% | 100.0% | 100.0% | 94.1% | 2 | 0 |
+| CONNECTION_STRING | 140 | 140 | 100.0% | 100.0% | 98.6% | 100.0% | 0 | 0 |
+| COORDINATES | 77 | 75 | 100.0% | 97.4% | 97.4% | 98.7% | 0 | 2 |
+| CREDIT_CARD | 150 | 155 | 96.8% | 100.0% | 100.0% | 98.4% | 5 | 0 |
+| CRYPTO_WALLET | 625 | 633 | 98.7% | 100.0% | 100.0% | 99.4% | 8 | 0 |
+| DRIVERS_LICENSE | 3 | 15 | 20.0% | 100.0% | 100.0% | 33.3% | 12 | 0 |
+| EMAIL | 594 | 600 | 99.0% | 100.0% | 100.0% | 99.5% | 6 | 0 |
+| GENERIC_SECRET | 74 | 2117 | 2.0% | 56.8% | 56.8% | 3.8% | 2075 | 32 |
+| HEALTH_DATA | 417 | 449 | 92.9% | 100.0% | 100.0% | 96.3% | 32 | 0 |
+| IBAN | 178 | 178 | 100.0% | 100.0% | 100.0% | 100.0% | 0 | 0 |
+| IN_IFSC | 13 | 13 | 100.0% | 100.0% | 100.0% | 100.0% | 0 | 0 |
+| IP_ADDRESS | 231 | 263 | 87.8% | 100.0% | 100.0% | 93.5% | 32 | 0 |
+| JWT | 162 | 162 | 100.0% | 100.0% | 99.4% | 100.0% | 0 | 0 |
+| LOCATION | 216 | 341 | 63.3% | 99.1% | 98.1% | 77.3% | 125 | 2 |
+| MAC_ADDRESS | 75 | 75 | 100.0% | 100.0% | 100.0% | 100.0% | 0 | 0 |
+| NATIONAL_ID | 495 | 844 | 68.2% | 100.0% | 100.0% | 81.1% | 268 | 0 |
+| ORG | 283 | 285 | 88.1% | 85.9% | 69.3% | 87.0% | 34 | 40 |
+| PASSPORT_MRZ | 48 | 48 | 100.0% | 100.0% | 100.0% | 100.0% | 0 | 0 |
+| PERSON | 917 | 977 | 98.0% | 97.1% | 87.9% | 97.5% | 20 | 27 |
+| PHONE | 610 | 610 | 100.0% | 100.0% | 100.0% | 100.0% | 0 | 0 |
+| POSTAL_CODE | 91 | 293 | 23.5% | 75.8% | 75.8% | 35.9% | 224 | 22 |
+| PRIVATE_KEY | 53 | 53 | 100.0% | 100.0% | 100.0% | 100.0% | 0 | 0 |
+| STREET_ADDRESS | 186 | 194 | 95.9% | 100.0% | 98.9% | 97.9% | 8 | 0 |
+| SWIFT_BIC | 84 | 84 | 100.0% | 100.0% | 100.0% | 100.0% | 0 | 0 |
+| TAX_ID | 113 | 276 | 46.0% | 100.0% | 100.0% | 63.0% | 149 | 0 |
 | UK_SORT_CODE | 4 | 4 | 100.0% | 100.0% | 100.0% | 100.0% | 0 | 0 |
-| URL_WITH_CREDENTIALS | 80 | 213 | 37.6% | 100.0% | 72.5% | 54.6% | 133 | 0 |
+| URL_WITH_CREDENTIALS | 71 | 211 | 33.6% | 100.0% | 98.6% | 50.4% | 140 | 0 |
 | US_NPI | 3 | 4 | 75.0% | 100.0% | 100.0% | 85.7% | 1 | 0 |
-| US_ROUTING_NUMBER | 5 | 12 | 41.7% | 100.0% | 100.0% | 58.8% | 7 | 0 |
-| VAT_NUMBER | 154 | 154 | 100.0% | 100.0% | 100.0% | 100.0% | 0 | 0 |
-| VIN | 88 | 88 | 100.0% | 100.0% | 100.0% | 100.0% | 0 | 0 |
+| US_ROUTING_NUMBER | 5 | 14 | 35.7% | 100.0% | 100.0% | 52.6% | 9 | 0 |
+| VAT_NUMBER | 162 | 162 | 100.0% | 100.0% | 100.0% | 100.0% | 0 | 0 |
+| VIN | 81 | 81 | 100.0% | 100.0% | 100.0% | 100.0% | 0 | 0 |
 
 ## Per language
 
 | language | GT | pred | P | R (partial) | R (exact) | F1 | FP | FN |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| ar | 245 | 314 | 75.8% | 95.1% | 86.5% | 84.4% | 76 | 12 |
-| cs | 233 | 362 | 64.1% | 99.6% | 97.9% | 78.0% | 130 | 1 |
-| da | 344 | 517 | 70.8% | 98.5% | 93.9% | 82.4% | 151 | 5 |
-| de | 329 | 481 | 68.2% | 98.8% | 95.4% | 80.7% | 153 | 4 |
-| el | 269 | 395 | 68.1% | 99.3% | 98.1% | 80.8% | 126 | 2 |
-| en | 286 | 600 | 50.2% | 99.0% | 95.5% | 66.6% | 299 | 3 |
-| es | 290 | 405 | 71.4% | 98.6% | 95.9% | 82.8% | 116 | 4 |
-| fa | 236 | 365 | 63.8% | 98.3% | 95.3% | 77.4% | 132 | 4 |
-| fi | 284 | 438 | 64.6% | 98.2% | 93.3% | 78.0% | 155 | 5 |
-| fr | 232 | 366 | 67.5% | 99.1% | 93.5% | 80.3% | 119 | 2 |
-| he | 271 | 398 | 69.6% | 97.8% | 94.1% | 81.3% | 121 | 6 |
-| hi | 275 | 390 | 71.3% | 96.7% | 92.0% | 82.1% | 112 | 9 |
-| it | 267 | 364 | 74.5% | 99.3% | 94.0% | 85.1% | 93 | 2 |
-| ja | 204 | 302 | 67.5% | 98.0% | 96.1% | 80.0% | 98 | 4 |
-| ko | 274 | 416 | 64.7% | 98.2% | 96.0% | 78.0% | 147 | 5 |
-| nl | 244 | 374 | 67.6% | 98.8% | 91.4% | 80.3% | 121 | 3 |
-| pl | 275 | 418 | 67.2% | 99.3% | 97.5% | 80.2% | 137 | 2 |
-| pt | 243 | 382 | 67.0% | 98.8% | 94.7% | 79.9% | 126 | 3 |
-| ro | 278 | 378 | 73.8% | 99.3% | 95.7% | 84.7% | 99 | 2 |
-| ru | 334 | 466 | 71.9% | 98.8% | 98.2% | 83.2% | 131 | 4 |
-| sv | 275 | 426 | 66.2% | 98.9% | 97.5% | 79.3% | 144 | 3 |
-| th | 288 | 409 | 69.2% | 97.9% | 94.8% | 81.1% | 126 | 6 |
-| tr | 263 | 389 | 70.4% | 99.6% | 98.1% | 82.5% | 115 | 1 |
-| uk | 255 | 348 | 74.1% | 99.2% | 97.6% | 84.9% | 90 | 2 |
-| zh | 237 | 333 | 70.3% | 98.7% | 96.6% | 82.1% | 99 | 3 |
+| ar | 281 | 399 | 70.9% | 96.1% | 89.0% | 81.6% | 116 | 11 |
+| cs | 280 | 417 | 66.4% | 98.2% | 96.8% | 79.3% | 140 | 5 |
+| da | 345 | 500 | 72.0% | 99.1% | 96.2% | 83.4% | 140 | 3 |
+| de | 285 | 413 | 68.8% | 98.9% | 98.2% | 81.1% | 129 | 3 |
+| el | 248 | 393 | 62.8% | 99.2% | 98.8% | 76.9% | 146 | 2 |
+| en | 317 | 680 | 49.0% | 98.7% | 97.8% | 65.5% | 347 | 4 |
+| es | 230 | 324 | 71.0% | 100.0% | 100.0% | 83.0% | 94 | 0 |
+| fa | 259 | 373 | 69.2% | 99.2% | 96.1% | 81.5% | 115 | 2 |
+| fi | 295 | 440 | 65.7% | 96.9% | 94.9% | 78.3% | 151 | 9 |
+| fr | 234 | 387 | 65.1% | 99.1% | 94.0% | 78.6% | 135 | 2 |
+| he | 256 | 379 | 67.8% | 96.5% | 93.4% | 79.6% | 122 | 9 |
+| hi | 205 | 276 | 72.5% | 95.6% | 93.7% | 82.4% | 76 | 9 |
+| it | 235 | 330 | 70.9% | 97.0% | 94.0% | 81.9% | 96 | 7 |
+| ja | 242 | 327 | 71.6% | 95.9% | 93.4% | 81.9% | 93 | 10 |
+| ko | 248 | 387 | 61.5% | 96.0% | 96.0% | 75.0% | 149 | 10 |
+| nl | 259 | 389 | 68.9% | 97.7% | 91.1% | 80.8% | 121 | 6 |
+| pl | 284 | 428 | 68.2% | 98.6% | 98.2% | 80.6% | 136 | 4 |
+| pt | 200 | 291 | 70.8% | 99.0% | 97.0% | 82.6% | 85 | 2 |
+| ro | 241 | 339 | 71.1% | 99.2% | 95.9% | 82.8% | 98 | 2 |
+| ru | 280 | 425 | 66.4% | 98.9% | 98.9% | 79.4% | 143 | 3 |
+| sv | 291 | 414 | 72.7% | 99.7% | 98.6% | 84.1% | 113 | 1 |
+| th | 277 | 381 | 69.8% | 95.7% | 92.8% | 80.7% | 115 | 12 |
+| tr | 283 | 392 | 73.7% | 98.9% | 98.2% | 84.5% | 103 | 3 |
+| uk | 268 | 358 | 76.3% | 99.3% | 98.5% | 86.2% | 85 | 2 |
+| zh | 302 | 418 | 70.8% | 98.0% | 97.0% | 82.2% | 122 | 6 |
 
 ## Raw confidence vs. empirical precision (NOT calibration)
 
@@ -79,179 +79,181 @@ Stage 1 confidences are detector-local and only ordered; real calibration requir
 
 | bucket | predictions | matched | precision |
 | --- | ---: | ---: | ---: |
-| HIGH(0.85) | 4987 | 4428 | 88.8% |
-| LOW(0.3) | 1233 | 116 | 9.4% |
-| MAXIMUM(0.99) | 1053 | 1033 | 98.1% |
-| MEDIUM(0.6) | 2763 | 1243 | 45.0% |
+| HIGH(0.85) | 4958 | 4369 | 88.1% |
+| LOW(0.3) | 1129 | 109 | 9.7% |
+| MAXIMUM(0.99) | 1029 | 1007 | 97.9% |
+| MEDIUM(0.6) | 2744 | 1205 | 43.9% |
 
 ## Hard-negative false positives by category
 
 | category | sensitive detections (all FP) |
 | --- | ---: |
-| checksum-failures | 59 |
-| hex-artifacts | 1 |
-| labeled-examples | 50 |
-| order-numbers | 47 |
+| base64-blob | 1 |
+| checksum-failures | 65 |
+| hex-artifacts | 3 |
+| labeled-examples | 42 |
+| native-digit-noise | 61 |
+| order-numbers | 51 |
 | placeholder-code | 18 |
-| version-numbers | 15 |
+| version-numbers | 8 |
 
 ## Latency
 
-p50 26.31ms · p95 56.85ms · p99 139.64ms · max 277.00ms per document (normalize + all detectors).
+p50 24.40ms · p95 223.51ms · p99 447.41ms · max 1031.00ms per document (normalize + all detectors).
 
 ## Worst false positives (highest confidence first)
 
-- **LOCATION** `ner:xlm-roberta-base-ner-hrl_onnx@q8` conf 0.9974849224090576 in doc-12648430-120 (de/markdown-table)
-  `…TQvwz-y1Zz_e2LMNL0Rn_3H |⏎| reference | Bahnhofstraße 28 |⏎…`
-- **LOCATION** `ner:xlm-roberta-base-ner-hrl_onnx@q8` conf 0.9958900809288025 in doc-12648430-104 (de/cv)
-  `…le.last@firma.de⏎Tel: +90 532 123 456 7⏎İstiklal Caddesi No: 200⏎⏎Der Vertrag liegt zur Untersch…`
-- **LOCATION** `ner:xlm-roberta-base-ner-hrl_onnx@q8` conf 0.9934576153755188 in doc-12648430-92 (el/cv)
-  `…dle.last@münchen.de⏎Tel: +1 21255-50123⏎Atatürk Caddesi No: 191⏎⏎Ευχαριστούμε για την άμεση απά…`
-- **LOCATION** `ner:xlm-roberta-base-ner-hrl_onnx@q8` conf 0.9846506714820862 in doc-12648430-82 (uk/csv)
-  `…⏎1,x.y.z@a-b.org,21LND35Y5DF1GC5EK,ok⏎2,Atatürk Sokak No: 39,AIzaU3T0ZgqV5aCNS9xN…`
-- **LOCATION** `ner:xlm-roberta-base-ner-hrl_onnx@q8` conf 0.9845295548439026 in doc-12648430-77 (da/cv)
-  `…: john.doe@münchen.de⏎Tel: +33612345678⏎Hauptstraße 121⏎⏎Mødet er flyttet til torsdag.⏎…`
-- **ORG** `ner:xlm-roberta-base-ner-hrl_onnx@q8` conf 0.9713096618652344 in doc-12648430-72 (pl/medical)
-  `…c3d7cd do piątku.⏎HbA1c 16.8 % [31-128]⏎SNOMED 22872007⏎Osoba kontaktowa: Agniesz…`
-- **LOCATION** `ner:xlm-roberta-base-ner-hrl_onnx@q8` conf 0.9429213404655457 in doc-12648430-20 (he/cv)
+- **LOCATION** `ner:xlm-roberta-base-ner-hrl_onnx@q8` conf 0.9992491006851196 in doc-12648430-53 (hi/cv)
+  `…ice@startup.io⏎Tel: +3 36123-45678⏎9974 Pennsylvania Avenue⏎⏎शीघ्र उत्तर के लिए धन्यवाद।⏎…`
+- **LOCATION** `ner:xlm-roberta-base-ner-hrl_onnx@q8` conf 0.9982746243476868 in doc-12648430-148 (es/code)
+  `…/ service configuration⏎const apiKey = "Atatürk Caddesi No: 100";⏎// La reunión s…`
+- **LOCATION** `ner:xlm-roberta-base-ner-hrl_onnx@q8` conf 0.9871461391448975 in doc-12648430-90 (zh/cv)
+  `…n.b@xn--bcher-kva.de⏎Tel: +558121345678⏎شارع الملك فهد 88⏎⏎感谢您的快速回复。⏎…`
+- **LOCATION** `ner:xlm-roberta-base-ner-hrl_onnx@q8` conf 0.9772992134094238 in doc-12648430-16 (he/cv)
   `…müller@sub.domain.net⏎Tel: +14155550198⏎İstiklal Caddesi No: 140⏎⏎תודה על המענה המהיר.⏎…`
-- **LOCATION** `ner:xlm-roberta-base-ner-hrl_onnx@q8` conf 0.8846341967582703 in doc-12648430-39 (ru/cv)
+- **LOCATION** `ner:xlm-roberta-base-ner-hrl_onnx@q8` conf 0.9430261254310608 in doc-12648430-47 (pl/cv)
+  `…y.z@corp.co.uk⏎Tel: +91 85270-12345⏎534 rue del Sol⏎⏎Spotkanie przeniesiono na czwartek.⏎…`
+- **LOCATION** `ner:xlm-roberta-base-ner-hrl_onnx@q8` conf 0.941663920879364 in doc-12648430-148 (es/code)
+  `… service configuration⏎const apiKey = "Atatürk Caddesi No: 100";⏎// La reunión se movió al jue…`
+- **LOCATION** `ner:xlm-roberta-base-ner-hrl_onnx@q8` conf 0.8846341967582703 in doc-12648430-35 (ru/cv)
   `…z@xn--bcher-kva.de⏎Tel: +81 90123-45678⏎Hauptstraße 78⏎⏎Совещание перенесено на четверг.⏎…`
-- **LOCATION** `ner:xlm-roberta-base-ner-hrl_onnx@q8` conf 0.8697465658187866 in doc-12648430-64 (es/cv)
-  `…björn.b@startup.io⏎Tel: +44 79111-23456⏎شارع الملك فهد 107⏎⏎Gracias por la respuesta rápida.⏎…`
 - **URL_WITH_CREDENTIALS** `url-with-credentials` conf 0.85 in doc-12648430-5 (tr/log)
   `…⏎2026-08-20T11:32:06Z INFO request from mongodb+srv://svc:lEJZBLRTkloYvrhcpdb@cluster0.mongodb.net:5432/appdb accepted⏎…`
 - **NATIONAL_ID** `national-id-in-aadhaar` conf 0.85 in doc-12648430-7 (pl/json)
   `…{⏎  "account": {⏎    "contact": "+558121345678",⏎    "reference": "6518849955",⏎    "n…`
-- **NATIONAL_ID** `national-id-th` conf 0.85 in doc-12648430-29 (ja/json)
+- **TAX_ID** `national-id-pt-nif` conf 0.85 in doc-12648430-9 (nl/contract)
+  `…naar donderdag.⏎2. Het dossier vermeldt 88506​9250 als identificatie.⏎3. Stuur de stukken …`
+- **NATIONAL_ID** `national-id-th` conf 0.85 in doc-12648430-25 (ja/json)
   `…{⏎  "account": {⏎    "contact": "+8613912345678",⏎    "reference": "675932456964",⏎    …`
-- **NATIONAL_ID** `national-id-in-aadhaar` conf 0.85 in doc-12648430-31 (sv/cv)
+- **NATIONAL_ID** `national-id-in-aadhaar` conf 0.85 in doc-12648430-27 (sv/cv)
   `…mail: first.middle.last@gmail.com⏎Tel: +558121345678⏎⏎Mötet flyttades till torsdag.⏎…`
-- **NATIONAL_ID** `national-id-hr-oib` conf 0.85 in doc-12648430-33 (de/email)
+- **NATIONAL_ID** `national-id-hr-oib` conf 0.85 in doc-12648430-29 (de/email)
   `…men,⏎⏎Sie erreichen die Abteilung unter 93657824508 während der Bürozeiten.⏎Der Mitarbeiter…`
-- **NATIONAL_ID** `national-id-th` conf 0.85 in doc-12648430-34 (ro/medical)
-  `…istrată.⏎HbA1c 21.2 g/dL [21-46]⏎SNOMED 2697926275001⏎Persoana de contact: Cristian Vasilescu…`
-- **TAX_ID** `national-id-gr-afm` conf 0.85 in doc-12648430-35 (nl/csv)
+- **NATIONAL_ID** `national-id-th` conf 0.85 in doc-12648430-30 (ro/medical)
+  `…istrată.⏎HbA1c 21.2 g/dL [21-46]⏎SNOMED 2697926275001⏎Persoana de contact: Ana Marinescu.⏎Mul…`
+- **TAX_ID** `national-id-gr-afm` conf 0.85 in doc-12648430-31 (nl/csv)
   `…iVt3A7nRiw61DH1HwpVPY,ok⏎3,BE0279831043,794083101,ok⏎…`
-- **URL_WITH_CREDENTIALS** `url-with-credentials` conf 0.85 in doc-12648430-40 (da/yaml)
+- **URL_WITH_CREDENTIALS** `url-with-credentials` conf 0.85 in doc-12648430-36 (da/yaml)
   `…service:⏎  owner_contact: redis://app:iX9irCCXPdb5e7v@prod-db.corp:5432/appdb⏎  billing_id: ghp_hN8mzZGriQ7ex88w87JaD…`
-- **TAX_ID** `national-id-pl-regon` conf 0.85 in doc-12648430-44 (he/prose)
-  `…התשלום עם האסמכתא 543104905 התקבל. בתיק רשום xoxb-EM2ZdpYD0FKWdSRPF…`
-- **TAX_ID** `national-id-gr-afm` conf 0.85 in doc-12648430-44 (he/prose)
-  `…התשלום עם האסמכתא 543104905 התקבל. בתיק רשום xoxb-EM2ZdpYD0FKWdSRPF…`
-- **TAX_ID** `national-id-gr-afm` conf 0.85 in doc-12648430-49 (fr/csv)
-  `…artup.io,114.214.143.103,ok⏎2,79513-614,969142058,ok⏎3,TEwYZmbju2iJRbtrUDEqNyKYi9DpCwps2N…`
-- **URL_WITH_CREDENTIALS** `url-with-credentials` conf 0.85 in doc-12648430-57 (da/code)
-  `…det er flyttet til torsdag.⏎ENDPOINT = "amqp://svc:auBk4RV9mEsv0dFZn@db.internal:5432/appdb"⏎…`
-- **NATIONAL_ID** `national-id-in-aadhaar` conf 0.85 in doc-12648430-58 (el/cv)
-  `…όλος.⏎Email: x.y.z@sub.domain.net⏎Tel: +558121345678⏎세종대로 425⏎⏎Ευχαριστούμε για την άμεση απ…`
-- **URL_WITH_CREDENTIALS** `url-with-credentials` conf 0.85 in doc-12648430-61 (sv/markdown-table)
-  `…VlDjYajeHbEOy1k9h5K12ZV |⏎| reference | redis://svc:OJSfEsGxTOo3yuGI@cluster0.mongodb.net:5432/appdb |⏎…`
-- **NATIONAL_ID** `national-id-in-aadhaar` conf 0.85 in doc-12648430-70 (zh/email)
-  `…0585WH 的付款已经到账。⏎会议改到了周四。⏎⏎此致，⏎陈美玲⏎Tel: +558121345678⏎jane_doe@münchen.de⏎…`
-- **URL_WITH_CREDENTIALS** `url-with-credentials` conf 0.85 in doc-12648430-83 (el/email)
-  `…Γεια σας,⏎⏎Η πληρωμή με στοιχείο redis://svc:Qv3FB062QqErn74SNlP@cluster0.mongodb.net:5432/appdb καταχωρήθηκε.⏎Η πληρωμή με στοιχείο 790…`
-- **URL_WITH_CREDENTIALS** `url-with-credentials` conf 0.85 in doc-12648430-91 (fa/markdown-table)
-  `…contact | 6289674532005 |⏎| reference | amqp://admin:kz6v9A7jzHPh@cluster0.mongodb.net:5432/appdb |⏎…`
-- **NATIONAL_ID** `national-id-th` conf 0.85 in doc-12648430-95 (es/csv)
-  `…yOoQZ7,a@startup.io,ok⏎3,AOJE271212ZI4,+8613912345678,ok⏎…`
-- **URL_WITH_CREDENTIALS** `url-with-credentials` conf 0.85 in doc-12648430-109 (da/email)
-  `…Hej alle,⏎⏎Betalingen med reference redis://svc:9E6RsPlTfBMIhpKcy9@cluster0.mongodb.net:5432/appdb er modtaget.⏎Sagen angiver 87SvyHayXXNS…`
-- **NATIONAL_ID** `national-id-in-aadhaar` conf 0.85 in doc-12648430-111 (el/csv)
-  `…c,sk_live_TvGK23tv6xUQ4gdpJrgOW0M8,ok⏎3,607319821007,TR14343598QUY2LKRT0UWHVLWG,ok⏎…`
-- **URL_WITH_CREDENTIALS** `url-with-credentials` conf 0.85 in doc-12648430-112 (ko/csv)
-  `…E75mvScbwQxYQH5PhoFj,6943894401107,ok⏎2,postgres://app:uVtI2Pp7eVuebahM@prod-db.corp:5432/appdb,QIVJLC79,ok⏎…`
+- **URL_WITH_CREDENTIALS** `url-with-credentials` conf 0.85 in doc-12648430-45 (tr/log)
+  `…⏎2026-08-26T17:22:08Z INFO request from amqp://svc:g5ffRMOAAqi4wmt@10.0.3.4:5432/appdb accepted⏎2026-08-23T13:52:00Z INFO requ…`
+- **URL_WITH_CREDENTIALS** `url-with-credentials` conf 0.85 in doc-12648430-50 (cs/prose)
+  `…4DQ1W5 byla přijata. Platba s referencí redis://root:gTjI6dNuy0ILnPi9D@prod-db.corp:5432/appdb byla přijata. Zašlete prosím podklady n…`
+- **NATIONAL_ID** `national-id-th` conf 0.85 in doc-12648430-52 (hi/markdown-table)
+  `…fy5yPo1STliV64VQgdZHMk |⏎| reference | +८६१३९१२३४५६७८ |⏎…`
+- **URL_WITH_CREDENTIALS** `url-with-credentials` conf 0.85 in doc-12648430-60 (it/log)
+  `…2026-08-20T19:48:06Z INFO request from mongodb+srv://admin:lp2JOz0a0j3x@prod-db.corp:5432/appdb accepted⏎2026-08-21T18:33:06Z INFO heal…`
+- **NATIONAL_ID** `national-id-ro-cnp` conf 0.85 in doc-12648430-63 (es/medical)
+  `…iernes.⏎HbA1c 28.3 mmol/L [8-60]⏎SNOMED 7760630761010⏎Envíe la copia firmada a Pablo Cifuente…`
+- **NATIONAL_ID** `national-id-th` conf 0.85 in doc-12648430-63 (es/medical)
+  `…iernes.⏎HbA1c 28.3 mmol/L [8-60]⏎SNOMED 7760630761010⏎Envíe la copia firmada a Pablo Cifuente…`
+- **URL_WITH_CREDENTIALS** `url-with-credentials` conf 0.85 in doc-12648430-66 (he/markdown-table)
+  `…ntact | +55 81213-45678 |⏎| reference | mongodb://root:MEVAgfwrIjLs6@prod-db.corp:5432/appdb |⏎⏎```⏎P<INDYILMAZ<<JAN<<<<<<<<<<<<<<<<…`
+- **TAX_ID** `national-id-pl-regon` conf 0.85 in doc-12648430-83 (fr/contract)
+  `…vant vendredi.⏎3. Le virement référencé 555240415 a bien été reçu.⏎4. La facture de Ateli…`
+- **NATIONAL_ID** `national-id-in-aadhaar` conf 0.85 in doc-12648430-86 (es/csv)
+  `…97pvcxcpqvre6v8r4mw629xwrd9cz5e5qe6sh02,813917871003,ok⏎…`
+- **NATIONAL_ID** `national-id-th` conf 0.85 in doc-12648430-86 (es/csv)
+  `…row,contact,identifier,status⏎1,+8613912345678,bc1q4zzlj36zy3zs9s6fl2qha0ddfy56hj3wd4l…`
+- **NATIONAL_ID** `national-id-jp-my-number` conf 0.85 in doc-12648430-88 (it/csv)
+  `…⏎2,729:df30:70aa:438f:27a8:bae2:fe:6046,675909924887,ok⏎3,GI27SSCOFQ68V47CHWNM614,GMTZMB12E4…`
+- **NATIONAL_ID** `national-id-in-aadhaar` conf 0.85 in doc-12648430-90 (zh/cv)
+  `…。⏎Email: björn.b@xn--bcher-kva.de⏎Tel: +558121345678⏎شارع الملك فهد 88⏎⏎感谢您的快速回复。⏎…`
+- **URL_WITH_CREDENTIALS** `url-with-credentials` conf 0.85 in doc-12648430-91 (hi/log)
+  `…⏎2026-08-23T16:46:02Z INFO request from redis://app:९obehbzUbaEPUw६iYT@cluster०.mongodb.net:५४३२/appdb accepted⏎2026-08-24T10:32:03Z INFO heal…`
+- **URL_WITH_CREDENTIALS** `url-with-credentials` conf 0.85 in doc-12648430-93 (he/contract)
+  `…עם האסמכתא 99654013 התקבל.⏎3. בתיק רשום postgres://svc:BGvOhGqFLbdxXB@cluster0.mongodb.net:5432/appdb כמזהה.⏎4. החשבונית הופקה על ידי מפעלי א…`
 
 ## False negatives (missed ground truth)
 
-- **GENERIC_SECRET** scheme `generic-secret` in doc-12648430-26 (uk/contract)
+- **GENERIC_SECRET** scheme `generic-secret` in doc-12648430-22 (uk/contract)
   `…0 як ідентифікатор.⏎3. У справі вказано A99cAXjL4yqONyd7ux6RgVHATH9ZEfMsMUvEWDl5 як ідентифікатор.⏎4. Новий постачальник…`
-- **POSTAL_CODE** scheme `postal` in doc-12648430-35 (nl/csv)
+- **POSTAL_CODE** scheme `postal` in doc-12648430-31 (nl/csv)
   `…MNZC9qBa5zCqyucyVTZ5p2Ez1gdXx6HcV1,ok⏎2,9931-240,87mvekt9BDyfGL28gB2N4cYP7paanGpmr4NSuPu…`
-- **GENERIC_SECRET** scheme `generic-secret` in doc-12648430-70 (zh/email)
-  `…大家好：⏎⏎档案中登记的识别号是 A9OsA9sEbWFkRIh5bPQu47wDZgj。⏎参考号为 IE5510585WH 的付款已经到账。⏎会议改到了周四。⏎⏎此致…`
-- **PERSON** scheme `ner-person` in doc-12648430-77 (da/cv)
-  `…Curriculum Vitae⏎Anders Holm⏎Levering til Aarhus tager fire dage.⏎Em…`
-- **ORG** scheme `ner-org` in doc-12648430-97 (ko/contract)
-  `… 참조번호 jane_doe@firma.de 입금이 확인되었습니다.⏎4. 새벽전자에서 수정 제안을 승인했습니다.⏎5. 초안은 어제 강민재 팀장이 승인했습…`
-- **ORG** scheme `ner-org` in doc-12648430-107 (ko/contract)
-  `…일에는 식별자로 36652910559349 가 기재되어 있습니다.⏎4. 한빛물류의 청구서가 어제 도착했습니다.⏎5. 담당자는 최수빈입니다.⏎…`
-- **PERSON** scheme `ner-person` in doc-12648430-124 (th/cv)
-  `…Curriculum Vitae⏎ประวิทย์ แสงทอง⏎สำนักงานใหม่: เชียงใหม่⏎Email: dev-ops@…`
-- **POSTAL_CODE** scheme `postal` in doc-12648430-151 (es/csv)
-  `…83100-5,ok⏎2,261968100-0,94921575T,ok⏎3,56176-6397,23-36316784-5,ok⏎…`
-- **POSTAL_CODE** scheme `postal` in doc-12648430-161 (it/csv)
+- **GENERIC_SECRET** scheme `generic-secret` in doc-12648430-54 (th/prose)
+  `…็นรหัสประจำตัว ได้รับการชำระเงินอ้างอิง A๙๑๖๗GTj๑yoSOVttL_Dyps๑DvBG๑๔DTH๖KMyTWTahRLi แล้ว มะลิ ศรีสุข อนุมัติร่างเอกสารเมื่อ…`
+- **PERSON** scheme `ner-person` in doc-12648430-99 (en/cv)
+  `…Curriculum Vitae⏎Sophie Aldridge⏎Shipping to Cape Town takes about four …`
+- **POSTAL_CODE** scheme `postal` in doc-12648430-158 (it/csv)
   `…row,contact,identifier,status⏎1,630-4728,144.248.98.3,ok⏎2,X6G 4B3,GFTJKD40S49H9…`
-- **POSTAL_CODE** scheme `postal` in doc-12648430-161 (it/csv)
+- **POSTAL_CODE** scheme `postal` in doc-12648430-158 (it/csv)
   `…ier,status⏎1,630-4728,144.248.98.3,ok⏎2,X6G 4B3,GFTJKD40S49H999W,ok⏎…`
-- **ORG** scheme `ner-org` in doc-12648430-191 (he/contract)
-  `…z8ywxkWriJ3QYGMsWg התקבל.⏎4. הספק החדש: מפעלי אלון.⏎5. איש הקשר: שירה פרידמן.⏎…`
-- **GENERIC_SECRET** scheme `generic-secret` in doc-12648430-199 (fi/contract)
-  `…otettu.⏎3. Asiakirjoissa tunnisteena on A9TfqpMsJAy-NKtinP656pJgI6MMHGHNrmJTgaLwS3h.⏎4. Uusi toimittajamme on Revontuli Log…`
-- **ORG** scheme `ner-org` in doc-12648430-204 (ar/contract)
-  `…TGmMSvw1 كمعرّف مسجل.⏎4. وصلت فاتورة من مجموعة الأفق أمس.⏎5. مسؤول التواصل: عمر الخطيب.⏎…`
-- **POSTAL_CODE** scheme `postal` in doc-12648430-217 (ru/csv)
+- **ORG** scheme `ner-org` in doc-12648430-162 (pt/contract)
+  `…0940100 até sexta-feira.⏎4. A fatura da Transportes Beiramar chegou ontem.⏎5. Envie a cópia assinada…`
+- **ORG** scheme `ner-org` in doc-12648430-180 (cs/contract)
+  `…ako identifikátor.⏎4. Fakturu vystavuje Strojírny Vichr.⏎5. Podklady připraví Ondřej Beneš.⏎…`
+- **ORG** scheme `ner-org` in doc-12648430-193 (ar/contract)
+  `…80750688 كمعرّف مسجل.⏎4. وصلت فاتورة من مجموعة الأفق أمس.⏎5. سيقدم ليلى الحسن النتائج يوم ال…`
+- **POSTAL_CODE** scheme `postal` in doc-12648430-204 (ru/csv)
   `…contact,identifier,status⏎1,ZZQKBQZJEWG,733-1514,ok⏎2,EL499711334,https://db.internal.co…`
-- **GENERIC_SECRET** scheme `generic-secret` in doc-12648430-242 (ru/prose)
-  `… как идентификатор. Платёж с реквизитом A9tfuIhMJacdRzXd2T7ok0RnocdGVZr поступил на счёт. В деле указан 2907092…`
-- **POSTAL_CODE** scheme `postal` in doc-12648430-243 (pl/csv)
-  `…ok⏎2,TG2G4JjoGekq4dia8stRdRaq295UagvQ5Z,X4M 6E3,ok⏎…`
-- **GENERIC_SECRET** scheme `generic-secret` in doc-12648430-245 (he/medical)
-  `…בתיק רשום A9VtIEYEMQVNxH42GnhCTfg2xF_5wIcFrudR8sEuhDLxgQl כמזהה.⏎HbA1c 236.0 mmol/L [75-93]⏎SNOME…`
-- **POSTAL_CODE** scheme `postal` in doc-12648430-370 (da/csv)
-  `…secret@build.ci.dev/app,LU56173253,ok⏎2,89651-7031,Y4EUXAJL5LA3MXUK2,ok⏎3,SI85692999,hf_oR…`
-- **POSTAL_CODE** scheme `postal` in doc-12648430-392 (fr/csv)
-  `…w,contact,identifier,status⏎1,56990-016,H3Y 0K7,ok⏎2,CNIE: Y002609,+55 81213-45678,ok⏎3…`
-- **ORG** scheme `ner-org` in doc-12648430-427 (el/prose)
-  `…F313cc7 καταχωρήθηκε. Νέος προμηθευτής: Μεταφορές Δίας. Την παρουσίαση αναλαμβάνει: Κατερίνα Β…`
-- **ORG** scheme `ner-org` in doc-12648430-445 (hi/contract)
-  `…7P6Yibwp6rhLTfmUonRX3p1TCO पर भेजें।⏎4. प्रकाशन वटवृक्ष का चालान कल प्राप्त हुआ।⏎5. अनन्या गुप्…`
-- **GENERIC_SECRET** scheme `generic-secret` in doc-12648430-468 (pt/email)
-  `…ira.⏎Por favor envie os documentos para A9s-KBkJTVafO73IZCCbbus3b7Tne até sexta-feira.⏎Henrique Tavares apres…`
-- **POSTAL_CODE** scheme `postal` in doc-12648430-472 (da/csv)
-  `…hKHdAHo27Kv9SJwDGyugdzPwbwwLangBb5,ok⏎2,199224,PS17UOKCT21M1LLCSBICN82QMT75H,ok⏎…`
-- **PERSON** scheme `ner-person` in doc-12648430-502 (fr/cv)
-  `…Curriculum Vitae⏎Élodie Garnier⏎Le nouveau bureau de Marseille ouvrira …`
-- **POSTAL_CODE** scheme `postal` in doc-12648430-535 (uk/csv)
+- **ORG** scheme `ner-org` in doc-12648430-209 (ar/contract)
+  `…ملف +442079460958 كمعرّف مسجل.⏎4. وافقت مصنع الأمل على العرض المعدل.⏎5. وقّع فاطمة النجار …`
+- **POSTAL_CODE** scheme `postal` in doc-12648430-220 (nl/csv)
+  `…6dQVY4JiqIJVIznkKvaNqZCSmc8fXHdC8n8kM7g,72140,ok⏎…`
+- **PERSON** scheme `ner-person` in doc-12648430-223 (tr/cv)
+  `…Curriculum Vitae⏎Selin Çelik⏎Yeni ofis adresi: Eskişehir.⏎Email: mül…`
+- **PERSON** scheme `ner-person` in doc-12648430-236 (th/prose)
+  `…AVxHqNsA9-S5-fBufsnkDi เป็นรหัสประจำตัว ดารา บุญมี จะนำเสนอผลประกอบการวันศุกร์ …`
+- **PERSON** scheme `ner-person` in doc-12648430-316 (th/medical)
+  `… ภายในวันศุกร์⏎HbA1c ๑๑.๒ mg/dL [๗-๑๑๓]⏎ดารา บุญมี จะนำเสนอผลประกอบการวันศุกร์⏎ขอบคุณสำหรั…`
+- **GENERIC_SECRET** scheme `generic-secret` in doc-12648430-329 (pl/log)
+  `…⏎2026-08-26T21:11:05Z INFO request from A9F942-uYLjOFPxj365SigGloZS accepted⏎2026-08-25T16:40:05Z INFO requ…`
+- **PERSON** scheme `ner-person` in doc-12648430-337 (en/cv)
+  `…Curriculum Vitae⏎Sophie Aldridge⏎Shipping to Portland takes about four d…`
+- **ORG** scheme `ner-org` in doc-12648430-358 (he/contract)
+  `…שום 103.168.94.117 כמזהה.⏎4. הספק החדש: הוצאת דקל.⏎5. איש הקשר: איתי כהן.⏎…`
+- **ORG** scheme `ner-org` in doc-12648430-359 (th/prose)
+  `…7@db.internal.corp/app เป็นรหัสประจำตัว กลุ่มบริษัทรุ่งเรือง ตอบรับข้อเสนอฉบับแก้ไขแล้ว …`
+- **ORG** scheme `ner-org` in doc-12648430-375 (hi/prose)
+  `… दर्ज है। संपर्क व्यक्ति: अर्जुन वर्मा। सूर्या समूह का चालान कल प्राप्त हुआ। …`
+- **GENERIC_SECRET** scheme `generic-secret` in doc-12648430-376 (el/contract)
+  `…ευή.⏎3. Παρακαλώ στείλτε τα έγγραφα στο A9FZXnp0qZR6DsMDHEZu-J5eFNFCIsL6LZLwj1gBN μέχρι την Παρασκευή.⏎4. Νέος προμηθευτή…`
+- **ORG** scheme `ner-org` in doc-12648430-379 (zh/contract)
+  `…的付款已经到账。⏎3. 请在周五之前把材料发送到 H113522639。⏎4. 长风机械已接受修订后的报价。⏎5. 联系人:李静。⏎…`
+- **GENERIC_SECRET** scheme `generic-secret` in doc-12648430-393 (zh/prose)
+  `…请在周五之前把材料发送到 A9TTdNT9ThCEZRKfAzGWg_AOOu3fVT1kPqR542u_pD7。 档案中登记的识别号是 9137-950。 交货城市:上海。 明远科技已接受修…`
+- **PERSON** scheme `ner-person` in doc-12648430-415 (ar/cv)
+  `…Curriculum Vitae⏎عمر الخطيب⏎المكتب الجديد: الدار البيضاء.⏎Email: us…`
+- **ORG** scheme `ner-org` in doc-12648430-420 (cs/contract)
+  `…v38uc do pátku.⏎4. Novým dodavatelem je Strojírny Vichr.⏎5. Podklady připraví Jakub Novotný.⏎…`
+- **ORG** scheme `ner-org` in doc-12648430-436 (ro/contract)
+  `…e a fost înregistrată.⏎4. Factura de la Asigurări Meridianul a sosit ieri.⏎5. Persoana de contact: I…`
+- **GENERIC_SECRET** scheme `generic-secret` in doc-12648430-441 (pt/email)
+  `…ira.⏎Por favor envie os documentos para A9s-KBkJTVafO73IZCCbbus3b7Tne até sexta-feira.⏎Beatriz Nogueira aprov…`
+- **PERSON** scheme `ner-person` in doc-12648430-443 (hi/cv)
+  `…Curriculum Vitae⏎काव्या अय्यर⏎नया कार्यालय: भोपाल।⏎Email: o'brien@xn-…`
+- **POSTAL_CODE** scheme `postal` in doc-12648430-512 (uk/csv)
   `…row,contact,identifier,status⏎1,X2E 2L4,ghp_HVJaLPnJk5H2a2UQYaoDMnlMEzDikg2hc1m…`
-- **ORG** scheme `ner-org` in doc-12648430-615 (ar/contract)
-  `…34-56789 كمعرّف مسجل.⏎4. وصلت فاتورة من مصنع الأمل أمس.⏎5. سيقدم فاطمة النجار النتائج يوم …`
-- **GENERIC_SECRET** scheme `generic-secret` in doc-12648430-628 (sv/contract)
-  `… flyttades till torsdag.⏎2. Akten anger A9YyvIoVO6LLfixTsxb6jShPZqKuBiuVpmQtPP1wVfx som identifierare.⏎3. Betalningen med r…`
-- **POSTAL_CODE** scheme `postal` in doc-12648430-645 (es/csv)
-  `…hkiXwJ-d3mNHqaPQXF1X,OTRB8208196H4,ok⏎2,54381-8428,_service@firma.de,ok⏎…`
-- **POSTAL_CODE** scheme `postal` in doc-12648430-655 (fi/csv)
-  `…hp_A2HF1VGetNk5UPYZirfqtjBBmslLwK1BYSQJ,55332-610,ok⏎3,eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVC…`
-- **GENERIC_SECRET** scheme `generic-secret` in doc-12648430-660 (fi/prose)
-  `…tauksesta. Asiakirjoissa tunnisteena on A97nXZcB85UDUf5whRKmU3ymt7GctuCCP47U9x-B40J-. Kokous siirrettiin torstaihin. Kiitos …`
+- **PERSON** scheme `ner-person` in doc-12648430-534 (ja/email)
+  `…日届きました。⏎会議は木曜日に変更になりました。⏎⏎よろしくお願いいたします。⏎山本さくら⏎Tel: +90 53212-34567⏎jane_doe@firma.de⏎…`
 
 
 ## Stage 2 per-language (PERSON/ORG/LOCATION only)
 
 | language | GT | precision | recall (partial) | recall (exact) | F1 |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| ar | 55 | 92.5% | 80.0% | 50.9% | 85.8% |
-| cs | 47 | 75.8% | 100.0% | 97.9% | 86.2% |
-| da | 74 | 85.9% | 98.6% | 82.4% | 91.8% |
-| de | 68 | 89.9% | 100.0% | 94.1% | 94.7% |
-| el | 50 | 87.9% | 98.0% | 94.0% | 92.7% |
-| en | 50 | 85.7% | 96.0% | 94.0% | 90.6% |
-| es | 51 | 86.7% | 96.1% | 88.2% | 91.1% |
-| fa | 47 | 92.2% | 97.9% | 87.2% | 94.9% |
-| fi | 54 | 86.6% | 100.0% | 90.7% | 92.8% |
-| fr | 40 | 94.3% | 97.5% | 72.5% | 95.9% |
-| he | 56 | 82.5% | 91.1% | 82.1% | 86.6% |
-| hi | 46 | 86.5% | 82.6% | 65.2% | 84.5% |
-| it | 51 | 89.1% | 100.0% | 86.3% | 94.2% |
-| ja | 47 | 79.7% | 95.7% | 91.5% | 87.0% |
-| ko | 60 | 83.6% | 93.3% | 90.0% | 88.2% |
-| nl | 52 | 86.1% | 100.0% | 76.9% | 92.5% |
-| pl | 46 | 87.5% | 100.0% | 93.5% | 93.3% |
-| pt | 50 | 90.3% | 100.0% | 86.0% | 94.9% |
-| ro | 69 | 91.1% | 100.0% | 88.4% | 95.4% |
-| ru | 84 | 88.4% | 100.0% | 100.0% | 93.9% |
-| sv | 58 | 87.9% | 100.0% | 98.3% | 93.5% |
-| th | 60 | 71.8% | 91.7% | 80.0% | 80.5% |
-| tr | 66 | 84.8% | 100.0% | 97.0% | 91.8% |
-| uk | 61 | 95.3% | 100.0% | 100.0% | 97.6% |
-| zh | 51 | 89.3% | 98.0% | 96.1% | 93.5% |
+| ar | 65 | 87.7% | 83.1% | 52.3% | 85.3% |
+| cs | 54 | 84.1% | 94.4% | 87.0% | 89.0% |
+| da | 76 | 88.0% | 98.7% | 86.8% | 93.1% |
+| de | 53 | 79.7% | 100.0% | 96.2% | 88.7% |
+| el | 49 | 84.7% | 100.0% | 98.0% | 91.7% |
+| en | 73 | 88.8% | 94.5% | 90.4% | 91.5% |
+| es | 44 | 91.7% | 100.0% | 100.0% | 95.7% |
+| fa | 54 | 90.0% | 98.1% | 83.3% | 93.9% |
+| fi | 61 | 93.8% | 95.1% | 86.9% | 94.5% |
+| fr | 51 | 89.7% | 98.0% | 74.5% | 93.7% |
+| he | 54 | 96.1% | 85.2% | 70.4% | 90.3% |
+| hi | 40 | 83.7% | 85.0% | 75.0% | 84.4% |
+| it | 40 | 90.0% | 97.5% | 80.0% | 93.6% |
+| ja | 52 | 78.0% | 86.5% | 75.0% | 82.0% |
+| ko | 51 | 86.3% | 86.3% | 86.3% | 86.3% |
+| nl | 55 | 92.1% | 100.0% | 70.9% | 95.9% |
+| pl | 64 | 91.5% | 100.0% | 98.4% | 95.6% |
+| pt | 50 | 88.3% | 98.0% | 90.0% | 92.9% |
+| ro | 52 | 94.6% | 98.1% | 84.6% | 96.3% |
+| ru | 54 | 87.1% | 100.0% | 100.0% | 93.1% |
+| sv | 70 | 88.8% | 100.0% | 95.7% | 94.0% |
+| th | 59 | 90.9% | 83.1% | 69.5% | 86.8% |
+| tr | 64 | 92.9% | 98.4% | 95.3% | 95.6% |
+| uk | 65 | 93.0% | 100.0% | 96.9% | 96.4% |
+| zh | 66 | 88.7% | 95.5% | 93.9% | 92.0% |

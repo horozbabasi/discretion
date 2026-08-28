@@ -680,3 +680,41 @@ the table looks better.
 One bucket runs the other way: 30.9% predicted against 16.9% observed, on 77
 samples. That is over-confidence, the direction that matters, and it is small
 and sparse but real.
+
+### What overlap resolution does to the two types M8 put back in scope
+
+Measured on the 2,600-document corpus, Stages 0–3 with and without Stage 4
+resolution. The overlap census predicted this and the measurement confirms it:
+
+| type | precision | false positives | recall |
+| --- | ---: | ---: | ---: |
+| **GENERIC_SECRET** | 2.0% → **100.0%** | 2,075 → **0** | 56.8% → 55.4% |
+| **POSTAL_CODE** | 23.5% → **100.0%** | 224 → **0** | 75.8% → 72.5% |
+| URL_WITH_CREDENTIALS | 33.6% → **100.0%** | 140 → 0 | 100% held |
+| IP_ADDRESS | 87.8% → **100.0%** | 32 → 0 | 100% held |
+| NATIONAL_ID | 68.2% → **81.2%** | 268 → 112 | 100% → 98.0% |
+| TAX_ID | 46.0% → **56.3%** | 149 → 80 | 100% → 91.2% |
+| DRIVERS_LICENSE | 20.0% → 42.9% | 12 → 4 | 100% held |
+| HEALTH_DATA | 92.9% → 97.6% | 32 → 10 | 100% → 98.6% |
+| EMAIL | 99.0% → 100.0% | 6 → 0 | 100% held |
+| **all types** | — | **2,991 → 246 (−92%)** | — |
+
+D19's deferral was the right call and is now discharged. GENERIC_SECRET's
+false positives were never a context problem — 2,047 of 2,053 of them had a
+validated type covering the same characters, which is precisely why Stage 3's
+binary suppress-or-allow could not fix it and why the M7 attempt made
+precision *worse*. Resolution removes all 2,075 by deciding which type owns
+the span, and it costs 1.4 points of recall to do it.
+
+**The recall cost is real and is not hidden.** TAX_ID gives up the most,
+100% → 91.2%, and that is the cross-scheme ambiguity the specificity table
+deliberately refuses to settle: NATIONAL_ID and TAX_ID tie, so the contest
+falls to confidence, and confidence sometimes picks the wrong one. That is the
+honest state of a genuinely ambiguous case, not a bug to tune away — a static
+ordering would trade these losses for different ones without being more
+correct.
+
+**GENERIC_SECRET's remaining gap is unchanged and still open.** Recall is
+55.4%, because the prose-labeled-secret class (D19) is a *detection* gap, not
+an overlap one: those secrets have no competing candidate to resolve against.
+Fusion addressed the half it could.

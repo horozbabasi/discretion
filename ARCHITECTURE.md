@@ -636,7 +636,7 @@ states both its principle and its risk. A suppression rule whose author
 cannot name what it might wrongly suppress has not been thought
 through.
 
-**Three standing measurement rules now sit together, each earned the
+**Four standing measurement rules now sit together, each earned the
 hard way.** They are stated as one block because they fail in the same
 direction — a check that looks like it passed when it never ran:
 
@@ -651,7 +651,12 @@ direction — a check that looks like it passed when it never ran:
    measured 0.000%; the probe's PRNG had lost precision above 2^53 and
    generated 1,731 distinct tokens from 20,000 draws. Suspiciously good
    numbers get audited before they get published.
-3. **An exemption must be scoped to the CHECK it excuses, not to the
+3. **A clean tree means nothing until every background job has exited**
+   (M8). A commit landed while a backgrounded eval was still running, so
+   the report artifacts that job rewrote were left uncommitted while the
+   tree was reported clean. Verify tree state after the last job exits,
+   not after the commit lands.
+4. **An exemption must be scoped to the CHECK it excuses, not to the
    DETECTOR that earned it** (M8, span hygiene). A PEM block and an MRZ
    are legitimately multi-line, so both were exempted from the
    line-crossing check — but a scratch audit written as an else-if chain
@@ -979,6 +984,70 @@ ever masks more. That is the safe direction by construction.
 be ASSERTED by callers and tests rather than trusted to follow from the
 ordering. Current state: 9,474 candidates resolve to 5,688 with zero
 holes.
+
+### D23 — Calibration is isotonic, per type, on splits proved disjoint (M8)
+
+**Method.** Isotonic regression over ten score bins, fitted per entity
+type, with pool-adjacent-violators enforcing monotonicity. Chosen over
+Platt scaling deliberately: the raw scores are a base confidence plus a
+handful of additive Stage 3 contributions, so there is no reason to
+expect a logistic shape and a two-parameter family would impose one.
+Isotonic is also readable — the model IS a table of empirical precisions,
+so "0.8 means 80%" can be checked against the fit rather than inferred
+from coefficients.
+
+Per type because the types are not comparable, which the eval's own
+header has said since M3: a validated IBAN and a shape-only postal code
+carry the same raw score and mean different things. Removing that
+non-comparability is the whole job. Types with fewer than 200
+observations use a pooled curve instead of fitting noise.
+
+**Monotonicity is the property that matters most**, and it is why
+isotonic rather than raw binned precision. A sparse bin can easily show
+lower precision than the bin below it; left alone that would mean more
+evidence yielding less confidence. It also has a downstream consequence:
+the exposure score's required monotonicity property (adding an entity
+never lowers the score) cannot hold if the confidence feeding it is not
+monotonic in the evidence.
+
+**Different seeds are NOT a disjoint split.** The hard-negative builders
+are templated with only a few random fields, so short negatives collide
+across seeds — 91 identical documents on the first run, 181 at the size
+finally used. Assuming seed independence would have leaked fit documents
+into the held-out set and inflated the result. The harness now removes
+duplicates by text, prints the count, and asserts zero overlap on every
+run. Generalizing: a split is disjoint when it has been CHECKED to be,
+not when the construction suggests it should be.
+
+**Two of my own additions were wrong and are recorded because the
+failures generalize.** Prediction originally interpolated between step
+midpoints to smooth the output — an embellishment with no justification,
+which because the steps are coarse where data is sparse systematically
+pulled predictions toward the step below and left the model
+under-confident through 0.7–0.8. Reverting to the standard piecewise-
+constant isotonic prediction improved held-out ECE from 3.90% to 2.63%.
+Separately, a test that claimed to compare calibrated against RAW scores
+in fact compared against a constant-0.5 model, so it was not measuring
+what it named. Both are the same error in different clothes: a step
+added for plausibility rather than for a reason.
+
+**Result, held out: expected calibration error 2.63% against 12.33% for
+the raw scores.** Honest weakness, published rather than smoothed: the
+curve is conservative in the middle, every mid-range bucket running
+12–15 points above what it predicts, because 4,755 of 5,416 held-out
+observations sit in the top bucket and the mid-range bins have least
+data. One bucket is over-confident (30.9% predicted, 16.9% observed, 77
+samples), which is the direction that matters and is small but real.
+
+**D19 is discharged by resolution, not by calibration.** GENERIC_SECRET
+goes 2.0% → 100% precision with all 2,075 false positives removed,
+because 2,047 of 2,053 had a validated type covering the same
+characters. That is exactly why Stage 3's binary suppress-or-allow made
+precision WORSE at M7 and why the deferral was correct. POSTAL_CODE goes
+23.5% → 100%. The remaining GENERIC_SECRET recall gap (55.4%) is
+untouched and still open: prose-labeled secrets have no competing
+candidate to resolve against, so that half is a detection problem, not
+an overlap one.
 
 ## Status after M2
 

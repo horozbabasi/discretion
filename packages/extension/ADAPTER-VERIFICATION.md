@@ -249,60 +249,83 @@ ambiguity count**), which invariant rejected the rest, and `healthCheck`'s
 `failures[]` in full.
 
 **6. Type synthetic text into the composer** — never anything real, and do not
-send it. This is what exercises the read path.
+send it. This exercises the read path, and on Gemini it is what makes the send
+control exist at all.
+
+**7. Re-run the diagnostic in the state you actually care about** with
+**Ctrl+Alt+Shift+P**. It emits a fresh block on demand and does not consume the
+keystroke.
+
+This exists because **the findings live in states that do not survive a
+reload**: a composer with text already typed, a response mid-generation, the
+moment after a paste. Every automatic emission is tied to page load or to a
+change of verdict, so reaching those states otherwise means being lucky about
+when the 15-second poll lands.
+
+It cost four rounds on Gemini. Its send control does not exist while the
+composer is empty, and an empty composer is what every page load produces — so
+every reading was taken in the one state where the element was absent, and
+produced a confident wrong diagnosis each time.
+
+**States worth capturing separately**, because each has produced a distinct
+finding:
+
+| State | How to reach it | What it exposes |
+| --- | --- | --- |
+| empty composer | page load | elements that are absent by design (Gemini's send control) |
+| composer with text | type, then Ctrl+Alt+Shift+P | the normal working state |
+| mid-generation | send, then trigger while streaming | disabled-composer handling (ChatGPT) |
+| just after a paste | paste, then trigger | the paste guard's path |
 
 **7. Record the result** in the status table below, with the date and the tier.
 
 ## Current verification status
 
-| | Claim A (logic correct) | Claim B (site still has that shape) | Last live check |
-| --- | --- | --- | --- |
-| Claude | verified — 20 fixture tests | **VERIFIED-WORKING** | 2026-08-29 |
-| ChatGPT | verified — 23 fixture tests | **VERIFIED-WORKING (idle)** — fails while the composer is disabled, D34i | 2026-08-29 |
-| Gemini | verified — 40 fixture tests | composer **healthy**; send control **unresolved — landing-page finding does not transfer** (D34r) | 2026-08-29 |
+**All three adapters VERIFIED-WORKING live, 2026-08-29.** Dated per D35: a
+Claim B result is evidence about the day it was taken, and "verified" decays.
 
-Dated per D35: a Claim B result is evidence about the day it was taken, and
-"verified" decays.
+| | Claim A (logic) | Claim B (live) | Verified in state | Date |
+| --- | --- | --- | --- | --- |
+| Claude | verified — 20 fixture tests | **WORKING** | composer idle | 2026-08-29 |
+| ChatGPT | verified — 23 fixture tests | **WORKING** | composer **idle, not generating** | 2026-08-29 |
+| Gemini | verified — 40 fixture tests | **WORKING** | composer **non-empty** | 2026-08-29 |
 
-### ChatGPT — VERIFIED-WORKING when idle
+**The state each was verified in is part of the result, not a footnote.** Two
+of the three report DEGRADED in states where an element is *correctly* absent:
 
-Read idle: `healthCheck` ok, no failures, composer RESOLVED by
-`chatgpt/composer-id`, all four strategies matching (two with `rendered×1`
-rejections on a duplicate, which is the invariant doing its job).
+- **ChatGPT** mid-generation — the composer is disabled, so `isEditableSurface`
+  rejects it.
+- **Gemini** with an **empty composer** — no send control is rendered at all.
+  An empty composer is the default state of every page load, so Gemini reports
+  DEGRADED to every user until they type.
 
-**These are the same selectors that matched 0 in the earlier reading.** Those
-zeros were the composer's *state*, not staleness. **ChatGPT has no selector
-rot, and no new selectors have been written.**
+Neither is an adapter defect. Both are the health model lacking the distinction
+between *"I cannot find this element"* and *"this element is not applicable in
+the current state"* — ARCHITECTURE.md D34v, an M9 blocker.
 
-The earlier reading — "ordinary selector rot with the target in plain view" —
-is **withdrawn**. It is retained below as evidence for D34i rather than as an
-adapter defect.
+### Gemini — four wrong diagnoses, and what actually resolved it
 
-### Gemini — composer healthy, send control open
+Recorded because the sequence is worth more than the outcome. **The adapter was
+correct throughout; no selector, `CONTROL_SELECTOR` or walk change was ever
+needed.**
 
-Composer resolved by 4 of 5 strategies; response-root by both; send-control the
-sole failure; 13 controls on the page. Unchanged by the ChatGPT work.
-
-**Progress across three live readings, each one correcting the last:**
-
-| Reading | Send-control outcome | What it established |
+| # | Diagnosis | Why it was wrong |
 | --- | --- | --- |
-| 1 | `not-found`, all clauses 0 | tag assumption suspected; unverified |
-| 2 | `not-found`, walk returned nothing | walk terminated before the toolbar (D34l) — a bound tightened past correctness |
-| 3 | **2 controls found in the region, refused** | the traversal is correct and the ambiguity rule is working; what was missing is a discriminator |
+| 1 | stale marker selectors | markers were fine — the element was absent |
+| 2 | wrong region; walk stopped at the tools menu | region was fine — the element was absent |
+| 3 | icon is `arrow_upward`, not `send` | true, and irrelevant — no control existed to carry it |
+| 4 | not exposed as a control by the site | landing-page state only; on a conversation page it is a normal control |
 
-Reading 3 is the correct failure. A composer toolbar holds send *and*
-microphone *and* attach, so several controls is normal — refusing every time
-would make the fallback useless.
+Diagnoses 1 and 2 were corrected by adding instrument visibility. **3 and 4
+were not** — they were made with an instrument that could already see
+everything it needed. What was missing was the **page state**: every reading had
+been taken on an empty composer, the one state in which Gemini renders no send
+control.
 
-**A discriminator has been added** (ARCHITECTURE.md D34m): three rules, each a
-*positive* property of sending — native form submission, a declared
-`aria-controls` relationship, then send-icon identity — with **refusal still the
-default** when none identifies exactly one.
-
-**Unverified live; needs a re-run.** The reading will now print the region's
-controls in full — attributes, ancestors, accessible names — and say which rule
-fired, or that none did.
+**The rule this produces: before diagnosing an absent element, establish that
+the element should be present in the state you are looking at.** Four rounds
+went to answering *"why can we not find it"* when *"is it there at all"* had
+never been asked.
 
 ### Earlier Gemini readings — PRE-FIX, INVALID, kept deliberately
 

@@ -107,12 +107,43 @@ export const CLAUDE_COMPOSER_STRATEGIES: readonly ElementStrategy<HTMLElement>[]
 
 const EDITABLE_SELECTOR = 'textarea, input, [contenteditable="true"]';
 
-const SEND_BUTTON_SELECTOR = [
+/**
+ * Send-control clauses, SPLIT BY LOCALE DEPENDENCE.
+ *
+ * ─────────────────────────────────────────────────────────────────────────
+ * WHY THEY ARE SPLIT RATHER THAN JOINED.
+ *
+ * Two of these four clauses match an ENGLISH aria-label value. Joined into
+ * one selector, `querySelector` returns a match and nothing records WHICH
+ * clause produced it - so an adapter that works only because of an English
+ * string looks identical to one that works everywhere.
+ *
+ * That is not hypothetical. Gemini was found live to be matching its send
+ * control ONLY via an English aria-label, which was visible solely because
+ * that adapter reports provenance. Claude and ChatGPT reported none, so the
+ * same dependency here would have been invisible.
+ *
+ * ChatGPT has no English clause at all. Claude's dependency is LATENT: it
+ * works in any locale while the test id or the submit type matches, and falls
+ * back to English only if both stop matching. `healthCheck` now says when
+ * that has happened.
+ *
+ * Nothing about WHAT MATCHES changed - the union of these two lists is the
+ * previous selector exactly.
+ * ─────────────────────────────────────────────────────────────────────────
+ */
+const SEND_BUTTON_LOCALE_INDEPENDENT = [
   'button[data-testid="send-button"]',
-  'button[aria-label="Send message" i]',
-  'button[aria-label="Send Message" i]',
   'button[type="submit"]',
 ].join(', ');
+
+/** Last resort: matches an English accessible name, so English-only. */
+const SEND_BUTTON_ENGLISH_ONLY = [
+  'button[aria-label="Send message" i]',
+  'button[aria-label="Send Message" i]',
+].join(', ');
+
+const SEND_BUTTON_SELECTOR = `${SEND_BUTTON_LOCALE_INDEPENDENT}, ${SEND_BUTTON_ENGLISH_ONLY}`;
 
 export const CLAUDE_RESPONSE_STRATEGIES: readonly ElementStrategy[] = [
   {
@@ -290,6 +321,20 @@ export class ClaudeAdapter implements SiteAdapter {
 
     const responseRoot = this.getResponseRoot();
     if (!responseRoot.ok) failures.push(responseRoot.failure);
+
+    // Which clause fired, not merely whether one did.
+    const localeIndependentSend = this.document.querySelector(SEND_BUTTON_LOCALE_INDEPENDENT);
+    const englishOnlySend = this.document.querySelector(SEND_BUTTON_ENGLISH_ONLY);
+    if (localeIndependentSend === null && englishOnlySend !== null) {
+      warnings.push({
+        target: 'send-button',
+        tier: 'class',
+        detail:
+          'The send control matched ONLY via its English aria-label. Every locale-independent ' +
+          'clause failed, so on a non-English interface nothing would match and pointer sends ' +
+          'would be undecidable. This is invisible to anyone testing in English.',
+      });
+    }
 
     if (this.document.querySelector(SEND_BUTTON_SELECTOR) === null) {
       failures.push({

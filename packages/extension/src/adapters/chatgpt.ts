@@ -65,6 +65,14 @@ const EDITABLE_SELECTOR = 'textarea, input, [contenteditable]';
  * Controls that submit the composer. Excludes the stop control: stopping a
  * stream is not a send, and intercepting it would block the user from
  * interrupting a response.
+ *
+ * NO ENGLISH CLAUSE, deliberately, and this is the only one of the three
+ * adapters that can say so. Every clause keys on a test id, an element id, or
+ * a native submit type - none on an accessible NAME. So there is no
+ * English-only fallback to warn about here, unlike claude.ts (latent) and
+ * gemini.ts (active, found live). Stated rather than left implicit, so that
+ * adding an aria-label clause later is a visible decision rather than a
+ * convenience.
  */
 const SEND_BUTTON_SELECTOR = [
   'button[data-testid="send-button"]',

@@ -3090,6 +3090,127 @@ collection missed" need completely different fixes. The reading now says
 which.
 
 
+### D34u - RESOLVED: Gemini renders no send control while the composer is empty. The adapter was correct throughout (M9)
+
+Verified live: `healthCheck` ok, no failures, composer, response-root and
+send-button all resolved - **with text in the composer**.
+
+**Gemini does not render a send control when the composer is empty.**
+Every prior reading was taken on an empty composer, so the element was
+ABSENT, not unmatchable. `gemini/composer-in-send-region` matching 2/1
+here against 0/0 previously corroborates it independently: that strategy
+is anchored on the send control, so it can only match when one exists.
+
+**All outstanding Gemini diagnoses are withdrawn. No selector fix, no
+`CONTROL_SELECTOR` change, no walk change. The adapter was correct
+throughout.**
+
+**FOUR CONFIDENT DIAGNOSES OF ONE SYMPTOM, ALL WRONG:**
+
+| # | Diagnosis | What was actually wrong with it |
+| --- | --- | --- |
+| 1 | stale marker selectors | the markers were fine; the element was absent |
+| 2 | wrong region (walk stopped at the tools menu) | the region was fine; the element was absent |
+| 3 | icon named `arrow_upward`, not `send` | true, and irrelevant - no control existed to carry it |
+| 4 | not exposed as a control by the site | landing-page state only; on a conversation page with text it is a normal control |
+
+Each was the best available reading of the evidence at the time, and each
+was corrected by adding visibility rather than by reasoning harder. But
+the thing that finally resolved it was not another instrument - **it was
+reading the page in the state where the element exists.**
+
+**The lesson, which supersedes the one recorded in D34r.** D34r concluded
+"when a diagnosis is wrong twice, the fault is usually the instrument's
+reach". That was right about diagnoses 1 and 2 and wrong as a general
+rule. Diagnoses 3 and 4 were made with an instrument that could see
+everything it needed to; what was missing was the PAGE STATE. Better
+instruments cannot compensate for measuring in a state where the thing
+under test does not exist.
+
+**The corrected form: before diagnosing an absent element, establish that
+the element should be present in the state you are looking at.** Four
+rounds went to answering "why can we not find it" when the answer to "is
+it there" had never been asked.
+
+### D34v - CONFIRMED and WIDENED: two adapters report DEGRADED for correctly-absent elements (M9)
+
+D34i recorded that a momentarily disabled composer must not put the
+adapter into DEGRADED. The Gemini resolution widens it from a state to a
+CLASS, and makes it considerably more urgent.
+
+| Adapter | State | Element correctly absent | Current behaviour |
+| --- | --- | --- | --- |
+| ChatGPT | mid-generation | composer is disabled | DEGRADED |
+| Gemini | **composer empty** | **send control not rendered** | **DEGRADED** |
+
+**An empty composer is the default state of every page load.** So Gemini
+currently reports DEGRADED to every user, on every visit, until they type
+their first character. That is not an edge case; it is the first thing
+anybody sees.
+
+**The health model needs a distinction it does not have:** "I cannot find
+this element" versus "this element is not applicable in the current
+state". Today both produce `not-found`, and `not-found` produces
+DEGRADED.
+
+**Blocking in either state guards an action that is impossible.** A
+disabled composer cannot send. A page with no send control cannot send by
+clicking one. The block buys no safety and costs the entire user-facing
+impression - the same argument as D34i, now with two instances.
+
+**The M9 blocker set is now four, and they share one surface and one
+distinction:**
+
+- **D29** - a composer nobody typed into cannot be bound (suggestion chips)
+- **D34i** - a disabled composer must not mean DEGRADED
+- **D34v** - an inapplicable element must not mean DEGRADED
+- **D36** - SPEC's visible degraded state does not exist
+
+All four need the same in-page surface, and three of the four need the
+same state distinction. Building them separately would mean building that
+distinction three times.
+
+**The safety constraint, unchanged and load-bearing:** the
+not-applicable state must be entered only on POSITIVE evidence that the
+element is absent BY DESIGN in this state - never on a bare `not-found`.
+A missing composer masquerading as an inapplicable one would undo
+fail-closed entirely. For Gemini the positive evidence is available and
+cheap: the composer is empty, so no send control is expected.
+
+### D34w - The English-aria-label dependency is real, uneven, and was invisible in two of three adapters (M9)
+
+Gemini matched its send control live ONLY via an English `aria-label`, so
+a Turkish, German or any localised Gemini would fail today. Checked
+across all three adapters rather than assumed:
+
+| Adapter | English clauses | Locale-independent clauses | Status |
+| --- | ---: | --- | --- |
+| ChatGPT | **0 of 3** | test id, element id, native submit | clean |
+| Claude | **2 of 4** | `data-testid`, `type="submit"` | **latent** |
+| Gemini | 1, last resort | markers + icons - **all failed live** | **active** |
+
+So it is not a uniform cross-adapter gap, and reporting it as one would
+have been wrong. ChatGPT has no such clause at all.
+
+**The sharper finding is that it was UNOBSERVABLE in two of the three.**
+Claude and ChatGPT resolved their send controls with a single
+`querySelector` over a joined selector - one match, no record of which
+clause produced it. Gemini's dependency was visible only because that
+adapter reports provenance. **Claude could have had the identical
+dependency and nothing would have said so.**
+
+Claude's clauses are now split by locale dependence and `healthCheck`
+warns when only the English ones match. The union is unchanged - nothing
+about what matches was altered. ChatGPT's absence of an English clause is
+now stated in the file rather than left implicit, so adding one later is
+a visible decision rather than a convenience.
+
+**Gemini's active dependency belongs with the i18n work**, not with
+selector maintenance: the fix is a locale-independent marker on the send
+control, and there is nothing to write until Google provides one or the
+composer-anchored path can reach it.
+
+
 ## Status after M2
 
 Stage 1 is complete: 113 registered detectors — 57 NATIONAL_ID and 19

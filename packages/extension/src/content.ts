@@ -100,6 +100,11 @@ function start(): void {
   let lastVerdict: string | null = null;
   let lastUrl = location.href;
 
+  /** Emits a diagnostic regardless of whether the verdict has changed. */
+  const forceDiagnostic = (): void => {
+    renderDiagnostic(buildDiagnostic(adapter, document));
+  };
+
   const check = (): void => {
     if (location.href !== lastUrl) {
       lastUrl = location.href;
@@ -128,6 +133,35 @@ function start(): void {
   for (const delay of SETTLE_CHECKS_MS) setTimeout(check, delay);
   const timer = setInterval(check, HEALTH_INTERVAL_MS);
 
+  /**
+   * MANUAL TRIGGER: Ctrl+Alt+Shift+P re-runs the diagnostic on demand.
+   *
+   * ─────────────────────────────────────────────────────────────────────────
+   * The findings that remain live in page states that DO NOT SURVIVE A
+   * RELOAD: a composer with text already typed, a response mid-generation,
+   * the moment after a paste. Every automatic emission is tied to load or to
+   * a verdict change, so reaching those states means being lucky about when
+   * the poll lands.
+   *
+   * That cost four rounds on Gemini alone. Its send control does not exist
+   * while the composer is empty, and an empty composer is what every page
+   * load produces - so every reading was taken in the one state where the
+   * element was absent, and produced a confident wrong diagnosis each time.
+   *
+   * A key combination is unglamorous and it is the thing that was missing:
+   * get the page into the state you care about, then ask.
+   * ─────────────────────────────────────────────────────────────────────────
+   */
+  const onDiagnoseKey = (event: KeyboardEvent): void => {
+    if (!event.ctrlKey || !event.altKey || !event.shiftKey) return;
+    if (event.key.toLowerCase() !== 'p') return;
+    // Deliberately does NOT preventDefault: this must never take a keystroke
+    // away from the page, and a diagnostic that breaks the site it is
+    // diagnosing is worse than no diagnostic.
+    forceDiagnostic();
+  };
+  document.addEventListener('keydown', onDiagnoseKey, { capture: true });
+
   // The stored preference may switch debug off for a packed install, or on for
   // a user reporting a broken site. Storage is async, so the first report above
   // has already used the unpacked-load default; this refines everything after.
@@ -135,6 +169,7 @@ function start(): void {
 
   window.addEventListener('pagehide', () => {
     clearInterval(timer);
+    document.removeEventListener('keydown', onDiagnoseKey, { capture: true });
     witness.stop();
   });
   // SPA navigation fires popstate; conversation switches that use pushState do

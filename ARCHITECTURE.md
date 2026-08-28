@@ -1306,6 +1306,53 @@ which a user reads as the extension being broken. Pinned in both
 directions by the `composer-region-clone` fixture: an inert clone must
 not block, and two genuine editables still must.
 
+**THIS FAILURE CLASS HAS ESCAPED ONCE, AND IT WAS THE REPAIR THAT DID
+IT.** Recorded here rather than only in the review log, because a reader
+of this section is deciding how much to trust these constructions and
+should know that they have been breached.
+
+The Gemini send-control fix (D34b, D34k) added a structural fallback:
+"the single control beside the composer". Its region walk was bounded by
+a hop count rather than by the composer's actual region, and six hops
+reaches `<body>` on an ordinary page. So when the composer's own
+container held no control, the fallback took the single control from THE
+WHOLE DOCUMENT - a sidebar button - and bound it as the send control.
+`healthCheck` then reported `failures: []`.
+
+**A loud, blocking send-control failure was converted into a silently
+green adapter bound to an unrelated control.** Once submit interception
+lands, the real send control is not in the bound set, its click is never
+intercepted, and unmasked text is sent while every component reports
+health OK. That is exactly the silent-wrong-element failure the four
+constructions above exist to prevent - reintroduced by a change whose
+entire purpose was to repair that subsystem.
+
+Three things about how it got in are worth more than the bug itself:
+
+1. **It had passing tests.** The suite covered the shapes its author had
+   thought of, and a walk escaping to `<body>` was not one of them.
+2. **It had a clean typecheck and a written justification.** The
+   justification was sincere and wrong.
+3. **Review-by-reasoning did not catch it - including mine.** It was
+   caught by an adversarial review that REPRODUCED the failure in jsdom
+   against the real adapter rather than reasoning about the code. The
+   distinction is the whole lesson: reasoning finds the cases you can
+   imagine, execution finds the ones you cannot.
+
+**What it changes about the constructions.** Nothing in their design,
+which held - constructions #1 and #2 would still have blocked a wrong
+COMPOSER. What it changes is where the boundary of their protection sits:
+they govern the composer, and the SEND CONTROL had no equivalent rule
+until this incident. It has one now (the same ambiguity rule), because
+binding the wrong send control has the same consequence as resolving the
+wrong composer - a send that is never intercepted.
+
+**The general lesson for anyone repairing this subsystem:** a change that
+widens what a strategy may match is a change to the wrong-element surface
+even when it is aimed at a different element, and it deserves the same
+adversarial treatment as a change to the composer resolver. Widening is
+never locally safe.
+
 **The cost, stated honestly.** This design fails closed more often than
 a naive one. A site that legitimately grows a second editable surface
 near the composer will block sends until the adapter is updated. That is
@@ -2185,7 +2232,7 @@ candidates are now separated out and explicitly discounted, and a visible
 `<button>` candidate is called out as pointing at ordinary selector rot
 rather than at anything about tags.
 
-### D34f - Eight defects in checking code, and the last three share a shape (M9)
+### D34f - Twelve defects in checking code, and they fall into three shapes (M9)
 
 Recorded together because the pattern is more useful than any of them
 individually, and because the count is now large enough that it is a
@@ -2213,8 +2260,29 @@ The eight, in order:
 8. Forensics were gated on composer-and-response resolution, so a
    send-control-only failure emitted nothing at all (D34d).
 9. The paint gate withheld on a painted page (D34e).
+10. The READING line asserted "no strategy matched one - the selectors are
+    stale" without ever consulting the resolver, on a page where the
+    composer had resolved (D34g).
+11. The diagnostic's send-icon probe still matched only the attribute
+    forms after the adapter gained ligature matching, so it could report
+    "no send icon" on a page where the adapter was matching one (D34k).
+12. A comment above `CONTROL_SELECTOR` asserted that "a wider net that
+    catches two candidates fails hard rather than guessing" - true of
+    `resolveUnique`, false of `findSendButtons`, in the comment
+    justifying the widening (D34k).
 
-**THE LAST THREE ARE THE SAME DEFECT.** Each is a GATE - a rule deciding
+**THREE SHAPES, and the count is now large enough to be a property of how
+this code is written rather than a run of bad luck.**
+
+- **GATES** (7, 8, 9): the measuring code was correct and the rule
+  deciding when to emit or believe was not.
+- **CHECKING CODE DRIFTING FROM PRODUCTION** (2, 3, 6, 11): a probe or
+  helper that no longer matched the thing it was checking.
+- **UNTESTED ASSERTIONS** (5, 10, 12): a claim stated as verified in a
+  place a reader would not re-derive it - a conclusion, a summary line, a
+  comment.
+
+**ITEMS 7, 8 AND 9 ARE THE SAME DEFECT.** Each is a GATE - a rule deciding
 when to emit, when to believe, when to conclude - and in each case the
 measuring code was correct while the gate around it was not:
 

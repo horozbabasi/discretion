@@ -421,7 +421,9 @@ describe('the region walk is traced, so its two failure modes are distinguishabl
 
     const trace = describeSendSearch(document);
     expect(trace.regionControls).toBeGreaterThan(1);
-    expect(trace.stoppedBecause).toBe('found-region');
+    // The walk always climbs to the body now, collecting as it goes, so
+    // termination says nothing about the result - `outcome` does.
+    expect(trace.stoppedBecause).toBe('reached-body');
     expect(trace.outcome).toBe('discriminated');
     // Identified by a POSITIVE property of sending, not by excluding the mic.
     expect(trace.discriminator?.rule).toBe('send-icon');

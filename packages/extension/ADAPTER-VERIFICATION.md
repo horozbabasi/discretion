@@ -211,6 +211,27 @@ Use a throwaway account if you have one.
 `PrivacyShield [<site>]`. It is emitted when the content script runs and again
 on every change of state. Expand it.
 
+**SAVE THE WHOLE BLOCK TO A FILE. Do not copy from the viewport.** In devtools:
+right-click in the console → *Save as…*, or select all and save. Then read it
+from the file.
+
+Three readings were lost to this. The block is long — strategy tables, the
+probe table, editable and control candidates, the region hop table, the
+discriminator attempts — and the part pasted was the tail, which is the
+*conclusion* rather than the evidence it rests on. **Twice that produced a
+confident wrong diagnosis** that took another round-trip to undo: once the
+region trace was assumed absent when it had been emitted and truncated, and
+once a summary line was read without the table that contradicted it.
+
+What must be in whatever you capture, at minimum:
+
+- the verdict line and `resolver results this reading is based on`
+- the per-strategy tables for composer and response root
+- `environment forensics`, including the probe table and `mat-icon ligature names`
+- the editable-candidate and control-candidate tables **with their attribute columns**
+- the region hop table and the discriminator attempts
+- every `READING:` line
+
 Debug output is **on by default for an unpacked load** and off for a store
 install — see `src/debug.ts`. Nothing it prints contains page text.
 

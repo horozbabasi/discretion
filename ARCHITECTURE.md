@@ -2791,6 +2791,93 @@ the wrong control; this one bound none; neither was distinguishable from
 derived from the data, the instrument must report where it stopped.
 
 
+### D34o - "First ancestor with any controls" is not "the composer's toolbar" (M9)
+
+The traversal was fixed, the trace worked, and the conclusion drawn from
+it was still wrong - by one step.
+
+**What the reading showed.** The walk climbed rich-textarea ->
+textarea-wrapper -> textarea-inner -> div -> div -> div, finding 0
+controls at hops 0-4 and 2 at hop 5, and stopped there. The two controls
+were "Upload & tools" and "Dictate", both inside
+`simplified-input-menu-container`. All three discriminators returned 0.
+
+**NEITHER OF THOSE CONTROLS SENDS ANYTHING.** The discriminators were
+correct; the search space was wrong. That container is the attachment and
+tools menu, and it sits BETWEEN the composer and the container holding
+send - so the walk stopped one level short of the toolbar and never saw
+the send button at all.
+
+**The reading invited exactly the wrong repair.** "Two controls found, no
+discriminator fired" reads as "we need a better discriminator", which is
+a correct inference from a COUNT and a wrong conclusion about the PAGE. A
+fourth rule written against those two controls would have identified
+neither, because neither is the send control. Rule 7 again: the summary
+named one cause for a result with two explanations, and the unstated one
+was the true one.
+
+**Two candidate repairs rejected before choosing.** "Keep climbing while
+the controls found are all non-sending", and "require a region to contain
+a discriminable control before accepting it", are the same rule. Both
+climb PAST a send control that happens to carry no discriminable
+property, and may then bind a discriminable non-send control higher up -
+and `<mat-icon>send</mat-icon>` is the default glyph for share and export,
+so such a control exists on this very page. Binding the wrong element
+BECAUSE a rule fired is worse than refusing.
+
+**Chosen: collect across every hop, then discriminate over the union.**
+It cannot climb past the send control because it never stops, and the
+ambiguity rule supplies the protection that stopping early used to give -
+several controls satisfying the same rule is a refusal. The body stop and
+the ambiguity rule are unchanged; no selector matches anything new.
+
+**The weakest rule needed a locality bound, and it is structural rather
+than a hop count.** `form-submit` and `aria-controls` both encode a
+relationship TO THE COMPOSER, so collecting more widely cannot weaken
+them. A send ICON is position-agnostic, so it is accepted only when the
+control SHARES THE COMPOSER'S INPUT AREA: the smallest ancestor
+containing both the control and the composer must not also contain the
+transcript. Derived from the page's own landmarks, no magic number, and
+it excludes exactly the share and export actions carrying the same glyph.
+
+**`stoppedBecause: 'found-region'` was deleted rather than left
+unreachable.** The walk now always climbs to the body, so termination
+says nothing about the result, and keeping a value that can no longer
+occur would be a claim the code does not support.
+
+**Unresolved, from the same reading:** `mat-icon[fonticon="send"]` and
+`[data-mat-icon-name="send"]` both return 0 while `mat-icon` returns 19.
+The send icon uses neither attribute form, and the ligature clause was
+not matching either. Counts could never say why, so the diagnostic now
+reports the DISTINCT LIGATURE NAMES present - the send icon's real name
+becomes readable rather than guessed at.
+
+### D34p - Three readings were lost to pasting the tail of the block (M9)
+
+Recorded as a procedure defect, because it cost more than any single code
+defect in this milestone.
+
+The diagnostic block is long: strategy tables, probe table, editable and
+control candidates, the region hop table, discriminator attempts, and
+several READING lines. What gets copied out of a console viewport is the
+TAIL - which is the conclusion, not the evidence it rests on.
+
+**Twice that produced a confident wrong diagnosis** requiring another
+round-trip to undo: once the region trace was believed absent when it had
+been emitted and truncated, and once a summary line was read without the
+table that contradicted it.
+
+The manual procedure now says to SAVE THE WHOLE BLOCK TO A FILE and read
+it from there rather than copying from the viewport, and lists what a
+capture must contain to be worth anything.
+
+The general lesson matches this milestone's other findings: an instrument
+that reports richly is useless if the transport truncates it, and the
+truncation is invisible at BOTH ends - the reader sees a complete-looking
+block, and the author sees a conclusion that appears unsupported by
+evidence that was in fact produced.
+
+
 ## Status after M2
 
 Stage 1 is complete: 113 registered detectors — 57 NATIONAL_ID and 19

@@ -229,8 +229,12 @@ export interface SendSearchTrace {
    *  discriminator gets designed against. */
   readonly regionControlDetail: readonly RegionControl[];
   readonly discriminator: DiscriminatorOutcome | null;
+  /**
+   * Why the climb ended. NOT a verdict: the walk now always climbs to the
+   * document body, collecting as it goes, so termination says nothing about
+   * whether a send control was found. `outcome` says that.
+   */
   readonly stoppedBecause:
-    | 'found-region'
     | 'reached-body'
     | 'ran-out-of-ancestors'
     | 'hop-limit'
@@ -344,26 +348,79 @@ function describeRegionControl(control: HTMLElement): RegionControl {
  */
 const REGION_WALK_LIMIT = 20;
 
-function walkRegion(composer: Element): { region: Element | null; trace: SendSearchTrace } {
+/**
+ * Whether a control shares the composer's INPUT AREA rather than merely the page.
+ *
+ * The smallest ancestor containing both the control and the composer must not
+ * also contain the transcript. If it does, the control is somewhere else on
+ * the page - a share or export action in the conversation, a nav item - and
+ * not in the composer's toolbar.
+ *
+ * Structural, derived from the page's own landmarks, and needing no hop count.
+ * It exists to bound the WEAKEST discriminator: `form-submit` and
+ * `aria-controls` both encode a relationship TO THE COMPOSER, so distance
+ * cannot weaken them, but a send ICON is position-agnostic and
+ * `<mat-icon>send</mat-icon>` is the default glyph for share and export too.
+ */
+function sharesInputAreaWith(control: Element, composer: Element, transcript: Element | null): boolean {
+  if (transcript === null) return true;
+  const composerAncestors = ancestorsAcrossShadow(composer);
+  let node: Element | null = control;
+  let hops = 0;
+  while (node !== null && hops < REGION_WALK_LIMIT) {
+    if (composerAncestors.has(node)) {
+      // `node` is the nearest common ancestor. It must not swallow the
+      // transcript.
+      return !node.contains(transcript);
+    }
+    node = parentAcrossShadow(node);
+    hops += 1;
+  }
+  return false;
+}
+
+/**
+ * Collects every control between the composer and the document body.
+ *
+ * ─────────────────────────────────────────────────────────────────────────
+ * WHY IT NO LONGER STOPS AT THE FIRST ANCESTOR CONTAINING A CONTROL.
+ *
+ * That rule found `simplified-input-menu-container` on Gemini - the
+ * attachment and tools menu, which sits BETWEEN the composer and the
+ * container holding send. It contained two controls ("Upload & tools",
+ * "Dictate"), so the walk stopped there, and all three discriminators
+ * correctly returned zero because NEITHER OF THOSE CONTROLS SENDS ANYTHING.
+ *
+ * "The first ancestor with any controls" is not "the composer's toolbar", and
+ * the resulting reading - two controls, no discriminator fired - invited the
+ * conclusion that a fourth discriminator was needed. A rule written against
+ * those two controls would have identified neither, because neither is the
+ * send control.
+ *
+ * Two alternatives were rejected. Climbing while the controls found are all
+ * non-sending, or requiring a region to contain a discriminable control
+ * before accepting it, are the same rule: they climb PAST a send control that
+ * happens to carry no discriminable property, and may then bind a
+ * discriminable non-send control higher up. That binds the wrong element
+ * BECAUSE a rule fired, which is worse than refusing.
+ *
+ * Collecting across every hop cannot climb past the send control, because it
+ * never stops. The ambiguity rule does the protecting it used to get from
+ * stopping early: several controls satisfying the same rule is a refusal.
+ * ─────────────────────────────────────────────────────────────────────────
+ */
+function walkRegion(composer: Element): { controls: HTMLElement[]; trace: SendSearchTrace } {
   const doc = composer.ownerDocument;
   const steps: RegionWalkStep[] = [];
+  const collected: HTMLElement[] = [];
   let region: Element | null = parentAcrossShadow(composer);
   let hops = 0;
+  let stoppedBecause: SendSearchTrace['stoppedBecause'] = 'ran-out-of-ancestors';
 
   while (region !== null && hops < REGION_WALK_LIMIT) {
     if (region === doc.body || region === doc.documentElement) {
-      return {
-        region: null,
-        trace: {
-          composerResolved: true,
-          steps,
-          regionControlDetail: [],
-          discriminator: null,
-          stoppedBecause: 'reached-body',
-          regionControls: 0,
-          outcome: 'no-region',
-        },
-      };
+      stoppedBecause = 'reached-body';
+      break;
     }
     const controls = controlsBeside(region, composer);
     steps.push({
@@ -372,97 +429,62 @@ function walkRegion(composer: Element): { region: Element | null; trace: SendSea
       marker: describeElement(region),
       controlsFound: controls.length,
     });
-    if (controls.length > 0) {
-      const detail = controls.slice(0, 8).map(describeRegionControl);
-      if (controls.length === 1) {
-        return {
-          region,
-          trace: {
-            composerResolved: true,
-            steps,
-            regionControlDetail: detail,
-            discriminator: null,
-            stoppedBecause: 'found-region',
-            regionControls: 1,
-            outcome: 'unique',
-          },
-        };
-      }
-      // Several controls: ask which one IS the send control, by positive
-      // properties only. Refusal remains the default if none identifies
-      // exactly one.
-      const outcome = discriminateSendControl(controls, composer, hasSendIcon);
-      return {
-        region,
-        trace: {
-          composerResolved: true,
-          steps,
-          regionControlDetail: detail,
-          discriminator: outcome,
-          stoppedBecause: 'found-region',
-          regionControls: controls.length,
-          outcome: outcome.control !== null ? 'discriminated' : 'ambiguous',
-        },
-      };
-    }
+    for (const control of controls) if (!collected.includes(control)) collected.push(control);
     region = parentAcrossShadow(region);
     hops += 1;
   }
+  if (region !== null && hops >= REGION_WALK_LIMIT) stoppedBecause = 'hop-limit';
 
+  const detail = collected.slice(0, 12).map(describeRegionControl);
+
+  if (collected.length === 0) {
+    return {
+      controls: [],
+      trace: {
+        composerResolved: true,
+        steps,
+        regionControlDetail: detail,
+        discriminator: null,
+        stoppedBecause,
+        regionControls: 0,
+        outcome: 'no-region',
+      },
+    };
+  }
+
+  if (collected.length === 1) {
+    return {
+      controls: collected,
+      trace: {
+        composerResolved: true,
+        steps,
+        regionControlDetail: detail,
+        discriminator: null,
+        stoppedBecause,
+        regionControls: 1,
+        outcome: 'unique',
+      },
+    };
+  }
+
+  const transcript = deepQueryAll(doc, 'main, [role="main"], chat-window')[0] ?? null;
+  const outcome = discriminateSendControl(
+    collected,
+    composer,
+    (control) => hasSendIcon(control) && sharesInputAreaWith(control, composer, transcript),
+  );
   return {
-    region: null,
+    controls: outcome.control !== null ? [outcome.control] : [],
     trace: {
       composerResolved: true,
       steps,
-      regionControlDetail: [],
-      discriminator: null,
-      stoppedBecause: region === null ? 'ran-out-of-ancestors' : 'hop-limit',
-      regionControls: 0,
-      outcome: 'no-region',
+      regionControlDetail: detail,
+      discriminator: outcome,
+      stoppedBecause,
+      regionControls: collected.length,
+      outcome: outcome.control !== null ? 'discriminated' : 'ambiguous',
     },
   };
-}
-
-function regionAroundComposer(composer: Element): Element | null {
-  return walkRegion(composer).region;
-}
-
-/** The send control identified by the composer-anchored path, if any. */
-function sendControlFromComposer(root: ParentNode): HTMLElement[] {
-  const composer = resolveComposerIndependently(root);
-  if (composer === null) return [];
-  const { region, trace } = walkRegion(composer);
-  if (region === null) return [];
-  if (trace.outcome === 'unique') return controlsBeside(region, composer);
-  if (trace.outcome === 'discriminated' && trace.discriminator?.control != null) {
-    return [trace.discriminator.control];
-  }
-  return [];
-}
-
-/**
- * The region walk, described for the diagnostic.
- *
- * Without this, the composer-anchored path fails INDISTINGUISHABLY from a
- * marker clause: both report "send-button: not-found". They need opposite
- * fixes - a walk that terminates too early versus a region that legitimately
- * holds several controls and needs a discriminator - so the diagnostic has to
- * say which happened.
- */
-export function describeSendSearch(doc: Document): SendSearchTrace {
-  const composer = resolveComposerIndependently(doc);
-  if (composer === null) {
-    return {
-      composerResolved: false,
-      steps: [],
-      regionControlDetail: [],
-      discriminator: null,
-      stoppedBecause: 'no-composer',
-      regionControls: 0,
-      outcome: 'no-region',
-    };
-  }
-  return walkRegion(composer).trace;
 }
 
 /** Rendered controls inside `region` that are neither the composer, nor inside it, nor around it. */
@@ -490,6 +512,36 @@ function resolveComposerIndependently(root: ParentNode): HTMLElement | null {
   return resolved.ok ? resolved.value.node : null;
 }
 
+/**
+ * The region walk, described for the diagnostic.
+ *
+ * Without this, the composer-anchored path fails INDISTINGUISHABLY from a
+ * marker clause: both report "send-button: not-found". They need opposite
+ * fixes, so the diagnostic has to say which happened.
+ */
+export function describeSendSearch(doc: Document): SendSearchTrace {
+  const composer = resolveComposerIndependently(doc);
+  if (composer === null) {
+    return {
+      composerResolved: false,
+      steps: [],
+      regionControlDetail: [],
+      discriminator: null,
+      stoppedBecause: 'no-composer',
+      regionControls: 0,
+      outcome: 'no-region',
+    };
+  }
+  return walkRegion(composer).trace;
+}
+
+/** The send control identified by the composer-anchored path, if any. */
+function sendControlFromComposer(root: ParentNode): HTMLElement[] {
+  const composer = resolveComposerIndependently(root);
+  if (composer === null) return [];
+  return walkRegion(composer).controls;
+}
+
 /** Distinct elements, preserving order. */
 function distinct(elements: readonly HTMLElement[]): HTMLElement[] {
   const out: HTMLElement[] = [];
@@ -512,7 +564,6 @@ function distinct(elements: readonly HTMLElement[]): HTMLElement[] {
  */
 function findSendButtons(root: ParentNode): SendControlResult {
   const composer = resolveComposerIndependently(root);
-  const region = composer === null ? null : regionAroundComposer(composer);
 
   const decide = (
     candidates: readonly HTMLElement[],
@@ -531,8 +582,13 @@ function findSendButtons(root: ParentNode): SendControlResult {
     return control instanceof HTMLElement ? control : null;
   };
 
+  // Icons are scoped to the composer's input area rather than to a single
+  // ancestor: the send glyph is also used for share and export, and the
+  // transcript test excludes those without needing a hop count.
+  const transcript = deepQueryAll(root, 'main, [role="main"], chat-window')[0] ?? null;
+  const composerNode = composer;
   const withinRegion = (control: HTMLElement): boolean =>
-    region !== null && deepQueryAll<Element>(region, CONTROL_SELECTOR).includes(control);
+    composerNode !== null && sharesInputAreaWith(control, composerNode, transcript);
 
   // Tier 1: declared markers, document-wide. A test id naming the send button
   // is specific enough not to need scoping.

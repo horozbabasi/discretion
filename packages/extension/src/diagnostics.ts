@@ -139,6 +139,17 @@ export interface EnvironmentForensics {
   /** Custom element tag names present, which is how an Angular app is shaped. */
   readonly customElements: readonly string[];
   /**
+   * Distinct `<mat-icon>` ligature names on the page.
+   *
+   * Reported because a reading showed `mat-icon[fonticon="send"]` and
+   * `[data-mat-icon-name="send"]` both returning 0 while `mat-icon` returned
+   * 19 - so the send icon uses neither attribute form, and the ligature clause
+   * was not matching either. The counts alone could not say why. The NAMES can:
+   * they show what the icons are actually called, so the send icon's real name
+   * is readable instead of guessed at.
+   */
+  readonly iconNames: readonly string[];
+  /**
    * The composer-anchored send search, when the adapter has one.
    *
    * Without it that path fails INDISTINGUISHABLY from a marker clause - both
@@ -484,6 +495,17 @@ export function markScriptStart(): void {
   scriptStart = Date.now();
 }
 
+/** Distinct ligature names on `<mat-icon>` elements, guarded like every value. */
+function collectIconNames(doc: Document): string[] {
+  const names = new Set<string>();
+  for (const icon of deepQueryAll<HTMLElement>(doc, 'mat-icon')) {
+    const name = (icon.textContent ?? '').replace(/[\p{Cf}\s]/gu, '');
+    if (name.length === 0 || name.length > 24) continue;
+    names.add(name);
+  }
+  return [...names].sort().slice(0, 40);
+}
+
 function buildForensics(doc: Document, site: string): EnvironmentForensics {
   const shadow = collectShadowStats(doc);
   const probes: Record<string, { light: number; deep: number }> = {};
@@ -511,6 +533,7 @@ function buildForensics(doc: Document, site: string): EnvironmentForensics {
     iframes: doc.querySelectorAll('iframe').length,
     probes,
     customElements: shadow.customElements,
+    iconNames: collectIconNames(doc),
     editableCandidates: collectEditableCandidates(doc),
     controlCandidates: collectControlCandidates(doc),
     sendSearch: site === 'gemini' ? describeSendSearch(doc) : null,

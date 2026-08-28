@@ -217,6 +217,9 @@ function renderForensics(f: EnvironmentForensics, diagnostic: AdapterDiagnostic)
   if (f.customElements.length > 0) {
     console.log(`custom elements present: ${f.customElements.join(', ')}`);
   }
+  if (f.iconNames.length > 0) {
+    console.log(`mat-icon ligature names present: ${f.iconNames.join(', ')}`);
+  }
 
   if (f.sendSearch !== null) {
     const search = f.sendSearch;
@@ -264,11 +267,28 @@ function renderForensics(f: EnvironmentForensics, diagnostic: AdapterDiagnostic)
       );
     }
     if (search.outcome === 'ambiguous') {
+      // TWO HYPOTHESES, BOTH STATED. The previous version said only "the
+      // region needs a discriminator", which is a correct inference from a
+      // count and can be a wrong conclusion about the page: it silently
+      // assumed the send control was among the candidates. On Gemini it was
+      // not - the walk had stopped at the tools menu - so all three rules
+      // correctly returned zero and the summary pointed at the wrong repair.
       console.warn(
-        `The composer's region holds ${search.regionControls} controls and NO rule identified ` +
-          'which one sends. Refusing is correct - a wrong send binding has the same consequence ' +
-          'as a wrong composer. What is needed is a POSITIVE property of the send control (see ' +
-          'the table above), never a wider walk and never a rule that excludes the others.',
+        `${search.regionControls} control(s) were collected and NO rule identified which one ` +
+          'sends. There are TWO explanations and this block does not distinguish them:',
+      );
+      console.warn(
+        '  (a) the send control IS among them but carries no discriminable property -> a new ' +
+          'POSITIVE rule is needed (never one that excludes the others);',
+      );
+      console.warn(
+        '  (b) the send control is NOT among them -> no discriminator can help, and the ' +
+          'collection is what must change. CHECK THE TABLE ABOVE FIRST: if none of the listed ' +
+          'controls plausibly sends, it is (b).',
+      );
+      console.warn(
+        'Refusing is correct either way - a wrong send binding has the same consequence as a ' +
+          'wrong composer.',
       );
     }
     if (search.outcome === 'discriminated') {

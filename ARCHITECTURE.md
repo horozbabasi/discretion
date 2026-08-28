@@ -3211,6 +3211,108 @@ control, and there is nothing to write until Google provides one or the
 composer-anchored path can reach it.
 
 
+### D37 - The injected surface: one host, three contents, built before any of them (M9)
+
+First batch of the content-script flow. The surface alone; detection is
+not wired to it.
+
+**Built to serve all three contents rather than shaped around whichever
+landed first.** The review panel, the degraded state and the
+not-applicable state are the same host with different contents, and all
+four M9 blockers close against it - so `surfaceState.ts` was written
+before any rendering existed. Shaping the host around the review panel
+and retrofitting the other two would have produced a panel-with-special-
+cases rather than a surface.
+
+**WHERE IT ATTACHES: `<body>`, positioned over the composer - not inserted
+beside it.** SPEC asks for "a compact panel above the composer", which
+reads as an instruction to insert into the composer's parent. That is
+exactly where it would be destroyed: ProseMirror, Quill and Angular all
+own those subtrees and reconcile foreign nodes away. The dangerous part
+is that they do it on their own schedule, so an inserted panel WORKS IN
+TESTING and vanishes mid-session.
+
+So the host attaches to `<body>` and is positioned from the composer's
+bounding rect, recomputed on scroll (captured, since scroll does not
+bubble) and resize. If the page removes it anyway, a MutationObserver
+re-attaches it - a panel that silently disappeared would leave the
+extension believing it had warned the user.
+
+**SHADOW MODE IS CLOSED.** Open would let the host page read the panel
+through `element.shadowRoot`. The panel lists which ENTITY TYPES were
+found in the user's text - never the values, but the classification is
+itself something the page should not have, and the page is precisely the
+party this extension exists to withhold information from. Closed costs
+nothing: the class holds the root, and assistive technology traverses
+closed roots regardless of mode.
+
+**`all: initial` on `:host`, deliberately blunt.** Shadow encapsulation
+gives one half of SPEC's requirement for free - nothing leaks out. It
+does NOT give the other half: INHERITED properties still cross the
+boundary. `font-family`, `color`, `line-height`, `letter-spacing`,
+`direction` and `visibility` all inherit from the host element, so a site
+with `body { letter-spacing: 3px }` restyles the panel without ever
+selecting it. A list of individual resets is a list somebody has to keep
+complete, and its failure mode is silent and site-specific. `all: initial`
+cannot be incomplete.
+
+**THEME FOLLOWS THE PAGE, NOT THE OPERATING SYSTEM.** The obvious
+implementation is `prefers-color-scheme`, and it answers a different
+question. All three sites have their own theme switcher, and a user
+running ChatGPT in dark mode on a light OS is entirely ordinary - the OS
+preference would put a bright card in the middle of a dark conversation,
+which is the exact failure SPEC's requirement guards against. So the
+page's rendered background is sampled, walking up from the composer
+(a site can paint its conversation area differently from `<body>`, and
+the panel sits by the composer), and luminance is computed by WCAG's
+formula rather than a channel average - perceived brightness is not the
+mean, and getting it wrong puts light text on a light panel. The OS
+preference remains only as a fallback for when nothing opaque can be
+sampled.
+
+**ACCESSIBILITY DECISIONS, and the two that were not obvious:**
+
+- The review panel is `role="dialog"` with **`aria-modal="false"`**. It
+  demands an answer, so it is a dialog - but focus is NOT trapped.
+  Trapping focus inside a panel floating over somebody's chat takes the
+  page away from them, and the user may legitimately want to go back and
+  edit rather than answer.
+- The degraded state is `role="alert"` with `aria-live="assertive"` and
+  **does not take focus**. It can appear while the user is mid-sentence;
+  moving the caret would be worse than the problem it reports. A screen
+  reader announces it without the user having to go looking.
+- Escape is bound on the SHADOW ROOT, not the document. A global Escape
+  handler would steal the key from the page.
+- Focus is captured before a blocking panel opens and restored when it
+  closes, so it is never stranded on a panel that no longer exists.
+
+**INACTIVE RENDERS NOTHING AT ALL.** Not a badge, not a "waiting"
+indicator. The element is absent by design; there is no problem to report
+and no action to offer. A persistent indicator on every page load is
+noise a user learns to ignore, and that is precisely how a real warning
+gets missed later.
+
+**The safety constraint is enforced by construction, not discipline.**
+`Inapplicable` is a branded type with no public constructor. The only two
+ways to make one - `sendControlNotExpected` and
+`composerTemporarilyDisabled` - each REQUIRE a live, connected element in
+hand plus the positive condition, and both return `null` when it does not
+hold. **There is no path from a failure to this state**: a `not-found`
+has no element to pass.
+
+Two further guards, because "positive evidence" alone is not enough:
+
+- **A partial explanation is not an explanation.** `explainsEveryFailure`
+  requires the evidence to cover EVERY failed target. If the composer is
+  empty (so no send control is expected) but the response root has ALSO
+  gone missing, the adapter really has lost the page - one legitimate
+  inapplicability must not silence an unrelated real failure.
+- **An empty failure list returns false**, not vacuous true. Otherwise
+  `every` over nothing would report a healthy page as INACTIVE.
+
+**English-only strings**, per the milestone split; catalogues are M10.
+
+
 ## Status after M2
 
 Stage 1 is complete: 113 registered detectors — 57 NATIONAL_ID and 19

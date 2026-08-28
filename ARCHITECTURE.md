@@ -1288,6 +1288,24 @@ page gets uninstalled, and an uninstalled extension protects nobody.
 Invariants decide what is a candidate at all; ambiguity then adjudicates
 between candidates. The `composer-hidden-clone` fixture caught this.
 
+**A second ordering bug, same shape, found while reviewing the button
+path.** `resolveUnique` admits a candidate only if it satisfies every
+composer invariant, so an aria-hidden measurement clone is not a
+candidate. `editableWithinRegion` — which the BUTTON path of construction
+#2 uses to find "the single editable beside this send button" — filtered
+only by `isEditableSurface`. The two therefore disagreed about what
+counts as a candidate: on a page with an inert clone inside the composer
+region, the resolver found the composer without difficulty and the button
+path then returned null, blocking the send as 'undecidable'.
+
+Both now apply the SAME admission rule. The general lesson is the one
+already stated in `isEditableSurface`'s docstring and now demonstrated:
+when two places decide what counts as a candidate, a divergence between
+them does not fail loudly — it fails as a healthy page that cannot send,
+which a user reads as the extension being broken. Pinned in both
+directions by the `composer-region-clone` fixture: an inert clone must
+not block, and two genuine editables still must.
+
 **The cost, stated honestly.** This design fails closed more often than
 a naive one. A site that legitimately grows a second editable surface
 near the composer will block sends until the adapter is updated. That is

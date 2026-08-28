@@ -341,6 +341,60 @@ describe('submit-time identity binding', () => {
   });
 });
 
+describe('the button path and the resolver agree on what counts as a candidate', () => {
+  it('binds through a send-button click even when an inert clone shares the region', () => {
+    // resolveUnique rejects the aria-hidden clone via COMPOSER_INVARIANTS.
+    // editableWithinRegion must reject it by the SAME rule. If it does not,
+    // the resolver finds the composer, the button path reports two editables
+    // and returns null, and the send is blocked as 'undecidable' on a page
+    // that is working perfectly.
+    loadFixture('claude/composer-region-clone');
+    const { adapter, witness } = makeAdapter();
+
+    const resolved = adapter.getComposer();
+    expect(resolved.ok).toBe(true);
+    if (!resolved.ok) return;
+    resolved.value.node.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+
+    let captured: SubmitIntent | null = null;
+    const off = adapter.onSubmitIntent((intent) => {
+      captured = intent;
+    });
+    document
+      .querySelector<HTMLElement>('[data-testid="send-button"]')
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
+    off();
+
+    expect(captured).not.toBeNull();
+    const intent = captured as unknown as SubmitIntent;
+    expect(intent.originComposer).toBe(resolved.value.node);
+    expect(verifyBinding(resolved.value, intent, witness).ok).toBe(true);
+  });
+
+  it('still refuses when the region holds two REAL editables', () => {
+    // The other direction: the agreement must not be achieved by making
+    // editableWithinRegion permissive. Two genuine candidates still block.
+    loadFixture('claude/composer-region-clone');
+    const clone = document.querySelector<HTMLElement>('.height-measurement-clone');
+    clone?.removeAttribute('aria-hidden');
+    giveEverythingLayout();
+
+    const { adapter } = makeAdapter();
+    let captured: SubmitIntent | null = null;
+    const off = adapter.onSubmitIntent((intent) => {
+      captured = intent;
+    });
+    document
+      .querySelector<HTMLElement>('[data-testid="send-button"]')
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
+    off();
+
+    const intent = captured as unknown as SubmitIntent;
+    expect(intent).not.toBeNull();
+    expect(intent.originComposer).toBeNull();
+  });
+});
+
 describe('adapter identity', () => {
   it('matches claude.ai and nothing else', () => {
     const { adapter } = makeAdapter();

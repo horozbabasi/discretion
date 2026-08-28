@@ -43,7 +43,7 @@
  */
 
 import type { ComposerHandle, SubmitIntent } from './types.js';
-import { isEditableSurface } from './invariants.js';
+import { COMPOSER_INVARIANTS, isEditableSurface } from './invariants.js';
 
 export type BindingVerdict =
   | { readonly ok: true; readonly node: HTMLElement }
@@ -141,11 +141,25 @@ function editableOnPath(event: Event): HTMLElement | null {
  * ambiguity rule as resolve.ts, for the same reason. `region` is supplied by
  * the adapter as the container that holds both the composer and its send
  * button.
+ *
+ * IT APPLIES THE FULL COMPOSER INVARIANTS, not merely `isEditableSurface`, and
+ * that is load-bearing rather than tidiness. resolveUnique admits a candidate
+ * only if it satisfies every invariant, so an aria-hidden measurement clone is
+ * not a candidate there. If this function used a laxer rule it would see that
+ * clone as a rival, return null, and the send would be blocked as
+ * 'undecidable' — on a page where the resolver had just found the composer
+ * without difficulty.
+ *
+ * The two admission rules must be the SAME rule. A divergence between them
+ * does not fail loudly; it fails as a healthy page that cannot send, which
+ * reads to a user as the extension being broken. Pinned by
+ * `composer-region-clone` in both directions: an inert clone must not block,
+ * and two genuine editables still must.
  */
 export function editableWithinRegion(region: Element): HTMLElement | null {
   const editables: HTMLElement[] = [];
   for (const element of region.querySelectorAll<HTMLElement>('textarea, input, [contenteditable]')) {
-    if (isEditableSurface(element)) editables.push(element);
+    if (COMPOSER_INVARIANTS.every((invariant) => invariant.holds(element))) editables.push(element);
   }
   return editables.length === 1 ? (editables[0] as HTMLElement) : null;
 }

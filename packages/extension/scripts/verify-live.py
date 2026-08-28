@@ -24,6 +24,9 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
+# How long to give the operator to sign in and type.
+WAIT_SECONDS = 900
+
 ROOT = Path(__file__).resolve().parent.parent
 PROBE = ROOT / '.probe' / 'live-probe.js'
 PROFILE = ROOT / '.probe' / 'profile'
@@ -72,20 +75,52 @@ with sync_playwright() as p:
     print('  1. Sign in if asked. Use a throwaway account if you have one.')
     print('  2. Get to a page with the composer visible.')
     print('  3. TYPE SOMETHING SYNTHETIC into the composer - never anything')
-    print('     real. It is not sent; it is needed so the input witness has')
-    print('     something to have observed.')
-    print('  4. Come back here and press Enter.')
+    print('     real, and do not send it. Typing is what gives the input')
+    print('     witness something to have observed.')
     print()
-    print('  The report is structural only. No page text is captured.')
-    print('=' * 70)
-    input('  Press Enter when ready... ')
+    print('  This script then continues on its own. Nothing is sent, nothing')
+    print('  is typed on your behalf, and no page text is captured.')
+    print('=' * 70, flush=True)
 
-    try:
-        report = page.evaluate('() => (window.__PS_PROBE__ ? window.__PS_PROBE__() : null)')
-    except Exception as exc:  # noqa: BLE001
-        print(f'FAIL: probe threw: {type(exc).__name__}')
-        ctx.close()
-        sys.exit(1)
+    # Polls rather than waiting on stdin, so the run needs no terminal
+    # interaction: the operator types in the browser and the script notices.
+    report = None
+    last_state = None
+    for _ in range(int(WAIT_SECONDS / 2)):
+        try:
+            candidate = page.evaluate('() => (window.__PS_PROBE__ ? window.__PS_PROBE__() : null)')
+        except Exception:  # noqa: BLE001  (navigation mid-evaluate is routine here)
+            page.wait_for_timeout(2000)
+            continue
+        if candidate is None:
+            page.wait_for_timeout(2000)
+            continue
+
+        c = candidate['composer']
+        state = (c['resolved'], c['failureKind'], c['textLength'])
+        if state != last_state:
+            last_state = state
+            if c['resolved']:
+                print(f"  ... composer resolved ({c['tier']}/{c['strategyId']}), "
+                      f"{c['textLength']} chars typed - waiting for text", flush=True)
+            else:
+                print(f"  ... composer not resolved yet: {c['failureKind']}", flush=True)
+
+        # The report is only complete once something has been typed: the
+        # witness check is the part fixtures cannot establish.
+        if c['resolved'] and (c['textLength'] or 0) > 0:
+            report = candidate
+            break
+        page.wait_for_timeout(2000)
+
+    if report is None:
+        # Take the last observation anyway - "the composer never resolved" is
+        # itself the finding, and reporting nothing would hide it.
+        try:
+            report = page.evaluate('() => (window.__PS_PROBE__ ? window.__PS_PROBE__() : null)')
+        except Exception:  # noqa: BLE001
+            report = None
+        print('  (timed out waiting for typed text; reporting last observation)', flush=True)
 
     ctx.close()
 

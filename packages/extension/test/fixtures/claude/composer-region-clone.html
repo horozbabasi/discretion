@@ -1,0 +1,47 @@
+<!doctype html>
+<!--
+  SYNTHETIC fixture: an inert duplicate INSIDE the composer region.
+
+  composer-hidden-clone.html puts the clone elsewhere on the page, where only
+  resolveUnique sees it. This puts it inside the region that contains the send
+  button, where the BUTTON path of the submit binding sees it too.
+
+  That path asks editableWithinRegion for "the single editable in this region".
+  If that function counts candidates by a different rule than resolveUnique
+  uses, the two disagree: resolveUnique resolves the composer correctly, then
+  the button path returns null because it saw two editables, and the send is
+  blocked with 'undecidable' on a page that is working perfectly.
+
+  The two must apply the SAME admission rule. This fixture is what holds them
+  to it.
+-->
+<html lang="en">
+  <body>
+    <div id="app">
+      <main>
+        <div data-testid="conversation-turn"><p>lorem ipsum</p></div>
+      </main>
+
+      <fieldset class="composer-shell">
+        <div data-testid="chat-input-container">
+          <div
+            class="ProseMirror"
+            contenteditable="true"
+            role="textbox"
+            aria-label="Write your prompt to Claude"
+          >
+            <p>lorem ipsum</p>
+          </div>
+          <div aria-hidden="true" class="height-measurement-clone">
+            <div class="ProseMirror" contenteditable="true"><p>lorem ipsum</p></div>
+          </div>
+        </div>
+        <div class="composer-actions">
+          <button type="button" aria-label="Send message" data-testid="send-button">
+            lorem ipsum
+          </button>
+        </div>
+      </fieldset>
+    </div>
+  </body>
+</html>

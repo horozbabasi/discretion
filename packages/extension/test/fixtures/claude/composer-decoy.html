@@ -1,0 +1,52 @@
+<!doctype html>
+<!--
+  SYNTHETIC adversarial fixture: the failure this whole subsystem exists for.
+
+  Two elements are indistinguishable to the strongest strategy — both are
+  contenteditable, both carry role="textbox", both are rendered, neither is
+  aria-hidden. One is the composer the user types into. The other is a
+  "composer-shaped div that is not the composer": a draft restore surface, a
+  second editor in a side panel, an experiment behind a flag. Real sites grow
+  these constantly.
+
+  A resolver that returned the first match would pick the WRONG one here (the
+  decoy appears first in document order, exactly as it would if a site rendered
+  a side panel above the composer). Detection would then run on empty text,
+  report "nothing sensitive", and the real composer's contents would be sent
+  unmasked with every component reporting success.
+
+  The expected behaviour is a hard 'ambiguous' failure and a blocked send.
+-->
+<html lang="en">
+  <body>
+    <div id="app">
+      <main>
+        <div data-testid="conversation-turn"><p>lorem ipsum</p></div>
+      </main>
+
+      <aside class="draft-panel">
+        <div class="ProseMirror" contenteditable="true" role="textbox" aria-label="Draft">
+          <p></p>
+        </div>
+      </aside>
+
+      <fieldset class="composer-shell">
+        <div data-testid="chat-input-container">
+          <div
+            class="ProseMirror"
+            contenteditable="true"
+            role="textbox"
+            aria-label="Write your prompt to Claude"
+          >
+            <p>lorem ipsum</p>
+          </div>
+        </div>
+        <div class="composer-actions">
+          <button type="button" aria-label="Send message" data-testid="send-button">
+            lorem ipsum
+          </button>
+        </div>
+      </fieldset>
+    </div>
+  </body>
+</html>

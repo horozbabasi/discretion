@@ -30,7 +30,7 @@ function modelServer() {
 export default defineConfig({
   plugins: [modelServer()],
   server: {
-    port: 5199,
+    port: 5211,
     headers: {
       // WASM multi-threading needs cross-origin isolation; without these
       // onnxruntime-web silently falls back to single-threaded, which would

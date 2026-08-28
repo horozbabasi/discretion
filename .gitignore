@@ -39,3 +39,6 @@ npm-debug.log*
 
 # Gazetteer build working directory (build-time downloads)
 .gazetteer-build/
+
+# Loadable extension bundle (build output; dist/ holds tsc declarations)
+packages/extension/build/

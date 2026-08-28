@@ -3,6 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "PrivacyShield browser extension — empty placeholder workspace until its milestone",
-  "license": "MIT"
+  "description": "PrivacyShield Chrome MV3 extension",
+  "license": "MIT",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "icons": "node scripts/make-icons.mjs"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0"
+  }
 }

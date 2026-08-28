@@ -1,0 +1,52 @@
+<!doctype html>
+<!--
+  SYNTHETIC fixture: an inert duplicate that must NOT cause an ambiguity
+  failure.
+
+  Sites routinely keep a hidden or aria-hidden copy of the composer around, for
+  measurement, for animation, or as a template. If every such duplicate tripped
+  the ambiguity rule, the adapter would block sends on a page that is working
+  perfectly — and an extension that cries wolf gets uninstalled, which protects
+  nobody.
+
+  So the invariants have to do real work here: the clone is inside an
+  aria-hidden subtree and has no layout box, so it is rejected before the
+  ambiguity count is taken, and exactly one candidate remains.
+
+  This is the counterweight to composer-decoy.html. Together they pin both
+  directions: refuse to guess when two REAL candidates exist, and do not
+  panic when a second candidate is demonstrably inert.
+-->
+<html lang="en">
+  <body>
+    <div id="app">
+      <main>
+        <div data-testid="conversation-turn"><p>lorem ipsum</p></div>
+      </main>
+
+      <div aria-hidden="true" class="measurement-clone">
+        <div class="ProseMirror" contenteditable="true" role="textbox">
+          <p>lorem ipsum</p>
+        </div>
+      </div>
+
+      <fieldset class="composer-shell">
+        <div data-testid="chat-input-container">
+          <div
+            class="ProseMirror"
+            contenteditable="true"
+            role="textbox"
+            aria-label="Write your prompt to Claude"
+          >
+            <p>lorem ipsum</p>
+          </div>
+        </div>
+        <div class="composer-actions">
+          <button type="button" aria-label="Send message" data-testid="send-button">
+            lorem ipsum
+          </button>
+        </div>
+      </fieldset>
+    </div>
+  </body>
+</html>

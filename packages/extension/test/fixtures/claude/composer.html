@@ -1,0 +1,42 @@
+<!doctype html>
+<!--
+  SYNTHETIC fixture, hand-written, modelled on claude.ai's composer structure.
+
+  Synthetic rather than captured because a captured fixture requires a signed-in
+  session on a real account, and this file is public. It is marked synthetic so
+  nobody mistakes it for evidence about the live site: it proves the ADAPTER
+  LOGIC behaves correctly on this shape, not that claude.ai has this shape.
+  ADAPTER-VERIFICATION.md sets out exactly which of those two claims fixtures
+  can support.
+-->
+<html lang="en">
+  <body>
+    <div id="app">
+      <main>
+        <div data-testid="conversation-turn">
+          <div class="font-user-message"><p>lorem ipsum</p></div>
+          <div class="font-claude-message" data-is-streaming="false"><p>lorem ipsum</p></div>
+        </div>
+      </main>
+
+      <fieldset class="composer-shell">
+        <div data-testid="chat-input-container">
+          <div
+            class="ProseMirror"
+            contenteditable="true"
+            role="textbox"
+            aria-label="Write your prompt to Claude"
+          >
+            <p>lorem ipsum</p>
+          </div>
+        </div>
+        <div class="composer-actions">
+          <button type="button" aria-label="Attach file">lorem ipsum</button>
+          <button type="button" aria-label="Send message" data-testid="send-button">
+            lorem ipsum
+          </button>
+        </div>
+      </fieldset>
+    </div>
+  </body>
+</html>

@@ -39,6 +39,19 @@ export default tseslint.config(
     },
   },
   {
+    // Code that RUNS IN A BROWSER PAGE rather than in Node: the benchmark
+    // harness, and the in-page half of the fixture capture tool. Neither is
+    // bundled into the extension; both legitimately use DOM globals.
+    files: ['bench/**/*.mjs', 'packages/extension/scripts/capture-fixture.mjs'],
+    languageOptions: {
+      globals: {
+        console: 'readonly', document: 'readonly', navigator: 'readonly',
+        location: 'readonly', performance: 'readonly', Node: 'readonly',
+        URLSearchParams: 'readonly', globalThis: 'readonly', process: 'readonly',
+      },
+    },
+  },
+  {
     // packages/core is an environment-agnostic library: it must run identically
     // in a browser extension, a web worker, and Node. No DOM, no Node built-ins.
     files: ['packages/core/src/**/*.ts'],

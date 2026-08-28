@@ -149,6 +149,55 @@ explicit about because a green health badge is easy to over-read.
 6. **Races.** Health is a snapshot. The composer can be replaced a millisecond
    later. Mitigated by re-resolving at submit rather than trusting the snapshot.
 
+## Current verification status — what is and is not established
+
+Kept in the repository rather than in a commit message, because "has this
+adapter ever been checked against the live site?" is a question every future
+change needs the answer to.
+
+| | Claim A (logic correct) | Claim B (site still has that shape) |
+| --- | --- | --- |
+| Claude | **verified** — 20 fixture tests | **NOT VERIFIED** |
+| ChatGPT | **verified** — 15 fixture tests | **NOT VERIFIED** |
+| Gemini | **verified** — 15 fixture tests | **NOT VERIFIED** |
+
+**The live harness itself is verified.** `verify-live.py` was run against live
+claude.ai and completed end to end: the probe bundled from the real adapter
+sources, injected at document-start, executed every strategy against the live
+DOM, and reported `composer: not-found`, `health: DEGRADED`, with per-strategy
+match counts of zero.
+
+That is the CORRECT result for the page it saw — a logged-out landing page has
+no composer — and it establishes that the injection, the init script, the
+strategy execution and the failure reporting all work against a real site. It
+establishes **nothing whatsoever about Claim B**, which needs a signed-in
+session, and the script says so itself rather than exiting 0:
+
+```
+VERIFICATION INCOMPLETE: nothing was typed into the composer, so the
+input witness and the read path were not exercised.
+```
+
+**To complete Claim B**, with a throwaway account and only synthetic text:
+
+```
+python packages/extension/scripts/verify-live.py claude
+python packages/extension/scripts/verify-live.py chatgpt
+python packages/extension/scripts/verify-live.py gemini
+```
+
+A browser opens; sign in, type something synthetic into the composer, and the
+script proceeds on its own. It exits 0 only when the composer resolved, health
+was clean, AND something had been typed — so a run that nobody attended cannot
+be mistaken for a pass.
+
+What each run establishes that fixtures cannot: that the site still exposes the
+markers the strategies key on, at which TIER they now match (a drop to the
+structural or class tier is the early warning that a redesign is coming), that
+exactly one candidate matches rather than two, and that the composer the
+adapter resolves is the same node the input witness observed — the one check
+that ties the selector layer to the binding layer on a real page.
+
 ## What fixtures CANNOT catch — stated plainly
 
 1. **That the site changed.** The whole of Claim B. A fixture captured today

@@ -18,14 +18,21 @@
 # The report is STRUCTURAL ONLY: tags, counts, tiers, strategy ids, text
 # lengths. No page text, no conversation ids. See src/devtools/liveProbe.ts.
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
 
+from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import sync_playwright
 
-# How long to give the operator to sign in and type.
-WAIT_SECONDS = 900
+# How long to give the operator to sign in and type. Lower it for a quick
+# logged-out structural reading, which exercises the harness end to end without
+# needing anyone present.
+WAIT_SECONDS = int(os.environ.get('WAIT_SECONDS', '900'))
+# Headed by default: signing in needs a visible window. A logged-out reading
+# does not, and should not steal the screen.
+HEADLESS = os.environ.get('HEADLESS', '0') == '1'
 
 ROOT = Path(__file__).resolve().parent.parent
 PROBE = ROOT / '.probe' / 'live-probe.js'
@@ -59,7 +66,7 @@ with sync_playwright() as p:
     ctx = p.chromium.launch_persistent_context(
         user_data_dir=str(PROFILE),
         channel='msedge',
-        headless=False,
+        headless=HEADLESS,
         viewport={'width': 1400, 'height': 950},
     )
     # document-start, so the input witness sees everything typed afterwards.
@@ -86,10 +93,21 @@ with sync_playwright() as p:
     # interaction: the operator types in the browser and the script notices.
     report = None
     last_state = None
+    closed = False
     for _ in range(int(WAIT_SECONDS / 2)):
         try:
             candidate = page.evaluate('() => (window.__PS_PROBE__ ? window.__PS_PROBE__() : null)')
-        except Exception:  # noqa: BLE001  (navigation mid-evaluate is routine here)
+        except PlaywrightError as exc:
+            # Closing the window is how an operator abandons a run. Report it
+            # as an incomplete verification, never as a crash - a stack trace
+            # here would read as "the adapter is broken", which is a different
+            # and much more alarming claim than "nobody signed in".
+            if 'closed' in str(exc).lower():
+                closed = True
+                break
+            page.wait_for_timeout(2000)
+            continue
+        except Exception:  # noqa: BLE001  (navigation mid-evaluate is routine)
             page.wait_for_timeout(2000)
             continue
         if candidate is None:
@@ -111,28 +129,35 @@ with sync_playwright() as p:
         if c['resolved'] and (c['textLength'] or 0) > 0:
             report = candidate
             break
-        page.wait_for_timeout(2000)
-
-    if report is None:
-        # Take the last observation anyway - "the composer never resolved" is
-        # itself the finding, and reporting nothing would hide it.
+        # Keep the last observation even if the run is abandoned: "the composer
+        # never resolved" is itself a finding about the live site.
+        report = candidate
         try:
-            report = page.evaluate('() => (window.__PS_PROBE__ ? window.__PS_PROBE__() : null)')
-        except Exception:  # noqa: BLE001
-            report = None
+            page.wait_for_timeout(2000)
+        except PlaywrightError:
+            closed = True
+            break
+
+    if closed:
+        print('  (browser was closed before anything was typed)', flush=True)
+    elif report is None or (report['composer']['textLength'] or 0) == 0:
         print('  (timed out waiting for typed text; reporting last observation)', flush=True)
 
-    ctx.close()
+    try:
+        ctx.close()
+    except PlaywrightError:
+        pass
 
 if report is None:
-    print('FAIL: the probe was not installed (init script did not run)')
-    sys.exit(1)
+    print('INCOMPLETE: no observation was taken (the probe never ran).')
+    sys.exit(3)
 
 print()
 print(json.dumps(report, indent=2))
 
 c = report['composer']
-ok = c['resolved'] and report['health']['ok']
+typed = (c['textLength'] or 0) > 0
+ok = c['resolved'] and report['health']['ok'] and typed
 print()
 print('-' * 70)
 if c['resolved']:
@@ -147,5 +172,10 @@ else:
     print('input witness: not exercised (composer was empty - nothing was typed)')
 print(f"health: {'OK' if report['health']['ok'] else 'DEGRADED'} "
       f"failures={report['health']['failures']} warnings={report['health']['warnings']}")
+if not typed:
+    print()
+    print('VERIFICATION INCOMPLETE: nothing was typed into the composer, so the')
+    print('input witness and the read path were not exercised. The structural')
+    print('observation above is still a real reading of the live site.')
 print('-' * 70)
 sys.exit(0 if ok else 2)

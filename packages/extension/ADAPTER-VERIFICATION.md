@@ -237,7 +237,7 @@ send it. This is what exercises the read path.
 | | Claim A (logic correct) | Claim B (site still has that shape) | Last live check |
 | --- | --- | --- | --- |
 | Claude | verified — 20 fixture tests | *not verified* | — |
-| ChatGPT | verified — 21 fixture tests | **MUST BE RE-RUN** — old reading invalid | 2026-08-28 (invalid) |
+| ChatGPT | verified — 21 fixture tests | **composer ROT, send control unresolved** | 2026-08-29, painted |
 | Gemini | verified — 19 fixture tests | **composer HEALTHY, send control FAILING** | **2026-08-29, painted** |
 
 ### Gemini — 2026-08-29, confirmed-painted reading
@@ -287,6 +287,11 @@ Two readings preceded the one above. Both are wrong, and both are kept because
 | 1st (2026-08-28) | composer `not-found`, all 5 strategies 0, send-button 0 | Taken at `document_idle`, before the Angular app painted. The diagnostic emitted only on a change of `health.ok`, so this shell snapshot then stood forever. |
 | 2nd (2026-08-28) | 0 shadow roots, 0 iframes, `mat-icon` likely-closed, every editable probe 0 except `textarea`=1, **`button`=0** | Same un-painted page. `button: 0` on a chat UI was the tell, and it was what exposed the defect. |
 | 3rd (2026-08-29) | composer resolves; `READING: withheld — page had not painted` printed **alongside** 6 buttons, a rich-textarea, 34 custom elements | The paint gate used an invented 400-element floor as a proxy and contradicted its own probe data. The composer/strategy rows are valid; **the READING line and everything downstream of it are not**. |
+| 4th (2026-08-29) | `READING: ...no strategy matched one. THE SELECTORS ARE STALE` on a page where the composer **had resolved** | The READING line was keyed on the editable PROBE, never on the resolver, so it fired generically on any health failure. Health had failed for the **send control**; the composer was fine. The probe and editable tables are valid; **the READING line is not**. |
+
+**The 3rd and 4th readings disagreed with each other about the same unchanged
+composer.** That disagreement is what exposed D34g — and it is the reason
+readings are kept rather than deleted.
 
 The second reading produced a confident, specific and completely wrong
 conclusion — that Gemini had migrated to a native textarea. It is the clearest
@@ -299,15 +304,33 @@ number and DOM element count; below 400 elements the block refuses to draw a
 conclusion; re-checks run at 400 ms → 12 s; and the console re-emits on a change
 of *verdict* rather than only of `health.ok`.
 
-### ChatGPT — reading INVALID, must be re-run
+### ChatGPT — 2026-08-29 painted reading
 
-Its three matched-0 strategies came from the same defective instrument and
-cannot be trusted. Only the invariant rejection on strategy 1 is meaningful,
-because that strategy *found* a candidate and something rejected it — a result
-that does not depend on the page having painted.
+Supersedes the earlier one entirely. The earlier "editable invariant rejection
+on `chatgpt/composer-in-composer-form`" is **not reproduced** and is superseded,
+not a second finding to chase — it came from an unpainted page.
 
-**Not being fixed against the old reading.** It must be re-run live on a
-confirmed-painted page and re-diagnosed from that.
+- **Composer: ordinary selector rot, target in plain view.** The probe
+  `[contenteditable][role="textbox"]` returns 1 — visible, editable, failing no
+  invariants, carrying `aria-multiline` and `role`. Adapter strategies matched 0.
+- **Send control: 6 visible `<button>` candidates**, plus one visible
+  `div[role="button"]` with a `data-testid` **under `nav`**.
+
+**That div is almost certainly not the send control.** A send control lives in
+the composer region; this one is in the navigation landmark, where a sidebar
+toggle or model switcher lives. With 6 visible `<button>` candidates present,
+the send control is far more likely one of those — making ChatGPT's send failure
+ordinary rot, exactly like its composer.
+
+**So the tag-anchoring finding does NOT graduate to a confirmed diagnosis.** It
+stays a fragility finding on its own merits. What would settle it: the
+attributes of the 6 visible button candidates, and whether any carries a send
+marker — which the next reading prints.
+
+**Not being fixed yet.** Both readings were taken with the defective READING
+line (D34g). The composer conclusion is independently supported by the
+resolver's own `not-found` plus the editable table, but the sequencing stands:
+re-take with a strategy table attached before writing selectors.
 
 ## The fixture boundary — what two live failures proved
 

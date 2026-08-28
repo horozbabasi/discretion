@@ -123,7 +123,7 @@ export function renderDiagnostic(diagnostic: AdapterDiagnostic): void {
     console.warn(`  warning ${warning.target} (${warning.tier}): ${warning.detail}`);
   }
 
-  if (diagnostic.forensics !== null) renderForensics(diagnostic.forensics);
+  if (diagnostic.forensics !== null) renderForensics(diagnostic.forensics, diagnostic);
 
   console.groupEnd();
 }
@@ -181,7 +181,7 @@ export function paintEvidence(f: EnvironmentForensics): {
   };
 }
 
-function renderForensics(f: EnvironmentForensics): void {
+function renderForensics(f: EnvironmentForensics, diagnostic: AdapterDiagnostic): void {
   console.warn('environment forensics (emitted because health was not ok):');
   const evidence = paintEvidence(f);
   console.log(
@@ -283,37 +283,131 @@ function renderForensics(f: EnvironmentForensics): void {
     }
   }
 
+  // The resolver's own results, restated INSIDE the forensics block. The
+  // reading below is a claim about these; printing them together is what makes
+  // it checkable without scrolling to another part of the group.
+  console.log('resolver results this reading is based on:');
+  for (const element of [diagnostic.composer, diagnostic.responseRoot]) {
+    const summary = element.strategies
+      .map((st) => `${st.id} ${st.matched}/${st.admitted}`)
+      .join('  |  ');
+    console.log(
+      `  ${element.target}: ${element.resolved ? `RESOLVED by ${element.strategyId}` : `NOT RESOLVED (${element.failureKind})`}` +
+        `${summary.length > 0 ? ` — ${summary}` : ' — NO STRATEGIES REGISTERED (this is a bug in the diagnostic, not a finding about the page)'}`,
+    );
+  }
+
+  renderReading(f, diagnostic);
+}
+
+/**
+ * The READING line.
+ *
+ * ─────────────────────────────────────────────────────────────────────────
+ * IT MUST ONLY ASSERT WHAT IT ACTUALLY CHECKED.
+ *
+ * The first version said "visible editable surfaces ARE reachable but NO
+ * STRATEGY MATCHED ONE — the selectors are stale" whenever forensics fired and
+ * a visible editable existed. It never consulted the resolver. So on a page
+ * where the composer had resolved perfectly and only the SEND CONTROL failed,
+ * it announced that the composer's selectors were stale — a conclusion about a
+ * thing it had not examined, contradicting the strategy table printed a few
+ * lines above it.
+ *
+ * That is standing rule 7 in a new place, and a worse one. A gate on data can
+ * be checked against the data. A SUMMARY IS A GATE ON ATTENTION: if it states
+ * a conclusion the instrument did not test, it stops the reader looking
+ * exactly as a wrong diagnosis does — and it is likelier to be believed,
+ * because it reads as the instrument's considered verdict rather than as one
+ * more number.
+ *
+ * The rule this now follows: every branch below is keyed on
+ * `diagnostic.composer` — the RESOLVER'S OWN RESULT — and the reading names
+ * what actually failed rather than assuming which element it was.
+ * ─────────────────────────────────────────────────────────────────────────
+ */
+function renderReading(f: EnvironmentForensics, diagnostic: AdapterDiagnostic): void {
+  const evidence = paintEvidence(f);
+  const composer = diagnostic.composer;
   const anyEditable = f.editableCandidates.length;
   const usableEditable = f.editableCandidates.filter((c) => c.visible && c.editable).length;
-  const controls =
-    (f.probes['button']?.deep ?? 0) + (f.probes['[role="button"]']?.deep ?? 0);
+  const controls = evidence.controls;
+  const failedTargets = diagnostic.health.failures.map((x) => x.target);
 
   if (!evidence.painted) {
     console.warn('READING: withheld — nothing had rendered. Not a selector conclusion.');
-  } else if (controls === 0) {
+    return;
+  }
+
+  // THE COMPOSER RESOLVED. Nothing may be said about its selectors here.
+  if (composer.resolved) {
     console.warn(
-      'READING: no button and no [role="button"] anywhere on a painted page. That is not ' +
-        'credible for a chat UI, so treat this whole block as suspect rather than as evidence ' +
-        'about selectors.',
+      `READING: the composer RESOLVED (by '${composer.strategyId}' at the '${composer.tier}' ` +
+        `tier). These forensics are about the OTHER failure(s): ` +
+        `${failedTargets.length > 0 ? failedTargets.join(', ') : 'none reported'}. ` +
+        'Nothing here is evidence about the composer selectors.',
+    );
+    if (failedTargets.includes('send-button') || failedTargets.includes('submit-control')) {
+      console.warn(
+        controls === 0
+          ? 'The send control failed and NO control of any kind was found. Suspect the page ' +
+              'state, not the selectors.'
+          : `The send control failed while ${controls} control(s) exist on the page. Compare the ` +
+              'control-candidate table above against this adapter\'s send selectors: this is ' +
+              'most likely ordinary selector rot on that one element.',
+      );
+    }
+    return;
+  }
+
+  // THE COMPOSER DID NOT RESOLVE. Now the resolver's own failure kind leads.
+  const kind = composer.failureKind;
+  if (kind === 'ambiguous') {
+    console.warn(
+      `READING: the composer was AMBIGUOUS (${composer.ambiguityCount} candidates admitted), ` +
+        'not missing. Do not touch the selectors to make one win — find what the second ' +
+        'candidate is and why it is admissible.',
+    );
+    return;
+  }
+  if (kind === 'invariant') {
+    console.warn(
+      'READING: candidates were FOUND and every one was rejected by an invariant. The selectors ' +
+        'are finding something; the strategy table names which invariant rejected it.',
+    );
+    return;
+  }
+
+  if (controls === 0) {
+    console.warn(
+      'READING: no button and no [role="button"] anywhere on a painted page. Not credible for a ' +
+        'chat UI — treat this whole block as suspect rather than as evidence about selectors.',
     );
   } else if (anyEditable === 0 && f.likelyClosedShadowHosts.length > 0) {
-    console.warn('READING: no editable surface is reachable, and closed shadow roots are present. The composer is probably UNREACHABLE, not moved.');
+    console.warn(
+      'READING: no editable surface is reachable and closed shadow roots are present. The ' +
+        'composer is probably UNREACHABLE, not moved.',
+    );
   } else if (anyEditable === 0 && f.iframes > 0) {
-    console.warn('READING: no editable surface is reachable and frames are present. The composer may be in a frame; the manifest sets all_frames:false.');
+    console.warn(
+      'READING: no editable surface is reachable and frames are present. The composer may be in ' +
+        'a frame; the manifest sets all_frames:false.',
+    );
   } else if (usableEditable > 0) {
     console.warn(
-      `READING: ${usableEditable} visible, editable surface(s) ARE reachable but no strategy ` +
-        'matched one. THE SELECTORS ARE STALE, not the query mechanism. The table above says ' +
-        'what to write them against.',
+      `READING: the composer did NOT resolve (${kind}), and ${usableEditable} visible, editable ` +
+        'surface(s) ARE reachable. THE SELECTORS ARE STALE, not the query mechanism. The ' +
+        'editable table says what to write them against.',
     );
   } else if (anyEditable > 0) {
     console.warn(
       `READING: ${anyEditable} editable surface(s) exist but none is both visible and editable — ` +
-        'they may be hidden form fields rather than the composer. Check the table before ' +
-        'treating any of them as the composer.',
+        'they may be hidden form fields rather than the composer.',
     );
   } else {
-    console.warn('READING: no editable surface reachable and no closed-root or frame signal. Inconclusive; capture a fixture.');
+    console.warn(
+      'READING: no editable surface reachable and no closed-root or frame signal. Inconclusive.',
+    );
   }
 }
 

@@ -2218,6 +2218,96 @@ This is why D34e was fixed by removing the proxy rather than by raising
 the floor. Retuning a proxy only moves the point at which it lies.
 
 
+### D34g - The READING line asserted a conclusion it never tested: a summary is a gate on ATTENTION (M9)
+
+Fourth gate defect, and the most dangerous shape so far.
+
+**Observed:** on a painted Gemini page the block printed *"visible,
+editable surface(s) ARE reachable but no strategy matched one. THE
+SELECTORS ARE STALE"* - while the composer had RESOLVED, by four of five
+strategies, on that same page. The previous painted run and this one gave
+opposite verdicts about the same unchanged composer.
+
+**Cause:** the line was keyed on `editableCandidates` - the PROBE - and
+never on the resolver. The clause "but no strategy matched one" was
+generic text emitted whenever forensics fired and a visible editable
+existed. Since forensics fire on ANY health failure, a run where only the
+SEND CONTROL failed produced a confident false statement about the
+composer, which the instrument had not examined at all.
+
+**Which run was right:** the earlier painted run. The composer had
+resolved. The reading was describing nothing.
+
+**Why this is worse than the previous three gate defects.** D34a, D34d
+and D34e were gates on DATA, and a wrong gate on data can be caught by
+comparing it against the data - which is how each was found. **A SUMMARY
+IS A GATE ON ATTENTION.** If it states a conclusion the instrument did
+not test, it stops the reader looking exactly as a wrong diagnosis does,
+and it is likelier to be believed, because it reads as the instrument's
+considered verdict rather than as one more number to cross-check.
+
+It is also the shape most likely to recur, because summarising is
+precisely where the temptation to be helpful outruns what was measured.
+
+**Fixed:** every branch of the reading is now keyed on
+`diagnostic.composer` - the resolver's own result. When the composer
+resolved, the reading says so, names the targets that actually failed
+from `health.failures`, and states explicitly that nothing in the block
+is evidence about composer selectors. `ambiguous` and `invariant`
+failures now read as themselves rather than collapsing into "stale". And
+the resolver's per-strategy counts are restated INSIDE the forensics
+block, so the claim can be checked where it is made rather than by
+scrolling to another part of the group.
+
+A self-check was added at the same point: if an adapter's strategy list
+is empty, the block says **"NO STRATEGIES REGISTERED - this is a bug in
+the diagnostic, not a finding about the page"**, because an empty list
+renders as an empty table and is indistinguishable from no table at all.
+A test asserts every registered adapter yields a non-empty strategy list.
+
+**Standing rule 7, extended:** a gate must be derived from the data it
+gates - and a SUMMARY must assert only what it actually tested. Where it
+reports on something it did not examine, it must say so rather than
+inferring.
+
+### D34h - ChatGPT painted reading: composer rot; the send control is NOT yet evidence for the tag finding (M9)
+
+The painted ChatGPT reading supersedes the earlier one entirely. The
+earlier "editable invariant rejection on
+`chatgpt/composer-in-composer-form`" is NOT reproduced and is treated as
+superseded, not as a second finding to chase - it came from an unpainted
+page.
+
+**Composer: ordinary selector rot, target in plain view.** The probe
+`[contenteditable][role="textbox"]` returns 1 - visible, editable,
+failing no invariants, carrying `aria-multiline` and `role`. Adapter
+strategies matched 0. The element is right there and the selectors do not
+describe it.
+
+**Send control: the tag finding is NOT confirmed by this.** The reading
+shows 6 visible `<button>` candidates AND one visible `div[role="button"]`
+with a `data-testid` **under `nav`**.
+
+That div is almost certainly NOT the send control. A send control lives
+in the composer region; this one is in the navigation landmark, which is
+where a sidebar toggle, a model switcher or an account menu lives. With 6
+visible `<button>` candidates present, the send control is far more
+likely to be one of those - in which case ChatGPT's send failure is
+ordinary rot, exactly like its composer, and the tag assumption is
+irrelevant to it.
+
+**So D34b stays a FRAGILITY FINDING and does not graduate.** The
+widening stays on its own merits. What would settle it: the attributes of
+the 6 visible button candidates, and whether any carries a send marker -
+which the next reading prints.
+
+**Neither adapter is being fixed yet.** Both readings were taken with the
+defective READING line described in D34g, and although the ChatGPT
+composer conclusion is independently supported by the resolver's own
+`not-found` plus the editable table, the instruction stands: re-take both
+with a strategy table attached before writing selectors against them.
+
+
 ## Status after M2
 
 Stage 1 is complete: 113 registered detectors — 57 NATIONAL_ID and 19

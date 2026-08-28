@@ -65,6 +65,55 @@ Real-world performance will differ, and the context-free detector numbers in
 particular will not survive contact with real documents until Stage 3
 context scoring (M7) exists.
 
+## Performance
+
+SPEC.md sets the budget as **p50 under 250 ms and p95 under 600 ms for a
+2000-character input on a mid-range laptop, excluding model warmup**, and
+requires the measured numbers to be published here.
+
+Measured on an Intel Core Ultra 7 258V (8 logical cores, 31 GB RAM), Node
+24.18.0 on Windows, over 200 inputs of exactly 2000 characters built from the
+eval corpus, with 30 warmup iterations discarded:
+
+| path | p50 | p95 | p99 | budget |
+| --- | ---: | ---: | ---: | --- |
+| Stages 0–3 (pattern, gazetteer, context) | **10.6 ms** | **13.1 ms** | 15.1 ms | within, by ~20× |
+| Stages 0–3 + Stage 2 NER | **255.8 ms** | **354.9 ms** | 601.6 ms | **p50 missed by 5.8 ms** |
+
+Reproduce with `node packages/eval/dist/bench/latency.js --samples 200
+--ner jiting/xlm-roberta-base-ner-hrl_onnx --dtype q8`.
+
+### The p50 miss, stated rather than smoothed over
+
+The combined path misses the p50 budget by 5.8 ms — 2.3%. p95 clears it
+comfortably. The cost is the NER model, not the rest of the pipeline: Stages
+0–3 alone finish in about a twentieth of the budget.
+
+The mechanism is chunking. Stage 2 windows input at 400 characters, a bound
+set at M6 by the model's 512-token limit under the worst case of one token per
+character (CJK). A 2000-character input is therefore about six inference
+windows. For Latin-script text 400 characters is far below 512 tokens, so most
+windows are underfilled and the input pays for more inferences than it needs —
+sizing the window by the input's script would cut the inference count roughly
+threefold. That is an M9 change, measured there rather than asserted here.
+
+Two things this number is **not**:
+
+- It is not the browser number. These are onnxruntime-node on CPU; the
+  extension runs onnxruntime-web on WASM, which is typically slower. M9
+  measures the real target.
+- It is not what the user waits for while typing. SPEC puts NER inference in a
+  dedicated Web Worker, so the main-thread row governs UI responsiveness, and
+  detection is debounced and cached by content hash as the user types.
+
+### Not comparable: the eval's per-document latency
+
+`packages/eval/reports/` reports p50 115 ms per document, which measures a
+different thing — the corpus's documents are p50 164 and p95 347 characters,
+far shorter than the 2000-character benchmark input, and that figure includes
+NER. The two numbers should not be read against each other or against the
+budget; only the table above is measured as SPEC specifies.
+
 ## Licensing
 
 MIT — see [LICENSE](LICENSE). The workspace packages are marked

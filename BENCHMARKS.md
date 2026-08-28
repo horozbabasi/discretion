@@ -726,6 +726,34 @@ it looks — the survivors are exactly those candidates that had no losing
 overlap, because every false positive of these two types had a correct winner
 covering it. The detectors did not become accurate; the arbitration did.
 
+#### What the zero-wrong-winner result covers, and what it does not
+
+**It covers validated-versus-heuristic arbitration only.** That is the
+near-tautological case: the corpus plants a valid identifier with a known
+type, GENERIC_SECRET fires on it as entropy noise, and the arbiter prefers the
+validated type — which by construction is the planted one. Measured across all
+2,758 cross-type arbitrations:
+
+| arbitration | count | share | loser was actually right |
+| --- | ---: | ---: | ---: |
+| validated beats heuristic | 2,208 | 80.1% | 9 |
+| **validated beats validated** | **348** | **12.6%** | **17** |
+| heuristic beats validated | 64 | 2.3% | 7 |
+| heuristic beats heuristic | 138 | 5.0% | 1 |
+
+So the arbiter is **not** always right. In the genuinely contestable case —
+both claimants ran a real validator — it is wrong in 17 of 348, about 5%.
+`CONNECTION_STRING over URL_WITH_CREDENTIALS` (140) and `PHONE over
+NATIONAL_ID` (65) dominate that bucket, alongside the `NATIONAL_ID`/`TAX_ID`
+contest in both directions that the specificity table deliberately declines to
+settle — which is the same ambiguity TAX_ID's 91.2% recall reports from the
+other side.
+
+GENERIC_SECRET and POSTAL_CODE happen to have **no** validated-versus-validated
+overlaps at all, which is why their own figure is zero. That is a fact about
+those two types, not a property of the arbiter, and it should not be read as
+one.
+
 D19's deferral was the right call and is now discharged. GENERIC_SECRET's
 false positives were never a context problem — **all 2,075 of them had another
 type covering the same characters, and none had no overlap at all** — which is

@@ -35,6 +35,31 @@
  * a date of birth is mundane and permanent. The scale reflects that, and it
  * will occasionally read as counter-intuitive for exactly that reason.
  *
+ * ─────────────────────────────────────────────────────────────────────────
+ * THE COUNTER-ARGUMENT, recorded rather than resolved.
+ *
+ * Irreversibility-first uses IMPACT ALONE, and it does so deliberately.
+ * Standard risk framing multiplies impact by likelihood, and on that framing
+ * this ordering is wrong. The threat model here is exposure to an LLM chat
+ * surface: a credential pasted into a chat window can be scraped and
+ * exploited within minutes, while a national identity number is a latent risk
+ * with a long tail and no certainty of ever being used. Weighting by expected
+ * harm rather than maximum harm would put credentials above identity.
+ *
+ * The default stands as irreversibility-first, for one reason: likelihood is
+ * the term this project cannot estimate. It has no visibility into what
+ * happens to a value after it leaves, so any likelihood multiplier would be
+ * invented, and an invented factor buried in a weight is exactly what this
+ * file exists to prevent. Maximum harm is at least a property of the value
+ * itself.
+ *
+ * THE MECHANISM FOR DISAGREEING IS SENSITIVITY PROFILES, not editing these
+ * numbers. A developer profile that weights credentials above identity is
+ * precisely what profiles are for, and it expresses the disagreement where a
+ * user can see and change it rather than by silently re-anchoring a scale
+ * every other reader depends on.
+ * ─────────────────────────────────────────────────────────────────────────
+ *
  * SCALE: 0–100, where 100 is "irreversible and uniquely identifying".
  * Weights are per CATEGORY; per-type factors adjust within a category.
  * ─────────────────────────────────────────────────────────────────────────

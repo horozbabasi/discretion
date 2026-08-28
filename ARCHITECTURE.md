@@ -1059,6 +1059,71 @@ untouched and still open: prose-labeled secrets have no competing
 candidate to resolve against, so that half is a detection problem, not
 an overlap one.
 
+### D24 — Arbitration is an input to the exposure score, not only a label (M8)
+
+**The coupling, recorded because it is the one most likely to be broken
+silently.** Severity weights are per ENTITY TYPE. Overlap resolution
+decides which type owns a span. Therefore changing the specificity table
+changes which weight applies, which changes the document's exposure
+score — a published, user-facing number.
+
+Concretely: a span arbitrated to `CONNECTION_STRING` (secrets, weight
+70) rather than `URL_WITH_CREDENTIALS` (also secrets, 70) moves nothing,
+but a span arbitrated to `NATIONAL_ID` (government-identity, 100) rather
+than `POSTAL_CODE` (location, 25 × 0.8) moves the document's score
+substantially. Resolution stopped being a presentation concern the
+moment the exposure engine started reading its output.
+
+**This is intended.** The alternative — scoring every candidate before
+arbitration — would double-count every overlap, so a single credential
+claimed by three detectors would contribute three times and a document
+with one secret would read as a document with three. Scoring the
+resolved set is the only coherent choice. But it means the specificity
+table now has two consumers with different failure modes: get it wrong
+and the review UI shows a misleading label, AND the exposure number is
+wrong in a way nothing in the UI reveals.
+
+**The practical consequence for a future change:** editing `SPECIFICITY`
+in `fuse/resolve.ts` requires re-checking the exposure numbers in
+BENCHMARKS.md, not only the per-type precision table. A test cannot
+catch this — both outputs would still be internally consistent — so it
+is recorded here instead.
+
+**A related scoping correction, made in the same measurement.** The
+earlier "zero wrong winners" result was reported without saying what it
+covered. Measured across all 2,758 cross-type arbitrations:
+
+| arbitration | count | share | loser was right |
+| --- | ---: | ---: | ---: |
+| validated beats heuristic | 2,208 | 80.1% | 9 |
+| **validated beats validated** | **348** | **12.6%** | **17** |
+| heuristic beats validated | 64 | 2.3% | 7 |
+| heuristic beats heuristic | 138 | 5.0% | 1 |
+
+The dominant case is near-tautological, exactly as suspected: the corpus
+plants a valid identifier, GENERIC_SECRET fires on it as entropy noise,
+and the arbiter prefers the validated type — which by construction is
+the planted one. The interesting case, validated-versus-validated, is
+12.6% of arbitrations and the arbiter gets **17 of them wrong**. The
+zero-wrong figure was true only of GENERIC_SECRET and POSTAL_CODE, whose
+overlaps are all validated-versus-heuristic. BENCHMARKS.md now scopes it.
+
+**A build-hygiene defect audited in the same pass.** The root `build`
+script was `tsc -b`, which does not build the web bundle, so
+`npm run build` did not produce what its name implies and a browser check
+run after it could test a stale bundle — which is exactly what happened
+once during M8 before the screenshot caught it. Now
+`tsc -b && npm run build --workspace @privacyshield/web`; `build:ts`
+keeps the fast path for `eval` and `bench`, which have no use for the
+bundle.
+
+Scope of the doubt, checked rather than assumed: the only earlier
+browser-verified claim is M5's, and it reported a measured bundle size
+(603 KB / 156 KB gzipped) and described itself as a production-bundle
+smoke — both of which require an actual `vite build`. That verification
+stands. M11 requires a production build verified loading unpacked in
+Chrome, so this sat directly on that path.
+
 ## Status after M2
 
 Stage 1 is complete: 113 registered detectors — 57 NATIONAL_ID and 19
@@ -1239,6 +1304,70 @@ that comes first. Also outstanding: the rules scan ASCII digits and
 neither fire nor leak on Arabic-Indic or Devanagari digits, whose
 correct fix is a folding transform in Stage 0 rather than widening
 suppression rules into scripts where they are least tested.
+
+## Status after M8
+
+Stage 4 is complete: fusion, calibration, explanations, sensitivity
+profiles, and the exposure score engine with its severity-weight data
+file. 867 tests.
+
+**What M8 actually fixed, in order of how much it mattered.** A silent
+un-redaction came first and had nothing to do with fusion: identifiers
+written in Arabic-Indic, Devanagari, Bengali or Thai digits matched
+NOTHING, because NFKC folds fullwidth digits but correctly leaves
+living-script digits alone while every detector matches `\d`. Stage 0
+digit folding (D21) took recall in those six languages from 66.17% to
+99.75% and left every other language at exactly 99.44%. It ran before
+any calibration work on purpose: fitting thresholds while an entire
+input class was invisible would have meant refitting them afterwards.
+
+Then span hygiene, then cross-type overlap resolution (D22), which is
+where the M7 deferrals were discharged. GENERIC_SECRET went from 2.0% to
+100% precision and POSTAL_CODE from 23.5% to 100% — by REASSIGNMENT, not
+elimination: every one of those spans is still emitted and still masked,
+under the validated type that owns it. Total false positives 2,991 → 246.
+
+Calibration (D23) is isotonic per entity type, fitted and evaluated on
+splits proved disjoint rather than assumed to be — seed separation alone
+leaked 181 duplicate documents. Held-out expected calibration error is
+**2.63% against 12.33% for the raw scores**.
+
+**What this milestone was really about, though, was measurement
+discipline.** Five of the standing rules now in this file were earned
+here or in M7, and three of the four defects they describe were found in
+VERIFICATION code rather than production code: a Bloom probe whose PRNG
+lost precision above 2^53 and reported a suspiciously perfect 0.000%; a
+scratch audit whose else-if chain hid 48 defects inside an exemption; a
+test that compared against a constant-0.5 model while claiming to
+compare against raw scores; a false-positive probe that counted
+candidates the scorer excludes. Each reported success while measuring
+the wrong thing. The rules are in this file because the pattern
+recurred, not because it happened once.
+
+Two corrections in the same spirit landed on claims already published:
+"2,075 false positives removed" was a reassignment described as an
+elimination, and "zero wrong winners" turned out to cover only
+validated-versus-heuristic arbitration — the genuinely contestable case
+is 12.6% of arbitrations and the arbiter is wrong in about 5% of those
+(D24).
+
+**Open and carried into M9, none of it smoothed.** GENERIC_SECRET recall
+at 55.4%, which is a DETECTION gap rather than an overlap one: prose-
+labeled secrets have no competing candidate to arbitrate against, so
+Stage 4 could not reach them. TAX_ID recall at 91.2%, the price of
+refusing to settle a genuine cross-scheme ambiguity with a static
+ordering. A calibration bucket that is over-confident (30.9% predicted
+against 16.9% observed) on 77 samples, treated as real because it errs
+in the direction that matters. Mid-range calibration fitted on few
+observations because 4,755 of 5,416 sit in the top bucket. And the p50
+latency budget missed under conditions favourable on both axes —
+hardware above SPEC's mid-range reference and the faster of the two
+runtimes — so 5.8 ms is a floor rather than a size.
+
+**The coupling to watch** is D24: severity weights are per type and
+arbitration decides the type, so the specificity table is now an input
+to a published number. Nothing tests that, because both outputs stay
+internally consistent when it is wrong.
 
 ## Standing contracts (established in M1)
 

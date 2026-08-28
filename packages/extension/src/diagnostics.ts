@@ -249,6 +249,9 @@ const PROBE_SELECTORS = [
   'input[type="submit"]',
   'mat-icon',
   'mat-icon[fonticon="send"], mat-icon[data-mat-icon-name="send"]',
+  // Ligature form reported as its own row, so "attribute-form icons: 0,
+  // ligature-form icons: 3" is readable at a glance.
+  'mat-icon:not([fonticon]):not([data-mat-icon-name])',
   'main, [role="main"]',
 ] as const;
 
@@ -347,6 +350,24 @@ function collectEditableCandidates(doc: Document): EditableCandidate[] {
 /** Anything that acts as a control, regardless of tag. */
 const CONTROL_SELECTOR = 'button, [role="button"], input[type="submit"], input[type="image"]';
 
+/** Every form of Material send icon the adapter recognises. */
+function findAnySendIcons(root: ParentNode): HTMLElement[] {
+  const byAttribute = deepQueryAll<HTMLElement>(
+    root,
+    'mat-icon[fonticon="send"], mat-icon[data-mat-icon-name="send"]',
+  );
+  const byLigature = deepQueryAll<HTMLElement>(root, 'mat-icon').filter(
+    (icon) => (icon.textContent ?? '').replace(/[\p{Cf}\s]/gu, '').toLowerCase() === 'send',
+  );
+  const out: HTMLElement[] = [];
+  for (const icon of [...byAttribute, ...byLigature]) if (!out.includes(icon)) out.push(icon);
+  return out;
+}
+
+function containsSendIcon(element: Element): boolean {
+  return findAnySendIcons(element).length > 0;
+}
+
 /** Locale-independent hints that a control is the SEND control. */
 function sendHints(element: Element): string[] {
   const hints: string[] = [];
@@ -354,9 +375,11 @@ function sendHints(element: Element): string[] {
     const value = element.getAttribute(attribute);
     if (value !== null && /send|submit/iu.test(value)) hints.push(`${attribute}~send`);
   }
-  if (element.querySelector('mat-icon[fonticon="send"], mat-icon[data-mat-icon-name="send"]') !== null) {
-    hints.push('contains-send-icon');
-  }
+  // Uses the SAME predicate as production. The checking code's copy of this
+  // drifted once already: the adapter gained ligature-form icon matching and
+  // the probe kept querying only the attribute forms, so the diagnostic could
+  // report "no send icon" on a page where the adapter was matching one.
+  if (containsSendIcon(element)) hints.push('contains-send-icon');
   if (element.getAttribute('type') === 'submit') hints.push('type=submit');
   if (element.hasAttribute('aria-label')) hints.push('has-aria-label');
   return hints;
@@ -392,10 +415,7 @@ function collectControlCandidates(doc: Document): ControlCandidate[] {
   // Any element containing a send icon, even if it is not a recognised control
   // - this is the case that would explain the icon clause failing at its
   // closest('button') step while the icon itself is plainly present.
-  const iconHosts = deepQueryAll<HTMLElement>(
-    doc,
-    'mat-icon[fonticon="send"], mat-icon[data-mat-icon-name="send"]',
-  )
+  const iconHosts = findAnySendIcons(doc)
     .map((icon) => icon.parentElement)
     .filter((el): el is HTMLElement => el !== null)
     .slice(0, 4)

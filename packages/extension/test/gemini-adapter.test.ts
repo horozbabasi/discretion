@@ -221,8 +221,11 @@ describe('the send control does not have to be a <button>', () => {
     expect(verifyBinding(resolved.value, intent, witness).ok).toBe(true);
   });
 
-  it('still refuses when two distinct send controls exist', () => {
-    // Widening the net must not weaken the ambiguity rule.
+  it('REFUSES when two distinct send controls match the same tier', () => {
+    // The ambiguity rule now genuinely applies to the send control, not just
+    // to the composer. It has to: binding the wrong control means a send that
+    // is never intercepted, which is unmasked text leaving the machine - the
+    // same consequence as resolving the wrong composer.
     loadFixture('gemini/composer-nonbutton-send');
     const extra = document.createElement('div');
     extra.setAttribute('role', 'button');
@@ -230,12 +233,21 @@ describe('the send control does not have to be a <button>', () => {
     document.querySelector('.input-area')?.append(extra);
     giveEverythingLayout();
 
+    const { adapter } = makeAdapter();
+    const health = adapter.healthCheck();
+    const sendFailure = health.failures.find((f) => f.target === 'send-button');
+    expect(sendFailure?.kind).toBe('ambiguous');
+
+    // And the composer strategy anchored on it yields nothing rather than
+    // anchoring on a guess - which is why it is a corroborator, not a fallback.
     const region = GEMINI_COMPOSER_STRATEGIES.find(
       (s) => s.id === 'gemini/composer-in-send-region',
     );
-    // Two controls in one region still resolve to the single editable beside
-    // them; the ambiguity rule governs the COMPOSER, which is unchanged.
-    expect(region?.find(document).length).toBe(1);
+    expect(region?.find(document).length).toBe(0);
+
+    // The composer itself still resolves, by strategies that do not depend on
+    // the send control at all.
+    expect(adapter.getComposer().ok).toBe(true);
   });
 });
 
@@ -268,6 +280,79 @@ describe('localisation', () => {
     expect(health.ok).toBe(true);
     expect(health.warnings.map((w) => w.target)).toContain('send-button');
     expect(health.warnings.some((w) => w.detail.includes('non-English'))).toBe(true);
+  });
+});
+
+describe('ligature-form send icons', () => {
+  it('resolves a <mat-icon>send</mat-icon> control and binds a click on it', () => {
+    // The more common Material form, and the one the adapter missed. Every
+    // other send marker is absent in this fixture.
+    loadFixture('gemini/composer-ligature-send');
+    const { adapter, witness } = makeAdapter();
+
+    const health = adapter.healthCheck();
+    expect(health.failures.map((f) => f.target)).not.toContain('send-button');
+
+    const resolved = adapter.getComposer();
+    expect(resolved.ok).toBe(true);
+    if (!resolved.ok) return;
+    witnessTyping(resolved.value.node);
+
+    let captured: SubmitIntent | null = null;
+    const off = adapter.onSubmitIntent((intent) => {
+      captured = intent;
+    });
+    document
+      .querySelector<HTMLElement>('[role="button"].c-1a2b3c')
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
+    off();
+
+    // Identifying the control is not enough - the click path must BIND, which
+    // is a separate question and was broken when this clause was first added.
+    const intent = captured as unknown as SubmitIntent;
+    expect(intent).not.toBeNull();
+    expect(intent.originComposer).toBe(resolved.value.node);
+    expect(verifyBinding(resolved.value, intent, witness).ok).toBe(true);
+  });
+
+  it('WARNS that a ligature-only match is locale-fragile', () => {
+    // It lives in a text node, and page-level machine translation rewrites
+    // text nodes. The adapter may use it; it may not use it silently.
+    loadFixture('gemini/composer-ligature-send');
+    const { adapter } = makeAdapter();
+    const health = adapter.healthCheck();
+    expect(health.warnings.map((w) => w.target)).toContain('send-button');
+    expect(health.warnings.some((w) => w.detail.includes('LIGATURE'))).toBe(true);
+  });
+
+  it('declines when the ligature name has been translated', () => {
+    // The fragility made concrete. The clause must not match a translated
+    // name, and the adapter must fail loudly rather than binding something else.
+    loadFixture('gemini/composer-ligature-translated');
+    const { adapter } = makeAdapter();
+
+    // The composer still resolves - only the send control is affected.
+    expect(adapter.getComposer().ok).toBe(true);
+
+    const health = adapter.healthCheck();
+    const sendFailure = health.failures.find((f) => f.target === 'send-button');
+    const sendWarning = health.warnings.find((w) => w.target === 'send-button');
+    // Either it could not be found at all, or it fell through to the weakest
+    // positional tier - both must be reported, neither may be silent.
+    expect(sendFailure !== undefined || sendWarning !== undefined).toBe(true);
+  });
+
+  it('ignores bidi and format characters around the ligature name', () => {
+    // trim() removes whitespace only. RTL builds and templating pipelines
+    // insert LRM/RLM/ZWSP around inline text, and packages/core strips the
+    // same class of character in Stage 0 for the same reason.
+    loadFixture('gemini/composer-ligature-send');
+    const icon = document.querySelector('mat-icon');
+    if (icon !== null) icon.textContent = '‎ send ‏';
+    giveEverythingLayout();
+
+    const { adapter } = makeAdapter();
+    expect(adapter.healthCheck().failures.map((f) => f.target)).not.toContain('send-button');
   });
 });
 

@@ -1,0 +1,32 @@
+<!doctype html>
+<!--
+  SYNTHETIC fixture: the send icon is LIGATURE-form.
+
+  Angular Material renders <mat-icon>send</mat-icon> by using the icon name as
+  a font ligature, so the name lives in a TEXT NODE rather than an attribute.
+  This is the more common form, and the adapter matched only the attribute
+  forms until 2026-08-29 - the clause shipped with no coverage at all, in
+  either direction, which is how a strategy nobody exercises reaches
+  production.
+
+  Every other send marker is deliberately absent, so this fixture fails if the
+  ligature clause stops working.
+-->
+<html lang="en">
+  <body>
+    <div id="app">
+      <main>
+        <chat-window>
+          <model-response><message-content><p>lorem ipsum</p></message-content></model-response>
+        </chat-window>
+      </main>
+      <div class="input-area">
+        <rich-textarea>
+          <div class="ql-editor" contenteditable="true" role="textbox" aria-multiline="true"
+               aria-label="Enter a prompt here"><p>lorem ipsum</p></div>
+        </rich-textarea>
+        <div role="button" class="c-1a2b3c"><mat-icon>send</mat-icon></div>
+      </div>
+    </div>
+  </body>
+</html>

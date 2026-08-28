@@ -51,7 +51,7 @@ import type {
 import { COMPOSER_INVARIANTS, RESPONSE_ROOT_INVARIANTS, isEditableSurface } from './invariants.js';
 import { resolveUnique, writeAndVerify } from './resolve.js';
 import { readEditableText, writeEditableText } from './text.js';
-import { closestAcrossShadow, deepQueryAll } from './deep.js';
+import { closestAcrossShadow, deepQueryAll, parentAcrossShadow } from './deep.js';
 import type { InputWitness } from './binding.js';
 import { originComposerOfButtonEvent, originComposerOfKeyEvent } from './binding.js';
 import { collectChangedTextNodes } from './stream.js';
@@ -71,22 +71,25 @@ const EDITABLE_SELECTOR = 'textarea, input, [contenteditable]';
  * What counts as a CONTROL, regardless of tag.
  *
  * ─────────────────────────────────────────────────────────────────────────
- * THE TAG ASSUMPTION, REMOVED — this is the fix.
+ * THE TAG ASSUMPTION, REMOVED.
  *
  * Every send-control clause previously began with the literal `button` tag.
  * That single assumption was shared by every clause at every tier, so the
- * tiered fallback ladder was an illusion for this element: attribute and class
- * tiers varied while the TAG stayed constant, and one markup change defeated
- * all of them at once. Measured live on Gemini: the composer resolved by four
- * independent strategies while the send control matched zero.
+ * tiered ladder was an illusion for this element: attribute and class tiers
+ * varied while the TAG stayed constant, and one markup change defeated all of
+ * them at once.
  *
- * There is no justification for requiring the tag. An accessible control is
- * any element carrying `role="button"` — that is what assistive technology
- * uses, so it is at least as durable as a test id and far more durable than a
- * class. Requiring `<button>` on top of it was a narrowing nobody chose.
+ * An accessible control is any element carrying `role="button"` — what
+ * assistive technology reads — so it is at least as durable as a test id.
+ * Requiring `<button>` on top was a narrowing nobody chose.
  *
- * Narrowing it back is still safe, because the ambiguity rule is unchanged: a
- * wider net that catches two candidates fails hard rather than guessing.
+ * A NOTE ON THE COMMENT THIS REPLACES. It claimed "a wider net that catches
+ * two candidates fails hard rather than guessing". That is true of
+ * `resolveUnique`, which governs the COMPOSER — and it was false of
+ * `findSendButtons`, which returned every candidate it found. The comment
+ * asserted a property the code did not have, which is the same defect as a
+ * summary asserting an untested conclusion. The ambiguity rule is now
+ * actually implemented below, and the claim is true.
  * ─────────────────────────────────────────────────────────────────────────
  */
 const CONTROL_SELECTOR = 'button, [role="button"], input[type="submit"]';
@@ -98,134 +101,227 @@ const SEND_MARKER_SELECTOR = [
   '.send-button',
 ].join(', ');
 
-/**
- * A Material icon named "send", in either of the two forms Angular Material
- * uses.
- *
- * The attribute forms (`fonticon`, `data-mat-icon-name`) were already here.
- * The LIGATURE form was not, and it is the more common one: Material renders
- * `<mat-icon>send</mat-icon>` by using the icon name as a font ligature, so the
- * name lives in the element's TEXT rather than in an attribute.
- *
- * Matching that text is not a locale violation, and the distinction matters
- * because the contract forbids keying on visible strings. A ligature name is
- * an ICON IDENTIFIER, always the English token `send` in every locale - it is
- * closer to a class name than to UI copy, and it does not change when the
- * interface is translated. What the contract forbids is matching text a
- * translator would touch.
- *
- * Its enclosing CONTROL is resolved with CONTROL_SELECTOR rather than
- * `button`: an icon present while the clause matches nothing is the signature
- * of an icon inside a non-button control.
- */
+/** Material icons carrying the send name as an attribute. */
 const SEND_ICON_ATTRIBUTE_SELECTOR =
   'mat-icon[fonticon="send"], mat-icon[data-mat-icon-name="send"]';
 
-/** Ligature-form icons, matched on their icon identifier, not on UI copy. */
-function findSendIconsByLigature(root: ParentNode): HTMLElement[] {
-  return deepQueryAll<HTMLElement>(root, 'mat-icon').filter(
-    (icon) => (icon.textContent ?? '').trim().toLowerCase() === 'send',
-  );
+/**
+ * How the send control was found. Everything below `marker` is weaker than a
+ * declared test id, and `healthCheck` warns for each — because a control found
+ * by the guessiest path reporting identically to one found by a test id is how
+ * a weak result gets trusted.
+ */
+export type SendProvenance =
+  | 'marker'
+  | 'icon-attribute'
+  | 'icon-ligature'
+  | 'near-composer'
+  | 'english-label';
+
+export interface SendControlResult {
+  readonly buttons: readonly HTMLElement[];
+  readonly provenance: SendProvenance | null;
+  /** Two or more distinct candidates at one tier: refuse, do not choose. */
+  readonly ambiguous: boolean;
 }
 
 /**
- * The send control located RELATIVE TO THE COMPOSER.
+ * Normalises a Material ligature name before comparison.
  *
- * D34c recorded that `composer-in-send-region` is not independent coverage,
- * because it anchors the composer on the send control. This is the inverse,
- * and the direction is deliberate: the composer resolves by four independent
- * attribute and class strategies and is the reliably-found element on this
- * site, so anchoring the send control on IT is anchoring the weak thing to the
- * strong one rather than the other way round.
- *
- * It is markup-agnostic - no test id, no class, no icon name - so it survives
- * exactly the renames that defeat every marker clause.
- *
- * UNIQUENESS IS STILL REQUIRED. A composer region usually holds several
- * controls (attach, microphone, send), and this returns nothing rather than
- * guessing among them. That makes it a narrow fallback, not a general answer -
- * but "nothing" is the correct output when the alternative is picking the
- * wrong control and intercepting the wrong click.
+ * `trim()` removes whitespace only. It does not remove bidi and format
+ * characters (U+200E LRM, U+200F RLM, U+061C ALM, ZWSP, word joiner), which
+ * are exactly what an RTL build or a templating pipeline inserts around inline
+ * text. packages/core strips the same class of character in Stage 0 for the
+ * same reason.
  */
-function findSendControlNearComposer(root: ParentNode): HTMLElement[] {
-  // MUST EXCLUDE the send-region strategy, or this recurses forever:
-  // composer-in-send-region calls findSendButtons, which calls this, which
-  // resolves the composer, which runs composer-in-send-region again.
-  //
-  // That infinite loop is D34c's coupling turned into a hard failure. The
-  // record said a strategy anchored on another element inherits its failure
-  // modes; it now also says that anchoring in BOTH directions is a cycle. The
-  // send control may be found from the composer, or the composer from the send
-  // control, but the strategies used in one direction must be independent of
-  // the other.
+function normaliseIconName(text: string): string {
+  return text.replace(/[\p{Cf}\s]/gu, '').toLowerCase();
+}
+
+/**
+ * Ligature-form Material icons: `<mat-icon>send</mat-icon>`.
+ *
+ * The name is an icon IDENTIFIER rather than UI copy — Gemini's own
+ * translation files never touch it. But it lives in a TEXT NODE, and
+ * page-level machine translation rewrites text nodes; broken Material
+ * ligatures are the well-known symptom, which is why Material's own guidance
+ * is to mark icons `translate="no"`. So this form is treated as
+ * locale-FRAGILE and reported as such, ranked below the attribute forms.
+ */
+function findSendIconsByLigature(root: ParentNode): HTMLElement[] {
+  return deepQueryAll<HTMLElement>(root, 'mat-icon').filter(
+    (icon) => normaliseIconName(icon.textContent ?? '') === 'send',
+  );
+}
+
+/** Whether an element is actually rendered. */
+function isRenderedControl(element: Element): boolean {
+  const rect = element.getBoundingClientRect();
+  return rect.width > 0 && rect.height > 0;
+}
+
+/**
+ * The ancestors of a node, crossing open shadow boundaries.
+ *
+ * `Node.contains` stops at a shadow boundary while `deepQueryAll` does not, so
+ * a containment guard written with `contains` silently fails to exclude a
+ * wrapper exactly when the composer is inside a shadow root — the case this
+ * adapter exists for. Same class as `closest` versus `closestAcrossShadow`.
+ */
+function ancestorsAcrossShadow(node: Element): Set<Element> {
+  const out = new Set<Element>();
+  let current: Element | null = node;
+  let hops = 0;
+  while (current !== null && hops < 24) {
+    out.add(current);
+    current = parentAcrossShadow(current);
+    hops += 1;
+  }
+  return out;
+}
+
+/**
+ * The bounded region a composer's controls live in.
+ *
+ * Starts ABOVE the composer, never inside it, and refuses `<body>` and
+ * `<html>`: a region spanning the document makes every uniqueness test
+ * meaningless, and it is how a sidebar button becomes "the single control
+ * beside the composer".
+ */
+function regionAroundComposer(composer: Element): Element | null {
+  const doc = composer.ownerDocument;
+  let region: Element | null = parentAcrossShadow(composer);
+  let hops = 0;
+  while (region !== null && hops < 4) {
+    if (region === doc.body || region === doc.documentElement) return null;
+    const controls = controlsBeside(region, composer);
+    if (controls.length > 0) return region;
+    region = parentAcrossShadow(region);
+    hops += 1;
+  }
+  return null;
+}
+
+/** Rendered controls inside `region` that are neither the composer, nor inside it, nor around it. */
+function controlsBeside(region: ParentNode, composer: Element): HTMLElement[] {
+  const composerAncestors = ancestorsAcrossShadow(composer);
+  const inComposer = new Set(deepQueryAll<Element>(composer, CONTROL_SELECTOR));
+  return deepQueryAll<HTMLElement>(region, CONTROL_SELECTOR).filter(
+    (control) =>
+      control !== composer &&
+      !inComposer.has(control) &&
+      !composerAncestors.has(control) &&
+      isRenderedControl(control),
+  );
+}
+
+/** The composer, resolved WITHOUT the strategy that depends on the send control. */
+function resolveComposerIndependently(root: ParentNode): HTMLElement | null {
+  // Excluding `composer-in-send-region` is what stops this recursing: that
+  // strategy calls findSendButtons, which calls back here. Anchoring in both
+  // directions is a cycle, not two fallbacks.
   const independent = GEMINI_COMPOSER_STRATEGIES.filter(
     (strategy) => strategy.id !== 'gemini/composer-in-send-region',
   );
-  const composer = resolveUnique('composer', root, independent, COMPOSER_INVARIANTS);
-  if (!composer.ok) return [];
-
-  let region: Element | null = composer.value.node;
-  let hops = 0;
-  while (region !== null && hops < 6) {
-    const controls = deepQueryAll<HTMLElement>(region, CONTROL_SELECTOR).filter(
-      (control) => !control.contains(composer.value.node) && control !== composer.value.node,
-    );
-    if (controls.length === 1) return controls;
-    // More than one control here: stop rather than widening further, because a
-    // wider region only adds more controls and never fewer.
-    if (controls.length > 1) return [];
-    const parent: Element | null = region.parentElement;
-    region = parent ?? (region.getRootNode() instanceof ShadowRoot ? (region.getRootNode() as ShadowRoot).host : null);
-    hops += 1;
-  }
-  return [];
+  const resolved = resolveUnique('composer', root, independent, COMPOSER_INVARIANTS);
+  return resolved.ok ? resolved.value.node : null;
 }
 
-/** Whether an element acts as a control, regardless of its tag. */
-function isControl(element: Element): boolean {
-  return element.matches(CONTROL_SELECTOR);
+/** Distinct elements, preserving order. */
+function distinct(elements: readonly HTMLElement[]): HTMLElement[] {
+  const out: HTMLElement[] = [];
+  for (const element of elements) if (!out.includes(element)) out.push(element);
+  return out;
 }
 
 /**
  * The controls that submit the composer.
  *
- * Ordered: locale-independent markers first, and the English aria-label only
- * when nothing else matched anywhere on the page. Matching an English label
- * value is exactly what the contract warns against, so it is quarantined here
- * rather than mixed into the selector list, and `healthCheck` reports when it
- * is the only thing working.
+ * TIERED, AND AMBIGUITY IS A FAILURE AT EVERY TIER. Two distinct candidates in
+ * one tier returns nothing with `ambiguous: true`, exactly as the composer
+ * resolver does — because binding the wrong control means a send that is never
+ * intercepted, which is unmasked text leaving the machine. That is the same
+ * consequence as resolving the wrong composer, so it gets the same rule.
+ *
+ * EVERY TIER IS SCOPED TO THE COMPOSER'S REGION except the marker tier. A
+ * `send` glyph is the default icon for share, export and feedback controls, so
+ * an unscoped icon clause binds whichever one it reaches first.
  */
-function findSendButtons(root: ParentNode): { buttons: HTMLElement[]; usedEnglishFallback: boolean } {
-  // A send marker on the control itself, or on an ancestor of it: sites put
-  // the test id on either the control or its wrapper, and requiring one
-  // placement is the same narrowing as requiring a tag.
+function findSendButtons(root: ParentNode): SendControlResult {
+  const composer = resolveComposerIndependently(root);
+  const region = composer === null ? null : regionAroundComposer(composer);
+
+  const decide = (
+    candidates: readonly HTMLElement[],
+    provenance: SendProvenance,
+  ): SendControlResult | null => {
+    const found = distinct(candidates.filter(isRenderedControl));
+    if (found.length === 0) return null;
+    if (found.length > 1) return { buttons: [], provenance, ambiguous: true };
+    return { buttons: found, provenance, ambiguous: false };
+  };
+
+  const controlOf = (element: Element): HTMLElement | null => {
+    const control = element.matches(CONTROL_SELECTOR)
+      ? element
+      : closestAcrossShadow(element, CONTROL_SELECTOR);
+    return control instanceof HTMLElement ? control : null;
+  };
+
+  const withinRegion = (control: HTMLElement): boolean =>
+    region !== null && deepQueryAll<Element>(region, CONTROL_SELECTOR).includes(control);
+
+  // Tier 1: declared markers, document-wide. A test id naming the send button
+  // is specific enough not to need scoping.
   const byMarker = deepQueryAll<HTMLElement>(root, SEND_MARKER_SELECTOR)
-    .map((element) => (isControl(element) ? element : closestAcrossShadow(element, CONTROL_SELECTOR)))
-    .filter((el): el is HTMLElement => el instanceof HTMLElement);
+    .map(controlOf)
+    .filter((el): el is HTMLElement => el !== null);
+  const marker = decide(byMarker, 'marker');
+  if (marker !== null) return marker;
 
-  const icons = [
-    ...deepQueryAll<HTMLElement>(root, SEND_ICON_ATTRIBUTE_SELECTOR),
-    ...findSendIconsByLigature(root),
-  ];
-  const byIcon = icons
-    .map((icon) => closestAcrossShadow(icon, CONTROL_SELECTOR))
-    .filter((el): el is HTMLElement => el instanceof HTMLElement);
+  // Tier 2: attribute-form icons, scoped to the composer region.
+  const byIconAttribute = deepQueryAll<HTMLElement>(root, SEND_ICON_ATTRIBUTE_SELECTOR)
+    .map(controlOf)
+    .filter((el): el is HTMLElement => el !== null)
+    .filter(withinRegion);
+  const iconAttribute = decide(byIconAttribute, 'icon-attribute');
+  if (iconAttribute !== null) return iconAttribute;
 
-  const found: HTMLElement[] = [];
-  for (const button of [...byMarker, ...byIcon]) {
-    if (!found.includes(button)) found.push(button);
+  // Tier 3: ligature-form icons, scoped. Locale-fragile; reported as such.
+  const byLigature = findSendIconsByLigature(root)
+    .map(controlOf)
+    .filter((el): el is HTMLElement => el !== null)
+    .filter(withinRegion);
+  const ligature = decide(byLigature, 'icon-ligature');
+  if (ligature !== null) return ligature;
+
+  // Tier 4: the English accessible name.
+  //
+  // ORDERED ABOVE the positional tier, which inverts the usual "English last"
+  // rule deliberately. The rule exists so a strategy does not silently fail
+  // for non-English users - and this ordering cannot cause that, because for a
+  // non-English UI this clause matches nothing and falls straight through to
+  // the positional tier exactly as before. It only changes what an ENGLISH
+  // user gets, and there it gives a match with actual SEND EVIDENCE (the
+  // accessible name says so) in place of one with none at all. A wrong
+  // positional guess binds the attach button; a wrong English match is far
+  // less likely. Both still warn.
+  const byEnglish = deepQueryAll<HTMLElement>(root, '[aria-label="Send message" i]')
+    .map(controlOf)
+    .filter((el): el is HTMLElement => el !== null);
+  const english = decide(byEnglish, 'english-label');
+  if (english !== null) return english;
+
+  // Tier 5: the single rendered control beside the composer. Markup-agnostic,
+  // and the guessiest path in the file - it has NO send evidence at all, only
+  // position. Bounded to the composer's own region, excludes anything inside
+  // or around the composer, and refuses when the region holds more than one.
+  if (composer !== null && region !== null) {
+    const near = decide(controlsBeside(region, composer), 'near-composer');
+    if (near !== null) return near;
   }
-  if (found.length > 0) return { buttons: found, usedEnglishFallback: false };
 
-  // Structural fallback: the single control beside the composer. Tried before
-  // the English label, because it is locale-independent and the label is not.
-  const nearComposer = findSendControlNearComposer(root);
-  if (nearComposer.length > 0) return { buttons: nearComposer, usedEnglishFallback: false };
-
-  const english = deepQueryAll<HTMLElement>(root, '[aria-label="Send message" i]')
-    .map((element) => (isControl(element) ? element : closestAcrossShadow(element, CONTROL_SELECTOR)))
-    .filter((el): el is HTMLElement => el instanceof HTMLElement);
-  return { buttons: english, usedEnglishFallback: english.length > 0 };
+  return { buttons: [], provenance: null, ambiguous: false };
 }
 
 export const GEMINI_COMPOSER_STRATEGIES: readonly ElementStrategy<HTMLElement>[] = [
@@ -311,30 +407,39 @@ export const GEMINI_RESPONSE_STRATEGIES: readonly ElementStrategy[] = [
 /**
  * The container holding both the composer and its send control.
  *
- * Climbs across open shadow boundaries, because a send button inside a shadow
- * root would otherwise appear to have no region at all and the button path of
- * the submit binding would report every pointer send undecidable.
+ * ─────────────────────────────────────────────────────────────────────────
+ * DERIVED FROM THE RESOLVED CONTROL, not re-tested from markers.
+ *
+ * The previous version asked "does this ancestor contain a send marker or send
+ * icon, and an editable?". That made identification and BINDING use two
+ * different notions of what a send region is, and they could disagree: the
+ * structural tier exists precisely for pages with no marker and no icon, so
+ * whenever it was the tier that fired, this function found no region,
+ * `originComposerOfButtonEvent` returned null, and every pointer send was
+ * reported undecidable — an adapter that could identify the send control and
+ * still not bind a click on it.
+ *
+ * This is the same defect as `editableWithinRegion` and `resolveUnique`
+ * disagreeing about what counts as a candidate: two places deciding the same
+ * question, failing as a healthy page that cannot send.
+ * ─────────────────────────────────────────────────────────────────────────
  */
 export function composerRegionOf(from: Element): Element | null {
-  let node: Element | null = from;
+  const doc = from.ownerDocument;
+  const resolved = findSendButtons(doc);
+  const control = resolved.buttons[0];
+
+  // The clicked element must BE the resolved control, or sit inside it.
+  if (control === undefined) return null;
+  if (control !== from && !ancestorsAcrossShadow(from).has(control)) return null;
+
+  // Climb from the control to the first ancestor that also holds an editable.
+  let region: Element | null = parentAcrossShadow(control);
   let hops = 0;
-  while (node !== null && hops < 10) {
-    if (
-      deepQueryAll(node, SEND_MARKER_SELECTOR).length +
-        deepQueryAll(node, SEND_ICON_ATTRIBUTE_SELECTOR).length +
-        findSendIconsByLigature(node).length >
-        0 &&
-      deepQueryAll(node, EDITABLE_SELECTOR).length > 0
-    ) {
-      return node;
-    }
-    const parent: Element | null = node.parentElement;
-    if (parent !== null) {
-      node = parent;
-    } else {
-      const root = node.getRootNode();
-      node = root instanceof ShadowRoot ? root.host : null;
-    }
+  while (region !== null && hops < 6) {
+    if (region === doc.body || region === doc.documentElement) return null;
+    if (deepQueryAll<HTMLElement>(region, EDITABLE_SELECTOR).some(isEditableSurface)) return region;
+    region = parentAcrossShadow(region);
     hops += 1;
   }
   return null;
@@ -467,22 +572,48 @@ export class GeminiAdapter implements SiteAdapter {
     if (!responseRoot.ok) failures.push(responseRoot.failure);
 
     const send = findSendButtons(this.document);
-    if (send.buttons.length === 0) {
+    if (send.ambiguous) {
+      // Same rule as the composer: two candidates is a refusal, not a choice.
+      // Binding the wrong control means a send that is never intercepted.
+      failures.push({
+        kind: 'ambiguous',
+        target: 'send-button',
+        detail:
+          `Two or more distinct send controls matched at the '${send.provenance}' tier. ` +
+          'Refusing to choose between them.',
+        triedStrategies: ['gemini/send-button'],
+      });
+    } else if (send.buttons.length === 0) {
       failures.push({
         kind: 'not-found',
         target: 'send-button',
         detail: 'No send control matched, so pointer sends would be undecidable.',
         triedStrategies: ['gemini/send-button'],
       });
-    } else if (send.usedEnglishFallback) {
-      // Reported as a warning rather than swallowed: on a non-English UI this
-      // path matches nothing, so a developer testing in English would see a
-      // healthy adapter that is broken for most of the world.
+    } else if (send.provenance !== 'marker') {
+      // PROVENANCE IS REPORTED. A control found by the guessiest path
+      // reporting identically to one found by a declared test id is how a weak
+      // result gets trusted; each tier below `marker` says what it relied on.
+      const why: Record<string, string> = {
+        'icon-attribute':
+          'matched only via a Material send icon attribute, not a declared test id.',
+        'icon-ligature':
+          'matched only via a Material LIGATURE icon name, which lives in a text node. ' +
+          'Page-level machine translation rewrites text nodes, so this can break for a user ' +
+          'running the page through a translator even though the site itself is localised.',
+        'near-composer':
+          'matched only by POSITION - it is the single rendered control beside the composer, ' +
+          'with no send evidence at all. If the composer toolbar gains a second control this ' +
+          'stops resolving, and if it is the wrong control nothing else will say so.',
+        'english-label':
+          'matched only via its English aria-label. On a non-English UI this clause matches ' +
+          'nothing, so resolution would fall through to the positional tier or fail outright - ' +
+          'either way this adapter is one relabelling away from not finding the send control.',
+      };
       warnings.push({
         target: 'send-button',
-        tier: 'class',
-        detail:
-          'The send control matched only via its English aria-label. Every locale-independent marker is gone, so pointer sends will fail entirely on a non-English UI.',
+        tier: send.provenance === 'icon-attribute' ? 'attribute' : 'class',
+        detail: `The send control ${why[send.provenance ?? ''] ?? 'matched by a weak strategy.'}`,
       });
     }
 

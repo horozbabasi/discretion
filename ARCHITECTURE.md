@@ -1853,6 +1853,26 @@ the diagnostic makes crossing the boundary cost about two minutes; and
 live results are DATED, because "verified" decays and a Claim B result is
 evidence about the day it was taken.
 
+**WHAT THE LIVE PROCEDURE ACTUALLY CAUGHT**, recorded because it settles
+what the boundary is worth in practice. Every fixture test passed
+throughout. Live verification found:
+
+1. **One real selector failure** - Gemini's send control.
+2. **One state-model defect** that would have put the extension into a
+   degraded, send-blocking state during most of a user's session (D34i) -
+   a defect in the health MODEL, not in any selector.
+3. **Two adapters wrongly diagnosed as broken** - ChatGPT had no rot at
+   all, and Gemini's composer was healthy the whole time.
+
+None of it was reachable from fixtures, and two of the three are not
+selector problems at all - which is the part worth remembering. The
+fixture boundary is usually described as "fixtures cannot tell you the
+site changed". It is wider than that: fixtures cannot tell you the
+extension is wrong about the site in ANY way that depends on the site
+being live, including its own state model.
+
+
+
 ### D36 - M9 BLOCKER: SPEC's visible degraded state does not exist yet; the badge is not it
 
 Asked directly: what does a person see when a site changes next week?
@@ -2403,6 +2423,164 @@ The rule this adds to D34c: a strategy may anchor on another element, but
 the strategies used in one direction must be independent of the other
 direction. Anchoring both ways is not two fallbacks; it is a cycle, and a
 cycle fails in a way that looks nothing like the problem it came from.
+
+
+### D34k - The Gemini send-control fix was reviewed adversarially and was unsafe (M9)
+
+The fix shipped, was reviewed by three independent lenses that
+REPRODUCED their findings in jsdom against the real adapter, and came
+back with four blocking defects. Recorded in full because the near-miss
+is the point: the change had passing tests, a clean typecheck and a
+written justification, and it was still dangerous.
+
+**1. The region walk escaped to `<body>`.** Six widenings reached the
+document root, so when the composer's container held no control, "the
+single control beside the composer" was taken from the whole page - a
+sidebar button - and `healthCheck` then reported `failures: []`. **A
+loud, blocking failure became a silently green adapter bound to an
+unrelated control.** Once interception lands that is unmasked text sent
+while health reads OK: the silent-wrong-element failure this subsystem
+exists to prevent, reintroduced by its own repair.
+
+**2. The walk started AT the composer**, searching inside it. The filter
+excluded controls that CONTAIN the composer but not controls it
+contains, so a `role="button"` chip inside the contenteditable won at hop
+0 and typing-area interaction became a send.
+
+**3. `Node.contains` does not cross shadow boundaries** while
+`deepQueryAll` does, so the "not a wrapper" guard failed exactly when the
+composer was in a shadow root - the case this adapter exists for. Same
+class as `closest` versus `closestAcrossShadow`, already fixed once in
+this file.
+
+**4. The ligature clause was unscoped and `findSendButtons` had no
+ambiguity rule.** `<mat-icon>send</mat-icon>` is the default glyph for
+share, export and feedback, so a second one bound a share-menu item as
+the send control.
+
+**AND THE COMMENT LIED.** Directly above `CONTROL_SELECTOR` I had written
+"a wider net that catches two candidates fails hard rather than
+guessing". True of `resolveUnique`; FALSE of `findSendButtons`. I
+asserted a property the code did not have, in the comment justifying the
+widening - the READING-line defect (D34g) in a new place: a claim that
+reads as verified, in the place a reader goes to check.
+
+**5. Identification without binding.** `composerRegionOf` still re-derived
+"is this a send region" from markers, so on exactly the pages the new
+tier existed for, the control was identified and could not be bound, and
+every pointer send was undecidable. Two places deciding the same question
+- the `editableWithinRegion` defect again.
+
+**All fixed.** The send control now has the composer's ambiguity rule:
+two candidates at a tier is a refusal, because binding the wrong control
+means a send that is never intercepted - the same consequence as
+resolving the wrong composer, so it gets the same rule. Provenance is
+reported, so the guessiest path no longer looks like a test-id match.
+
+**Tier order corrected, inverting the usual rule deliberately:** the
+English aria-label now ranks ABOVE the positional tier. That cannot harm
+non-English users - for them the clause matches nothing and falls through
+exactly as before - and for English users it replaces a match with NO
+send evidence by one with actual send evidence. A wrong positional guess
+binds the attach button.
+
+**The ligature argument was half right.** The name is an icon identifier
+the site never translates, but it lives in a text node and page-level
+machine translation rewrites text nodes; broken Material ligatures are
+the known symptom, and Material's own guidance is `translate="no"`.
+Treated as locale-fragile, ranked below the attribute forms, warned
+about, and compared after stripping `\p{Cf}` rather than only whitespace -
+RTL builds insert LRM/RLM around inline text, the same reason
+packages/core strips them in Stage 0.
+
+**Checking code drifted from production again.** The diagnostic's
+send-icon probe still matched only the attribute forms after the adapter
+gained ligature matching, so it could report "no send icon" on a page
+where the adapter was matching one. Eleventh defect in checking code, and
+the second of exactly this shape. One predicate now.
+
+**The clause shipped with zero coverage in either direction** - no
+fixture contained a ligature-form icon at all. Two added: ligature-only,
+and ligature-translated.
+
+**The lesson.** The tests passed because they tested the shapes I had
+thought of. Adversarial review that REPRODUCES rather than reasons is not
+redundant with a test suite; it is what finds the cases the suite was
+never pointed at.
+
+
+### D34i-a - CONFIRMED and broader: health polling cannot observe the state the composer spends most of its time in (M9)
+
+D34i was filed as "a momentarily disabled composer must not put the
+adapter into DEGRADED". A live idle reading confirms it and widens it.
+
+**ChatGPT has no selector rot.** Read idle, `healthCheck` is ok with no
+failures, the composer RESOLVES by `chatgpt/composer-id`, and all four
+strategies match - the SAME selectors that matched 0 in the earlier
+reading. **Those zeros were state, not staleness.** The adapter is
+correct; the earlier diagnosis of "ordinary rot with the target in plain
+view" was wrong, and is withdrawn.
+
+**The state is structurally invisible to the current model, which is the
+real finding.** Re-checks run at 400ms, 1.2s, 3s, 6s and 12s from load
+and then the 15-second poll takes over. A generation beginning after that
+window is only observed if a poll happens to land inside it. Generations
+last seconds; the poll period is 15 seconds.
+
+**A periodic sampler with period P systematically cannot observe states
+whose lifetime is shorter than P.** The composer's disabled state is
+exactly such a state, and it is the state the composer occupies for much
+of a working session. This is not a mis-tuned interval; it is the wrong
+instrument for the question.
+
+**Proposing against SPEC's design rather than bolting an observer onto
+it.** SPEC says "healthCheck() runs at init and periodically", and for
+what SPEC was describing that is right. The problem is that TWO
+DIFFERENT QUESTIONS have been conflated into one check:
+
+| Question | Lifetime | Right instrument |
+| --- | --- | --- |
+| Can the adapter find its elements? | permanent until someone fixes it | **polling** - SPEC's design, 15s is ample |
+| Is the composer editable right now? | seconds | **events** - it is announced, not discovered |
+
+Adapter breakage does not start and stop; sampling it periodically is
+appropriate and cheap. Availability changes constantly and announces
+itself in the DOM. Tuning the poll down to catch it would be the wrong
+repair twice over: it would burn CPU on every open tab forever to
+rediscover something the page already broadcasts, and it would STILL miss
+states shorter than the new period.
+
+So SPEC's sentence is not wrong and does not need replacing. It answers
+the first question, and the extension needs to answer both.
+
+**The mechanism, for the content-script batch:** a `MutationObserver` on
+the resolved composer with
+`{ attributes: true, attributeFilter: ['disabled', 'aria-disabled', 'readonly', 'contenteditable'] }`.
+One observer, one node, no polling cost.
+
+Two things it must handle, neither obvious:
+
+- **The composer may be REPLACED rather than disabled** during
+  generation, leaving the observer attached to a detached node and
+  silently blind. Re-resolution must be triggered by the composer
+  becoming disconnected, not only by its attributes changing.
+- **It drives UI state, never the safety decision.** The send gate
+  re-checks at submit time regardless of what the observer last said. An
+  observer is a responsiveness mechanism; fail-closed stays where it is.
+
+**The third state, restated with what the readings show.** Found-and-
+disabled must not be DEGRADED. Blocking there guards an action that is
+already impossible - a disabled composer cannot send - so the block buys
+ZERO safety and costs the entire user-facing impression of the product.
+
+That is different in kind from D29, where the block at least sits on a
+real send path and the argument is about how to get through it. Here
+there is nothing to get through.
+
+Entered **only on positive evidence**: element found, element disabled.
+**Never on `not-found`.** A missing composer masquerading as a disabled
+one would undo fail-closed entirely, and that is the whole risk in this
+change.
 
 
 ## Status after M2

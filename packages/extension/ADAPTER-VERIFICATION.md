@@ -236,46 +236,35 @@ send it. This is what exercises the read path.
 
 | | Claim A (logic correct) | Claim B (site still has that shape) | Last live check |
 | --- | --- | --- | --- |
-| Claude | verified — 20 fixture tests | *not verified* | — |
-| ChatGPT | verified — 23 fixture tests | **UNRESOLVED: transient-disabled vs rot** | 2026-08-29, painted ×2 (disagree) |
-| Gemini | verified — 23 fixture tests | composer HEALTHY; send control **fix applied, unverified** | 2026-08-29, painted |
+| Claude | verified — 20 fixture tests | **VERIFIED-WORKING** | 2026-08-29 |
+| ChatGPT | verified — 23 fixture tests | **VERIFIED-WORKING (idle)** — fails while the composer is disabled, D34i | 2026-08-29 |
+| Gemini | verified — 27 fixture tests | composer **healthy**; send control **open** | 2026-08-29 |
 
-### Gemini — 2026-08-29, confirmed-painted reading
+Dated per D35: a Claim B result is evidence about the day it was taken, and
+"verified" decays.
 
-- **composer: RESOLVED** by `gemini/composer-role-textbox` (attribute tier).
-- Four of five composer strategies match: `role-textbox` 1/1,
-  `multiline-labelled` 1/1, `composer-in-rich-textarea` 2 matched / 1 admitted
-  (`rendered` rejected 1), `composer-ql-editor` 1/1.
-- `composer-in-send-region` matched 0 — see below, it is not independent.
-- response-root: RESOLVED on both strategies.
-- **send-control: FAILING.** This is the only failure.
+### ChatGPT — VERIFIED-WORKING when idle
 
-**Closed-shadow-root branch: CLOSED, on this reading.** An element that resolves
-is reachable by definition, which settles it more directly than any shadow-root
-count. The earlier closure rested on an un-painted reading and was re-derived
-here rather than left standing on an invalid basis. **No SPEC or README edit —
-the three-site claim stands.**
+Read idle: `healthCheck` ok, no failures, composer RESOLVED by
+`chatgpt/composer-id`, all four strategies matching (two with `rendered×1`
+rejections on a duplicate, which is the invariant doing its job).
 
-**The wrong-model conclusion is WITHDRAWN.** `composer-ql-editor` matching
-proves the Quill editor is still present, so Gemini did *not* replace its
-rich-text composer with a native textarea. No `setComposerText` value branch,
-no input-witness rework, no `editable`-invariant change. That diagnosis came
-from an un-painted reading; it is marked withdrawn in ARCHITECTURE.md D34a
-rather than deleted, because it was specific and actionable and would otherwise
-have cost a future session real work.
+**These are the same selectors that matched 0 in the earlier reading.** Those
+zeros were the composer's *state*, not staleness. **ChatGPT has no selector
+rot, and no new selectors have been written.**
 
-**Send-control cause: STILL UNFOUND.** The tag-assumption widening shipped on
-2026-08-29 and stays — tag-anchoring across every tier is a real fragility. But
-it is **not** established as the cause of this failure. The reading it was drawn
-from had its verdict withheld by a broken paint gate, and the warning it leaned
-on described an *invisible* `<a role="button">` while a **visible `<button>`**
-sat in the same candidate list under the composer's own container. If that
-button is the send control, the cause is ordinary selector rot and the tag
-assumption is irrelevant here.
+The earlier reading — "ordinary selector rot with the target in plain view" —
+is **withdrawn**. It is retained below as evidence for D34i rather than as an
+adapter defect.
 
-The paint gate is fixed (ARCHITECTURE.md D34e). **The next reading is what
-identifies the cause**, and it will name which clause resolves the control, or
-print the visible button's attributes to write a clause against.
+### Gemini — composer healthy, send control open
+
+Composer resolved by 4 of 5 strategies; response-root by both; send-control the
+sole failure; 13 controls on the page. Unchanged by the ChatGPT work.
+
+The send-control fix has been through adversarial review, which found four
+blocking defects in it (ARCHITECTURE.md D34k) — all now fixed. **It is
+unverified live and needs a re-run.**
 
 ### Earlier Gemini readings — PRE-FIX, INVALID, kept deliberately
 
@@ -304,64 +293,27 @@ number and DOM element count; below 400 elements the block refuses to draw a
 conclusion; re-checks run at 400 ms → 12 s; and the console re-emits on a change
 of *verdict* rather than only of `health.ok`.
 
-### ChatGPT — 2026-08-29 painted reading
+### ChatGPT — earlier readings, retained as D34i evidence
 
-**Correction: the "editable invariant rejection" is REAL, not an unpainted
-artefact.** It reproduces on a painted page — `chatgpt/composer-in-composer-form`
-matched 1, admitted 0. It was recorded as superseded here and that was wrong.
+Two earlier painted readings showed the composer failing. Both are now
+understood as the composer in a **disabled** state, not as selector rot:
 
-**Selector rot cannot produce `matched 1`.** A stale selector matches nothing. A
-candidate found and then rejected means the selector still describes something
-and the *element's state* disqualified it — `isEditableSurface` returns false for
-a disabled textarea, so `form[data-type="unified-composer"] textarea` finding a
-**disabled** textarea produces exactly this signature.
+| | Reading A | Reading B | Idle reading |
+| --- | --- | --- | --- |
+| composer | visible contenteditable, failing no invariants | no contenteditable; 4 surfaces, all file inputs + a **DISABLED** textarea | **RESOLVED** by `chatgpt/composer-id` |
+| strategies | 0 | `composer-in-composer-form` matched 1, admitted 0 | **all four match** |
+| health | failing | failing | **ok, no failures** |
 
-**Two painted readings disagree, and the difference is state, not markup:**
+`isEditableSurface` returns false for a disabled textarea, so the `editable`
+invariant rejects it. That is why B showed *found-and-rejected* rather than
+*not-found* — and **selector rot cannot produce `matched 1`**.
 
-| | Reading A | Reading B |
-| --- | --- | --- |
-| composer | visible contenteditable, `aria-multiline`, `role` | **no contenteditable at all** |
-| surfaces | — | 4: file inputs + a **DISABLED** textarea |
-| invariants | failing none | every one failing `editable` |
-| `composer-in-composer-form` | 0 | **matched 1, admitted 0** |
-
-The textarea and both file inputs are disabled in B and were not in A — page
-state (composer locked mid-generation, rate-limited, or still initialising),
-not markup.
-
-- **Send control: 6 visible `<button>` candidates**, plus one visible
-  `div[role="button"]` with a `data-testid` **under `nav`**.
-
-**That div is almost certainly not the send control.** A send control lives in
-the composer region; this one is in the navigation landmark, where a sidebar
-toggle or model switcher lives. With 6 visible `<button>` candidates present,
-the send control is far more likely one of those — making ChatGPT's send failure
-ordinary rot, exactly like its composer.
-
-**So the tag-anchoring finding does NOT graduate to a confirmed diagnosis.** It
-stays a fragility finding on its own merits. What would settle it: the
-attributes of the 6 visible button candidates, and whether any carries a send
-marker — which the next reading prints.
-
-**NOT being fixed, and the reason has changed.** It is no longer a sequencing
-question. Which failure ChatGPT has is genuinely unresolved: *transient disabled
-state* and *selector rot* need opposite fixes, and rewriting selectors against a
-disabled-state reading would encode the wrong target.
-
-**What settles it — readings across states**, all on a painted page:
-
-1. **Composer idle**, nothing generating, page settled.
-2. **Mid-generation**, while a response streams.
-3. **Immediately after load**, before the app finishes initialising.
-
-If the composer resolves when idle and fails only when disabled, the failure is
-transient state, not rot — and that belongs with D29 as another case where
-fail-closed blocks a legitimate flow (ARCHITECTURE.md D34i). If it fails when
-idle too, it is rot and the selectors get rewritten against the idle reading.
-
-The diagnostic now tells these apart in the console: a found-but-disabled
-composer reads **"PAGE STATE, NOT SELECTOR ROT"** and names how many surfaces
-are disabled; a genuinely absent one still reads **STALE**.
+**Why the disabled state only ever appeared right after a page load:** the
+re-checks run 400 ms → 12 s from load and then hand over to a 15-second poll. A
+generation starting after that window is observed only if a poll happens to land
+inside it. Generations last seconds. See ARCHITECTURE.md D34i-a — the health
+model cannot currently observe the state the composer spends most of its time
+in.
 
 ## The fixture boundary — what two live failures proved
 

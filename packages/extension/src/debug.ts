@@ -375,16 +375,42 @@ function renderReading(f: EnvironmentForensics, diagnostic: AdapterDiagnostic): 
     );
     return;
   }
+  // PAGE STATE, and it must be derived from the RESOLVER, not from page-wide
+  // aggregates.
+  //
+  // Two defects were found in the first version of this branch. It was gated
+  // on `failureKind === 'invariant'`, which only ever occurs on ChatGPT: that
+  // adapter's strategies query raw, so a disabled composer is FOUND then
+  // rejected. Gemini's and Claude's strategies call `.filter(isEditableSurface)`
+  // INSIDE find(), so the same disabled composer matches zero and reports
+  // `not-found` - the identical page condition produces two different failure
+  // kinds depending on the adapter. And `onlyEditableFailed` ranged over EVERY
+  // editable on the page, so one unrelated 0x0 input failing `rendered`
+  // silently suppressed the verdict.
+  //
+  // Both are now keyed on the composer strategies' own per-strategy rejection
+  // records, plus the editable table as corroboration.
+  const composerRejections = composer.strategies.flatMap((st) => Object.keys(st.rejectedBy));
+  const rejectedOnlyForEditability =
+    composerRejections.length > 0 && composerRejections.every((id) => id === 'editable');
+  const disabledSurfaces = f.editableCandidates.filter((c) => c.disabled || c.readOnly);
+
+  if (rejectedOnlyForEditability || (kind === 'not-found' && disabledSurfaces.length > 0)) {
+    console.warn(
+      `READING: the composer appears PRESENT BUT NOT EDITABLE — ` +
+        `${disabledSurfaces.length} disabled/readonly surface(s), and every composer-strategy ` +
+        'rejection was the `editable` invariant. THIS IS PAGE STATE, NOT SELECTOR ROT: a stale ' +
+        'selector matches nothing, whereas this found something and the element\'s state ' +
+        'disqualified it. Common causes: a response is generating, the account is rate-limited, ' +
+        'or the app is still initialising. Re-read with the composer IDLE before changing any ' +
+        'selector.',
+    );
+    return;
+  }
+
   if (kind === 'invariant') {
-    // SELECTOR ROT CANNOT PRODUCE THIS. A stale selector matches nothing; a
-    // candidate that was found and then rejected means the selector still
-    // describes something real and the ELEMENT's state disqualified it. The
-    // two need opposite fixes, and conflating them would rewrite a selector
-    // that was working.
-    const disabled = f.editableCandidates.filter((c) => c.disabled || c.readOnly);
-    const onlyEditableFailed = f.editableCandidates
-      .filter((c) => c.failsInvariants.length > 0)
-      .every((c) => c.failsInvariants.every((id) => id === 'editable'));
+    const disabled = disabledSurfaces;
+    const onlyEditableFailed = rejectedOnlyForEditability;
 
     if (disabled.length > 0 && onlyEditableFailed) {
       console.warn(

@@ -1,0 +1,34 @@
+<!doctype html>
+<!--
+  SYNTHETIC fixture: the ligature name has been TRANSLATED by a page-level
+  machine translator.
+
+  A Material ligature name is an icon identifier, and the site's own
+  translation files never touch it - but it lives in a text node, and
+  page-level machine translation rewrites text nodes indiscriminately. Broken
+  Material ligatures are the well-known symptom, which is why Material's own
+  guidance is to mark icons translate="no".
+
+  So the ligature clause is locale-FRAGILE, and the adapter must not depend on
+  it alone. Here it is the only send marker AND it has been translated, so the
+  clause must decline and the adapter must fall through to something else -
+  loudly, not silently.
+-->
+<html lang="tr">
+  <body>
+    <div id="app">
+      <main>
+        <chat-window>
+          <model-response><message-content><p>lorem ipsum</p></message-content></model-response>
+        </chat-window>
+      </main>
+      <div class="input-area">
+        <rich-textarea>
+          <div class="ql-editor" contenteditable="true" role="textbox" aria-multiline="true"
+               aria-label="Buraya bir istem girin"><p>lorem ipsum</p></div>
+        </rich-textarea>
+        <div role="button" class="c-1a2b3c"><mat-icon>gonder</mat-icon></div>
+      </div>
+    </div>
+  </body>
+</html>

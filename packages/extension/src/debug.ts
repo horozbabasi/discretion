@@ -19,7 +19,7 @@
  * this module only formats what it is given.
  */
 
-import type { AdapterDiagnostic } from './diagnostics.js';
+import type { AdapterDiagnostic, EnvironmentForensics } from './diagnostics.js';
 
 const STORAGE_KEY = 'debugLogging';
 const PREFIX = 'PrivacyShield';
@@ -123,7 +123,55 @@ export function renderDiagnostic(diagnostic: AdapterDiagnostic): void {
     console.warn(`  warning ${warning.target} (${warning.tier}): ${warning.detail}`);
   }
 
+  if (diagnostic.forensics !== null) renderForensics(diagnostic.forensics);
+
   console.groupEnd();
+}
+
+/**
+ * Prints the failure forensics, and says what they mean.
+ *
+ * "Every strategy matched 0" looks the same whether the composer moved, sits
+ * behind a closed shadow root, or lives in a frame we cannot enter — and those
+ * need completely different responses. This is the part that tells them apart,
+ * so it states an interpretation rather than only numbers: a table nobody can
+ * read is barely better than the silence this replaced.
+ */
+function renderForensics(f: EnvironmentForensics): void {
+  console.warn('environment forensics (emitted because something did not resolve):');
+  console.log(
+    `open shadow roots: ${f.openShadowRoots} (max depth ${f.maxShadowDepth}) | iframes: ${f.iframes}`,
+  );
+  console.table(
+    Object.entries(f.probes).map(([selector, counts]) => ({
+      selector,
+      'light DOM': counts.light,
+      'incl. shadow': counts.deep,
+      'only in shadow': counts.deep - counts.light,
+    })),
+  );
+  if (f.likelyClosedShadowHosts.length > 0) {
+    console.warn(
+      `LIKELY CLOSED SHADOW ROOTS: ${f.likelyClosedShadowHosts.join(', ')} — these render but ` +
+        'expose no children and no shadowRoot. A closed root cannot be reached by any supported ' +
+        'means, so if the composer is inside one this adapter can never resolve it.',
+    );
+  }
+  if (f.customElements.length > 0) {
+    console.log(`custom elements present: ${f.customElements.join(', ')}`);
+  }
+
+  const anyEditable =
+    (f.probes['[contenteditable]']?.deep ?? 0) + (f.probes['textarea']?.deep ?? 0);
+  if (anyEditable === 0 && f.likelyClosedShadowHosts.length > 0) {
+    console.warn('READING: no editable surface is reachable, and closed shadow roots are present. The composer is probably UNREACHABLE, not moved.');
+  } else if (anyEditable === 0 && f.iframes > 0) {
+    console.warn('READING: no editable surface is reachable and frames are present. The composer may be in a frame; the manifest sets all_frames:false.');
+  } else if (anyEditable > 0) {
+    console.warn('READING: editable surfaces ARE reachable but no strategy matched one. The selectors are stale, not the query mechanism.');
+  } else {
+    console.warn('READING: no editable surface reachable and no closed-root or frame signal. Inconclusive; capture a fixture.');
+  }
 }
 
 /** Announces that no adapter claimed this page. */

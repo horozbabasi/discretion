@@ -32,6 +32,7 @@
  */
 
 import type { ElementStrategy, HealthReport, Invariant, SiteAdapter } from './adapters/index.js';
+import { deepQueryAll } from './adapters/deep.js';
 import {
   CHATGPT_COMPOSER_STRATEGIES,
   CHATGPT_RESPONSE_STRATEGIES,
@@ -67,6 +68,42 @@ export interface ElementDiagnostic {
   readonly strategies: readonly StrategyDiagnostic[];
 }
 
+/**
+ * Forensics for the case where nothing resolved.
+ *
+ * When every strategy returns zero, the failure could be a closed shadow root,
+ * an iframe the content script cannot enter, or five genuinely stale
+ * selectors — and those need completely different fixes. The per-strategy
+ * table cannot tell them apart, because "matched 0" looks identical in all
+ * three. This is what distinguishes them, and it is emitted ONLY on failure so
+ * a healthy page stays quiet.
+ *
+ * Counts and tag names only. Never text.
+ */
+export interface EnvironmentForensics {
+  /** Open shadow roots reachable from the document, and the deepest nesting. */
+  readonly openShadowRoots: number;
+  readonly maxShadowDepth: number;
+  /**
+   * Custom elements that render but expose no children and no shadowRoot.
+   * The strongest available signal for a CLOSED shadow root: something is
+   * painting, and it is not reachable. `shadowRoot` is null for closed roots
+   * and there is no supported way in, so this heuristic is the only answer
+   * available from a content script.
+   */
+  readonly likelyClosedShadowHosts: readonly string[];
+  /** Frames the content script cannot see into (manifest sets all_frames:false). */
+  readonly iframes: number;
+  /**
+   * Generic probes, from most to least specific. Whether a bare `textarea` or
+   * `[contenteditable]` exists anywhere separates "the composer moved" from
+   * "the composer is unreachable".
+   */
+  readonly probes: Readonly<Record<string, { light: number; deep: number }>>;
+  /** Custom element tag names present, which is how an Angular app is shaped. */
+  readonly customElements: readonly string[];
+}
+
 export interface AdapterDiagnostic {
   readonly site: string;
   readonly displayName: string;
@@ -75,6 +112,8 @@ export interface AdapterDiagnostic {
   readonly composer: ElementDiagnostic;
   readonly responseRoot: ElementDiagnostic;
   readonly health: HealthReport;
+  /** Present only when something failed to resolve. */
+  readonly forensics: EnvironmentForensics | null;
 }
 
 const STRATEGIES_BY_SITE: Readonly<
@@ -133,6 +172,85 @@ function describeStrategies(
   return { diagnostics, admittedAtDecidingTier };
 }
 
+/** Probe selectors, ordered from what the adapter expects to the most generic. */
+const PROBE_SELECTORS = [
+  'rich-textarea',
+  'div.ql-editor',
+  '[contenteditable][role="textbox"]',
+  '[role="textbox"]',
+  '[contenteditable]',
+  'textarea',
+  'input[type="text"]',
+  'button',
+  'main, [role="main"]',
+] as const;
+
+function collectShadowStats(doc: Document): {
+  roots: number;
+  maxDepth: number;
+  likelyClosed: string[];
+  customElements: string[];
+} {
+  let roots = 0;
+  let maxDepth = 0;
+  const likelyClosed = new Set<string>();
+  const customElements = new Set<string>();
+
+  const visit = (node: ParentNode, depth: number): void => {
+    if (depth > 12) return;
+    maxDepth = Math.max(maxDepth, depth);
+    for (const element of Array.from(node.querySelectorAll('*'))) {
+      const tag = element.tagName.toLowerCase();
+      if (tag.includes('-')) customElements.add(tag);
+      const shadow = element.shadowRoot;
+      if (shadow !== null) {
+        roots += 1;
+        visit(shadow, depth + 1);
+        continue;
+      }
+      // Renders, has no children of its own, and exposes no shadow root:
+      // something is painting from a tree we cannot reach.
+      if (tag.includes('-') && element.children.length === 0) {
+        const rect = element.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) likelyClosed.add(tag);
+      }
+    }
+  };
+  visit(doc, 0);
+
+  return {
+    roots,
+    maxDepth,
+    likelyClosed: [...likelyClosed].sort(),
+    customElements: [...customElements].sort().slice(0, 40),
+  };
+}
+
+function buildForensics(doc: Document): EnvironmentForensics {
+  const shadow = collectShadowStats(doc);
+  const probes: Record<string, { light: number; deep: number }> = {};
+  for (const selector of PROBE_SELECTORS) {
+    let light = 0;
+    let deep = 0;
+    try {
+      light = doc.querySelectorAll(selector).length;
+      deep = deepQueryAll(doc, selector).length;
+    } catch {
+      light = -1;
+      deep = -1;
+    }
+    probes[selector] = { light, deep };
+  }
+  return {
+    openShadowRoots: shadow.roots,
+    maxShadowDepth: shadow.maxDepth,
+    likelyClosedShadowHosts: shadow.likelyClosed,
+    iframes: doc.querySelectorAll('iframe').length,
+    probes,
+    customElements: shadow.customElements,
+  };
+}
+
 export function buildDiagnostic(adapter: SiteAdapter, doc: Document): AdapterDiagnostic {
   const lists = STRATEGIES_BY_SITE[adapter.id] ?? { composer: [], response: [] };
 
@@ -170,5 +288,7 @@ export function buildDiagnostic(adapter: SiteAdapter, doc: Document): AdapterDia
       strategies: responseStrategies.diagnostics,
     },
     health: adapter.healthCheck(),
+    forensics:
+      composerResolution.ok && responseResolution.ok ? null : buildForensics(doc),
   };
 }

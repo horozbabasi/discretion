@@ -1782,6 +1782,107 @@ committed fixture. That verifies the MECHANISM. Only a person signed in
 can verify the SITE'S SHAPE.
 
 
+### D34 - Gemini fails live; diagnose reachability before selectors (M9)
+
+Observed live, composer visible, extension loaded unpacked: composer
+`not-found`, all five strategies matched 0 at every tier, NO invariant
+rejections, send-button 0, response-root RESOLVED.
+
+**One inference corrected first.** The natural reading is that
+response-root resolving while the composer does not points at the query
+mechanism. It does not: `gemini/response-main` uses `deepQueryAll` too,
+exactly like the five composer strategies. All six go through the same
+helper, so the contrast carries no information about piercing. What it
+does establish is narrower - `deepQueryAll` runs and returns light-DOM
+matches.
+
+**Three causes print identically as "matched 0" and need opposite
+fixes:** stale selectors, a CLOSED shadow root (permanently unreachable),
+or an iframe (`all_frames: false`). Nothing in the existing report
+separates them, and none of it can be determined remotely.
+
+So the diagnostic now emits ENVIRONMENT FORENSICS on any resolution
+failure: open shadow-root count and depth; likely-CLOSED shadow hosts,
+detected as custom elements that render but expose neither children nor a
+`shadowRoot` (the only signal available - a closed root is unreachable by
+any supported means, so its absence must be inferred from something
+painting that cannot be reached); iframe count; and light-versus-deep
+match counts for probes from `rich-textarea` down to bare `textarea`. It
+prints a stated READING, not just numbers, because a table nobody
+interprets is barely better than the silence it replaced.
+
+**Selector work must not start until that block is captured.** A
+stale-selector fix applied to a reachability failure looks like progress
+and resolves nothing - and would burn the one live run per session that
+this project actually gets.
+
+**Conditional consequence, deliberately NOT yet written into SPEC.** If
+the forensics show a closed shadow root, Gemini is not a bug but a
+permanent limitation: the adapter reports `not-found` and blocks, which
+is correct by design, and the site can never be supported. SPEC's
+three-site claim would become two working sites and one blocked, which is
+a product fact the README and SPEC limitations must state. That edit
+waits for the evidence rather than anticipating it.
+
+### D35 - Fixtures encode a working state and can never detect that a site has moved (M9)
+
+Two of three adapters failed on first live contact with every fixture
+test passing. Recorded because it is easy to read as a testing failure
+and is not one.
+
+A fixture is written against the markup as its author understood it, and
+a fixture test asks: given a page of this shape, does the adapter resolve
+correctly? It can prove a strategy parses what it was written against.
+**It can never detect that the site has moved**, because the fixture
+moves with the author's belief rather than with the site. Every test can
+stay green forever while all three adapters are dead.
+
+This is the fixtures' BOUNDARY, not a defect. More fixtures do not move
+it; a captured fixture has exactly the same property as a synthetic one.
+The only instrument that crosses it is a person opening the real site.
+
+Acted on in three places: the status table tracks Claim A and Claim B in
+separate columns so a green suite is never reported as a working adapter;
+the diagnostic makes crossing the boundary cost about two minutes; and
+live results are DATED, because "verified" decays and a Claim B result is
+evidence about the day it was taken.
+
+### D36 - OPEN: SPEC's visible degraded state does not exist yet; the badge is not it (M9)
+
+Asked directly: what does a person see when a site changes next week?
+Answered from the code rather than from intent.
+
+SPEC: "On failure the extension enters a visible degraded state, blocks
+sends, and tells the user the site layout changed." Today, on a health
+failure, the complete set of observables is:
+
+| Observable | Reaches whom |
+| --- | --- |
+| Console diagnostic | Only an unpacked (development) load. **Default OFF for a store install.** |
+| Toolbar badge `!` + action tooltip | Anyone who happens to look at the extension icon, or hovers it |
+
+There is **no in-page UI** - the content script creates no DOM at all -
+and **no send blocking**, because submit interception is deliberately
+absent until detection is wired.
+
+So for a normal store-installed user on a site that changed, the entire
+signal is a small badge on an icon they are not looking at, and the
+sentence "the site layout changed" is reachable only by hovering the
+toolbar button. **SPEC's requirement is unmet on all three clauses.**
+
+**On whether periodic healthCheck is sufficient**, which was the question
+asked: the poll is not the problem. Both observed failures are permanent
+site drift, so the FIRST check already found them - a 15-second poll adds
+nothing for a permanent condition. Its value is elsewhere: catching SPA
+navigation and mid-session DOM replacement. What is missing is not more
+frequent detection but a VISIBLE SURFACE for what detection already
+found, and a send gate for it to block.
+
+Belongs to the content-script batch, alongside the review panel that will
+carry it and the D29 resolution that needs the same surface. Recorded as
+open so it is not mistaken for done once the badge exists.
+
+
 ## Status after M2
 
 Stage 1 is complete: 113 registered detectors — 57 NATIONAL_ID and 19

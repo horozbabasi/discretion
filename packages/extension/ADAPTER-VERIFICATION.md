@@ -232,33 +232,94 @@ send it. This is what exercises the read path.
 
 **7. Record the result** in the status table below, with the date and the tier.
 
-## Current verification status — what is and is not established
+## Current verification status
 
 | | Claim A (logic correct) | Claim B (site still has that shape) | Last live check |
 | --- | --- | --- | --- |
-| Claude | **verified** — 20 fixture tests | **NOT VERIFIED** | — |
-| ChatGPT | **verified** — 18 fixture tests | **NOT VERIFIED** | — |
-| Gemini | **verified** — 15 fixture tests | **NOT VERIFIED** | — |
+| Claude | verified — 20 fixture tests | *not verified* | — |
+| ChatGPT | verified — 21 fixture tests | **VERIFIED-FAILING** | reported failing; diagnostic not yet captured |
+| Gemini | verified — 15 fixture tests | **VERIFIED-FAILING** | composer `not-found`, all 5 strategies matched 0 |
 
-**What IS verified about the mechanism.** `scripts/verify-injection.py`, run
-against the built extension with the claude.ai origin intercepted, established
-by measurement:
+### Gemini — VERIFIED-FAILING
 
-- the content script injects on a matched origin;
-- the adapter resolves the composer and response root on a page of the expected
-  shape, and reports `health: ok` with no failures;
-- on a page with no composer it reports `not-found` for all three targets, sets
-  the toolbar badge to `!`, and changes the action title;
-- the console diagnostic is emitted in both states.
+Observed live in an open conversation at `gemini.google.com/app/<id>`, composer
+visible, extension loaded unpacked:
 
-That measurement is also what prompted the diagnostic to exist. The first run
-of it found the content script injecting, resolving and degrading **correctly
-and completely silently** — 0 console lines at any level. The only observable
-was a badge, and on a healthy page the badge is empty, which is
-indistinguishable from the extension not running. An adapter nobody can
-interrogate is silent by construction, which is the thing SPEC forbids most
-strongly, so the diagnostic is part of meeting that requirement rather than a
-convenience.
+- **composer: NOT RESOLVED, `not-found`.** All five strategies matched **0**, at
+  every tier. **No invariant rejections** — nothing was found to reject.
+- **send-button: `not-found`**, matched 0.
+- response-root: **RESOLVED** by `gemini/response-main` (attribute tier), 1 admitted.
+- `healthCheck` FAILED.
+
+**Diagnosis so far, and one inference corrected.** Every composer strategy uses
+`deepQueryAll` — and so does `gemini/response-main`. So response-root resolving
+while the composer does not is **not** evidence that the query mechanism is at
+fault: both go through the same helper. What it establishes is narrower —
+`deepQueryAll` runs and returns light-DOM matches. Shadow piercing is verified
+against open roots by fixture test, but nothing yet says whether it reached
+anything on the live page.
+
+Three failures print identically as "matched 0" and need opposite fixes:
+
+1. the composer moved (stale selectors);
+2. the composer is behind a **closed** shadow root (permanently unreachable);
+3. the composer is in a frame (`all_frames: false`, so invisible to us).
+
+**This cannot be determined remotely**, so the diagnostic now emits
+**environment forensics** whenever something fails to resolve: open shadow-root
+count and depth, likely-closed shadow hosts (custom elements that render but
+expose neither children nor a `shadowRoot`), iframe count, and light-vs-deep
+match counts for probes from `rich-textarea` down to bare `textarea`. It prints
+a stated READING rather than only numbers.
+
+**Next step is one more live run on Gemini** to capture that block. Selector
+work must not start before it: *a stale-selector fix applied to a reachability
+failure will look like progress and resolve nothing.*
+
+**If the forensics report a closed shadow root**, this stops being a bug and
+becomes a permanent limitation — the adapter reports `not-found` and blocks,
+which is the correct behaviour by design, but Gemini could never be supported.
+That would make SPEC's three-site claim *two working sites and one blocked*,
+which is a product fact the README and SPEC's limitations must state rather
+than leaving a fixable-looking row in this table. That edit is deliberately
+**not** made yet, because the condition is not yet established.
+
+### ChatGPT — VERIFIED-FAILING
+
+Reported failing on first live contact. The diagnostic output has not been
+captured, so there is nothing to diagnose from yet, and it is **not** being
+worked in the same batch as Gemini: they fail for different reasons, and the
+Gemini diagnosis may invalidate its own fix.
+
+## The fixture boundary — what two live failures proved
+
+Two of three adapters failed on first live contact **with every fixture test
+passing**. That is worth stating precisely, because it is easy to read as a
+testing failure and it is not one.
+
+**Fixtures encode a working state.** Each was written against the markup as it
+was understood at the time, and a fixture test asks: *given a page of this
+shape, does the adapter resolve correctly?* It can prove a strategy parses what
+it was written against. **It can never detect that the site has moved**, because
+the fixture moves with the author's belief, not with the site.
+
+So a green fixture suite means the logic is right about a shape. It carries no
+information about whether that shape still exists. Every passing test can stay
+green forever while all three adapters are dead.
+
+**This is the fixtures' boundary, not a defect in them.** Writing more
+fixtures, or better ones, does not move it — a captured fixture has exactly the
+same property as a synthetic one here. The only instrument that crosses the
+boundary is a person opening the real site.
+
+Three consequences, each already acted on:
+
+- The status table above tracks Claim A and Claim B in **separate columns**,
+  because a green suite must never be reported as a working adapter.
+- The diagnostic exists so that crossing the boundary costs about two minutes
+  rather than a debugging session.
+- Live checks are dated in the table, because "verified" decays. A Claim B
+  result is evidence about the day it was taken and nothing more.
 
 ## What fixtures CANNOT catch — stated plainly
 

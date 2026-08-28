@@ -2232,7 +2232,7 @@ candidates are now separated out and explicitly discounted, and a visible
 `<button>` candidate is called out as pointing at ordinary selector rot
 rather than at anything about tags.
 
-### D34f - Twelve defects in checking code, and they fall into three shapes (M9)
+### D34f - Thirteen defects in checking code, and they fall into three shapes (M9)
 
 Recorded together because the pattern is more useful than any of them
 individually, and because the count is now large enough that it is a
@@ -2271,11 +2271,16 @@ The eight, in order:
     `resolveUnique`, false of `findSendButtons`, in the comment
     justifying the widening (D34k).
 
+13. The icon ancestor table was gated on "no icon has an enclosing
+    control", so it printed on a broken page and went silent on a working
+    one - withholding the evidence from the reading that needed it
+    (D34t).
+
 **THREE SHAPES, and the count is now large enough to be a property of how
 this code is written rather than a run of bad luck.**
 
-- **GATES** (7, 8, 9): the measuring code was correct and the rule
-  deciding when to emit or believe was not.
+- **GATES** (7, 8, 9, 13): the measuring code was correct and the rule
+  deciding when to emit, believe or conclude was not.
 - **CHECKING CODE DRIFTING FROM PRODUCTION** (2, 3, 6, 11): a probe or
   helper that no longer matched the thing it was checking.
 - **UNTESTED ASSERTIONS** (5, 10, 12): a claim stated as verified in a
@@ -3158,17 +3163,12 @@ disabled composer cannot send. A page with no send control cannot send by
 clicking one. The block buys no safety and costs the entire user-facing
 impression - the same argument as D34i, now with two instances.
 
-**The M9 blocker set is now four, and they share one surface and one
-distinction:**
-
-- **D29** - a composer nobody typed into cannot be bound (suggestion chips)
-- **D34i** - a disabled composer must not mean DEGRADED
-- **D34v** - an inapplicable element must not mean DEGRADED
-- **D36** - SPEC's visible degraded state does not exist
-
-All four need the same in-page surface, and three of the four need the
-same state distinction. Building them separately would mean building that
-distinction three times.
+**This joins the M9 blocker set, which is now four.** The set is stated
+in full, once, under "Status after M9 adapters" - four items, one shared
+surface, one shared distinction, and the build order that follows from
+them. It is NOT restated here: two copies of a list drift apart, and
+checking code drifting from what it describes is one of this batch's
+recurring defects (D34f).
 
 **The safety constraint, unchanged and load-bearing:** the
 not-applicable state must be entered only on POSITIVE evidence that the
@@ -3455,6 +3455,104 @@ runtimes — so 5.8 ms is a floor rather than a size.
 arbitration decides the type, so the specificity table is now an input
 to a published number. Nothing tests that, because both outputs stay
 internally consistent when it is wrong.
+
+## Status after M9 adapters
+
+**Not the milestone close.** M9's content-script batch is still open. The
+adapter layer is done and is summarised here while it is fresh.
+
+Three adapters — claude.ts, chatgpt.ts, gemini.ts — on a shared contract,
+plus the MV3 manifest, a two-pass build wired into the root script, a
+shipped diagnostic, and a live-verification procedure. **982 tests.** All
+three VERIFIED-WORKING live on 2026-08-29.
+
+**What the layer actually guarantees.** SPEC calls selector resilience the
+highest-risk area, and the answer is not better selectors — it is that a
+WRONG selector cannot cause a silent leak. Four independent constructions
+(D26): ambiguity is a hard failure rather than a tie-break; the element
+detection ran on must be the same NODE the user's own submit event
+resolves to; an element nobody has typed into cannot be bound; and every
+write is read back. The selectors are the part allowed to be wrong.
+
+That held. It was also **breached once, by its own repair** — a
+region-walk fix reached `<body>` and bound a sidebar button while
+`healthCheck` reported clean, which is precisely the silent-wrong-element
+failure the constructions exist to prevent. It was caught by adversarial
+review that REPRODUCED the failure rather than reasoned about it, and the
+send control now carries the composer's ambiguity rule, because binding
+the wrong send control has the same consequence as resolving the wrong
+composer.
+
+**The dominant finding of the batch is about instruments, not adapters.**
+The extension shipped SILENT: injecting correctly, resolving correctly,
+degrading correctly, and telling nobody — the only observable was a badge
+that is empty on a healthy page. SPEC's strongest requirement is that
+silent failure be impossible by construction, and it was unverifiable
+until `diagnostics.ts` and `debug.ts` existed. **An unverifiable
+requirement is not a requirement.**
+
+Building that instrument then produced most of the batch's defects.
+Thirteen were found in CHECKING code rather than production code (D34f),
+falling into three shapes that recurred: gates that encoded an unmeasured
+assumption about which condition would hold; checking code that drifted
+from the production predicate it was checking; and assertions stated as
+verified in places a reader would not re-derive them — a summary line, a
+comment. Standing rules 7 and 8 came out of this batch and are the
+durable part.
+
+**Live verification found what fixtures structurally cannot (D35).** Every
+fixture test passed throughout. Live found one real selector failure, one
+state-model defect that would have degraded the extension through most of
+a user's session, and **four wrong diagnoses of a single Gemini symptom**
+— all four resolved not by a better instrument but by reading the page in
+the state where the element exists (D34u). Fixtures encode a working
+state and can never detect that the site has moved, or that the extension
+is wrong about the site in any way that depends on it being live.
+
+**What is NOT done, and is deliberately absent rather than stubbed:**
+submit interception. Detection is not wired in, and an interceptor with
+nothing behind it could only block every send or wave every send through.
+The gate it will call (`verifyBinding`) is built and tested; the caller
+arrives with detection.
+
+### The M9 blocker set — four items, one surface, one distinction
+
+Stated together because they were found separately and must not be built
+separately. **Three of the four need the same state distinction, and all
+four need the same injected in-page surface.** Building them in any other
+order means building that surface once and that distinction three times.
+
+| | Blocker | What is wrong |
+| --- | --- | --- |
+| **D29** | programmatic fills are blocked | a composer filled by a restored draft, a URL prefill or a SUGGESTION CHIP raises no editing event, so the input witness never sees it and the send is blocked. Suggestion chips are a first-run path on two sites |
+| **D34i** | ChatGPT mid-generation | the composer is disabled while a response streams, `isEditableSurface` rejects it, and the adapter reports DEGRADED |
+| **D34v** | Gemini with an empty composer | no send control is rendered at all, so `not-found` fires — and an empty composer is the default state of EVERY page load |
+| **D36** | SPEC's visible degraded state does not exist | the only observables are a console diagnostic (off by default for store installs) and a toolbar badge; there is no in-page UI and nothing blocks sends |
+
+**THE SHARED DISTINCTION** (D34i, D34v, D36): the health model cannot tell
+*"I cannot find this element"* from *"this element is not applicable in
+the current state"*. Both produce `not-found`, and `not-found` produces
+DEGRADED. Blocking in the not-applicable states guards actions that are
+already impossible — a disabled composer cannot send, and a page with no
+send control cannot send by clicking one — so the block buys zero safety
+and costs the entire user-facing impression.
+
+Its safety constraint is load-bearing and unchanged: the not-applicable
+state is entered ONLY on positive evidence that the element is absent BY
+DESIGN in this state, never on a bare `not-found`. A missing composer
+masquerading as an inapplicable one would undo fail-closed entirely.
+
+**THE SHARED SURFACE** (all four): an injected shadow-DOM host. SPEC
+requires all injected UI inside a shadow DOM, and M9 owns the review UI.
+The review panel, the degraded state, and D29's confirm-and-send path are
+the same host with different contents.
+
+**Build order for the content-script batch, and the reason it is not
+negotiable:** the injected surface FIRST, then detection wired to it,
+then the send gate. Detection first and the surface last leaves all four
+blockers open until the end of the milestone, which is where scope gets
+cut.
+
 
 ## Standing contracts (established in M1)
 

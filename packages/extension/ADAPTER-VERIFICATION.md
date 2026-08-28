@@ -259,7 +259,7 @@ send it. This is what exercises the read path.
 | --- | --- | --- | --- |
 | Claude | verified — 20 fixture tests | **VERIFIED-WORKING** | 2026-08-29 |
 | ChatGPT | verified — 23 fixture tests | **VERIFIED-WORKING (idle)** — fails while the composer is disabled, D34i | 2026-08-29 |
-| Gemini | verified — 33 fixture tests | composer **healthy**; send control **discriminator added, unverified** | 2026-08-29 |
+| Gemini | verified — 38 fixture tests | composer **healthy**; send control **not exposed as a control by the site** (D34r) | 2026-08-29 |
 
 Dated per D35: a Claim B result is evidence about the day it was taken, and
 "verified" decays.

@@ -2936,6 +2936,102 @@ invisible to every clause however well the walk works - and that would
 explain both findings at once.
 
 
+### D34r - RESOLVED: Gemini's send control is not exposed as a control at all (M9)
+
+The icon table settled it: `plus`, `mic` and `arrow_upward` ALL report
+`enclosingControl: NONE`, `matchedBySelector: false`. Gemini's send button
+is not a `<button>`, carries no `role="button"`, and is not an
+`input[type=submit]`. **Every clause in the adapter, and the
+composer-anchored fallback, are structurally unable to see it.**
+
+**The walk is correct and needs no further work.** The chain columns
+prove it rather than suggest it: raw 2 at hops 5-16, 5 at
+`side-navigation-v2`, 6 at `main`; the not-composer and rendered filters
+reduce to 2 accumulated; `runningTotal` monotonic; document census 8
+matched / 3 rendered, consistent throughout. Collect-across-all-hops
+landed and works.
+
+**The `arrow_upward` finding is RETIRED as a cause.** It was real - the
+icon is named `arrow_upward`, not `send` - but it cannot be the
+explanation: the ligature clause looks *inside a control*, and there is
+no control for it to look inside. Fixing the name would have changed
+nothing, and would have looked like a fix.
+
+**THIS IS THE THIRD DISTINCT DIAGNOSIS OF THE SAME SYMPTOM**, and that is
+the part worth keeping:
+
+| # | Diagnosis | Why it was wrong |
+| --- | --- | --- |
+| 1 | stale marker selectors | the instrument could not see that the region was wrong |
+| 2 | wrong region (walk stopped at the tools menu) | the instrument could not see that the control was unmatchable |
+| 3 | **the control is not exposed as a control** | resolved by the per-icon enclosing-control probe, in ONE reading |
+
+The first two were not careless. Each was the best available reading of
+the evidence the instrument could produce AT THAT TIME, and each was
+corrected by adding the next layer of visibility rather than by thinking
+harder. **The per-icon enclosing-control probe took one reading to
+resolve what two rounds of selector reasoning had not.**
+
+The general lesson, which is the milestone's recurring one in its
+sharpest form: **when a diagnosis is wrong twice, the fault is usually
+the instrument's reach, not the reasoning.** The productive move each
+time was to ask what the instrument could not see, never to propose
+another cause within what it already showed.
+
+**What the adapter can promise changes, and that is item 2.** If the send
+control's only affordance is a JavaScript listener, no selector can find
+it - and neither can a screen reader. That is a finding about Gemini's
+accessibility, not a selector to write harder, and it would mean the
+composer-anchored fallback cannot work on this site by any means
+available to a content script.
+
+**The probe that answers it** now reports, for every icon whose enclosing
+control is missing, the full ancestor chain with each element's durable
+affordances: tag, custom-element status, role, tabindex, aria-label
+presence, form association, pointer cursor, inline handler, disabled
+state.
+
+**What it deliberately cannot report, stated because the absence is the
+point:** listeners attached with `addEventListener` are not observable
+from a content script - `getEventListeners` is devtools-only - and both
+Angular and React attach that way. So "has a click handler" is missing by
+necessity. If an ancestor has no role, no durable tag, no tabindex and no
+form association, the control is exposed by nothing that a selector or an
+assistive technology can find, and that is the answer rather than a gap
+in the probe.
+
+**CONTROL_SELECTOR IS NOT CHANGED YET.** Per D26, a change to what may be
+matched is a change to the wrong-element surface, and the last widening
+reintroduced the body-walk failure. The addition must describe a control
+POSITIVELY - a named custom element such as `gem-icon-button`, or a
+distinguishing attribute. "Any element containing a mat-icon" would sweep
+in every decorated div on the page and is refused in advance.
+
+### D34s - NOTED, not chased: the region is wider than intended (M9)
+
+The second reading collected "New Chat" - a SIDEBAR control - into the
+composer's region. The hop limit is admitting controls from well outside
+the composer's toolbar.
+
+Harmless today, because the ambiguity rule refuses whenever more than one
+candidate satisfies a rule, and nothing has yet satisfied one. It stops
+being harmless the moment a discriminator fires: a rule that identifies
+exactly one control across an over-wide region can identify one that is
+nowhere near the composer.
+
+The input-area test (the nearest common ancestor of control and composer
+must not contain the transcript) already bounds the send-icon rule. It
+does NOT bound `form-submit` or `aria-controls`, which were left
+unbounded deliberately because both encode a relationship to the composer
+- and that reasoning holds. What is unbounded is the COLLECTION, not the
+rules.
+
+Recorded rather than fixed because fixing it now would be an adjacent
+tightening of exactly the kind D34n warns about: it closes no observed
+defect, and the last such change broke the path it was meant to protect.
+Revisit when a discriminator actually fires.
+
+
 ## Status after M2
 
 Stage 1 is complete: 113 registered detectors — 57 NATIONAL_ID and 19

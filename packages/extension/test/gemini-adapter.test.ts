@@ -553,3 +553,56 @@ describe('the walk reports its filter chain, not just the survivors', () => {
     expect(send?.matchedByControlSelector).toBe(true);
   });
 });
+
+describe('identifying a control that CONTROL_SELECTOR cannot see', () => {
+  it('reports the ancestor chain and its affordances when no control encloses an icon', () => {
+    // The Gemini finding: plus, mic and arrow_upward ALL report no enclosing
+    // control. The send button is not a <button>, has no role="button", and is
+    // not input[type=submit] — so every clause and the fallback are
+    // structurally unable to see it. The ancestor chain is what identifies the
+    // real control.
+    loadFixture('gemini/composer');
+    document.querySelector('button.send-button')?.remove();
+    const custom = document.createElement('gem-icon-button');
+    custom.setAttribute('tabindex', '0');
+    custom.setAttribute('aria-label', 'Send');
+    custom.innerHTML = '<gem-icon><mat-icon>arrow_upward</mat-icon></gem-icon>';
+    document.querySelector('.input-area')?.append(custom);
+    giveEverythingLayout();
+
+    const trace = describeSendSearch(document);
+    const arrow = trace.iconHosts.find((h) => h.iconName === 'arrow_upward');
+    expect(arrow).toBeDefined();
+    expect(arrow?.matchedByControlSelector).toBe(false);
+
+    // The chain names the custom element and its durable affordances, which is
+    // what a positive selector would be written against.
+    const custommost = arrow?.ancestors.find((a) => a.tag === 'gem-icon-button');
+    expect(custommost).toBeDefined();
+    expect(custommost?.isCustomElement).toBe(true);
+    expect(custommost?.tabIndex).toBe(0);
+    expect(custommost?.ariaLabelPresent).toBe(true);
+  });
+
+  it('distinguishes an element with NO durable affordance at all', () => {
+    // The finding that is about the site rather than the selector: an element
+    // exposed by nothing but a JavaScript listener cannot be found by any
+    // selector, and cannot be announced by a screen reader either.
+    loadFixture('gemini/composer');
+    document.querySelector('button.send-button')?.remove();
+    const bare = document.createElement('div');
+    bare.innerHTML = '<mat-icon>arrow_upward</mat-icon>';
+    document.querySelector('.input-area')?.append(bare);
+    giveEverythingLayout();
+
+    const trace = describeSendSearch(document);
+    const arrow = trace.iconHosts.find((h) => h.iconName === 'arrow_upward');
+    const nearest = arrow?.ancestors[0];
+    expect(nearest?.role).toBeNull();
+    expect(nearest?.tabIndex).toBeNull();
+    expect(nearest?.formAssociated).toBe(false);
+    expect(nearest?.isCustomElement).toBe(false);
+    // Nothing to write a positive selector against.
+    expect(arrow?.matchedByControlSelector).toBe(false);
+  });
+});

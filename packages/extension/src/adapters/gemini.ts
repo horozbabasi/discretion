@@ -226,6 +226,37 @@ export interface RegionWalkStep {
   readonly runningTotal: number;
 }
 
+/**
+ * One ancestor of an icon, with the affordances that would make it a control.
+ *
+ * ─────────────────────────────────────────────────────────────────────────
+ * WHAT THIS CANNOT SEE, stated because its absence is the interesting part.
+ *
+ * A content script runs in an isolated world and CANNOT enumerate listeners
+ * attached with `addEventListener` - `getEventListeners` is a devtools-only
+ * API. Angular and React both attach that way, so "has a click handler" is
+ * simply not observable here.
+ *
+ * What IS observable is every DURABLE affordance: a role, a tag, focusability,
+ * form association, an inline handler attribute, a pointer cursor. If an
+ * element has none of those and is still clickable, that is not a selector to
+ * write harder - it is a control exposed by nothing but a JavaScript listener,
+ * which no selector can find and no assistive technology can announce.
+ * ─────────────────────────────────────────────────────────────────────────
+ */
+export interface IconAncestor {
+  readonly tag: string;
+  readonly role: string | null;
+  readonly attributes: readonly string[];
+  readonly isCustomElement: boolean;
+  readonly tabIndex: number | null;
+  readonly hasInlineHandler: boolean;
+  readonly cursorPointer: boolean;
+  readonly formAssociated: boolean;
+  readonly ariaLabelPresent: boolean;
+  readonly disabledState: string | null;
+}
+
 /** Where a named icon actually sits, and whether a control encloses it. */
 export interface IconHostReport {
   readonly iconName: string;
@@ -233,6 +264,9 @@ export interface IconHostReport {
   readonly enclosingControlRole: string | null;
   readonly matchedByControlSelector: boolean;
   readonly parentTag: string;
+  /** The chain above the icon, nearest first. This is what identifies the
+   *  real control when CONTROL_SELECTOR matches nothing. */
+  readonly ancestors: readonly IconAncestor[];
 }
 
 /** A control in the composer's region, described for the diagnostic. */
@@ -574,6 +608,32 @@ function controlsBesideStaged(region: ParentNode, composer: Element): ControlFil
   };
 }
 
+function describeIconAncestor(element: Element): IconAncestor {
+  const view = element.ownerDocument.defaultView;
+  const style = view?.getComputedStyle(element);
+  const asFormControl = element as Partial<HTMLButtonElement>;
+  const tabIndexAttr = element.getAttribute('tabindex');
+  const disabled =
+    element.getAttribute('disabled') ?? element.getAttribute('aria-disabled') ?? null;
+  return {
+    tag: element.tagName.toLowerCase(),
+    role: element.getAttribute('role'),
+    attributes: Array.from(element.attributes)
+      .map((a) => `${a.name}="${guardValue(a.value)}"`)
+      .sort()
+      .slice(0, 16),
+    isCustomElement: element.tagName.includes('-'),
+    tabIndex: tabIndexAttr === null ? null : Number.parseInt(tabIndexAttr, 10),
+    // Inline handlers only. Listeners attached with addEventListener are not
+    // observable from a content script at all - see the interface header.
+    hasInlineHandler: element.hasAttribute('onclick') || element.hasAttribute('onkeydown'),
+    cursorPointer: style?.cursor === 'pointer',
+    formAssociated: asFormControl.form instanceof HTMLFormElement,
+    ariaLabelPresent: element.hasAttribute('aria-label') || element.hasAttribute('aria-labelledby'),
+    disabledState: disabled,
+  };
+}
+
 /** Every distinct icon name, and the control (if any) that encloses it. */
 function collectIconHosts(root: ParentNode): IconHostReport[] {
   const seen = new Set<string>();
@@ -583,12 +643,21 @@ function collectIconHosts(root: ParentNode): IconHostReport[] {
     if (name.length === 0 || name.length > 24 || seen.has(name)) continue;
     seen.add(name);
     const control = closestAcrossShadow(icon, CONTROL_SELECTOR);
+    const ancestors: IconAncestor[] = [];
+    let node: Element | null = parentAcrossShadow(icon);
+    let hops = 0;
+    while (node !== null && hops < 6) {
+      ancestors.push(describeIconAncestor(node));
+      node = parentAcrossShadow(node);
+      hops += 1;
+    }
     out.push({
       iconName: name,
       enclosingControlTag: control === null ? null : control.tagName.toLowerCase(),
       enclosingControlRole: control === null ? null : control.getAttribute('role'),
       matchedByControlSelector: control !== null,
       parentTag: (parentAcrossShadow(icon)?.tagName ?? '').toLowerCase(),
+      ancestors,
     });
     if (out.length >= 20) break;
   }

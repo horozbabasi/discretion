@@ -1,0 +1,37 @@
+<!doctype html>
+<!--
+  SYNTHETIC adversarial fixture in the form Gemini produces it: an immersive
+  Canvas editor panel open beside the composer.
+
+  Both are contenteditable, both role="textbox", both aria-multiline, both
+  visible and not aria-hidden. Neither is inert and neither is suspicious - the
+  Canvas editor is a real editor the user really types into. There is no
+  property of either element that says which one the send button submits.
+
+  Expected: a hard 'ambiguous' failure. This is the case where refusing to
+  guess is the entire value of the design.
+-->
+<html lang="en">
+  <body>
+    <div id="app">
+      <main>
+        <chat-window>
+          <model-response><message-content><p>lorem ipsum</p></message-content></model-response>
+        </chat-window>
+      </main>
+      <div class="canvas-panel">
+        <div class="ql-editor" contenteditable="true" role="textbox" aria-multiline="true"
+             aria-label="Canvas document"><p>lorem ipsum</p></div>
+      </div>
+      <div class="input-area">
+        <rich-textarea>
+          <div class="ql-editor" contenteditable="true" role="textbox" aria-multiline="true"
+               aria-label="Enter a prompt here"><p>lorem ipsum</p></div>
+        </rich-textarea>
+        <button class="send-button" data-test-id="send-button">
+          <mat-icon fonticon="send">lorem</mat-icon>
+        </button>
+      </div>
+    </div>
+  </body>
+</html>

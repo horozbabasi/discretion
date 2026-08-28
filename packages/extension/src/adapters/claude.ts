@@ -37,8 +37,13 @@ import type {
 } from './types.js';
 import { COMPOSER_INVARIANTS, RESPONSE_ROOT_INVARIANTS, isEditableSurface } from './invariants.js';
 import { resolveUnique, writeAndVerify } from './resolve.js';
+import { readEditableText, writeEditableText } from './text.js';
 import type { InputWitness } from './binding.js';
 import { originComposerOfButtonEvent, originComposerOfKeyEvent } from './binding.js';
+
+// Re-exported because the tests and the live probe import it from here; the
+// implementation is shared with every other adapter in text.ts.
+export { readEditableText };
 
 const CONVERSATION_PATH = /^\/chat\/([0-9a-fA-F-]{16,})/;
 
@@ -146,83 +151,6 @@ export function composerRegionOf(from: Element): Element | null {
     hops += 1;
   }
   return null;
-}
-
-/**
- * Reads a contenteditable composer as plain text with block structure intact.
- *
- * `textContent` is wrong here: ProseMirror renders each paragraph as its own
- * block element, and textContent concatenates them with no separator, so
- * "4111 1111 1111 1111" typed across two lines reads back as one run of
- * digits. Detection would then find a card number the user did not type, and —
- * far worse — offsets computed against that string would not correspond to the
- * real document, so redaction would target the wrong characters.
- */
-export function readEditableText(element: HTMLElement): string {
-  if (element instanceof HTMLTextAreaElement || element instanceof HTMLInputElement) {
-    return element.value;
-  }
-
-  const parts: string[] = [];
-  const walk = (node: Node): void => {
-    if (node.nodeType === Node.TEXT_NODE) {
-      parts.push(node.nodeValue ?? '');
-      return;
-    }
-    if (!(node instanceof Element)) return;
-    if (node.tagName === 'BR') {
-      parts.push('\n');
-      return;
-    }
-    const isBlock = BLOCK_TAGS.has(node.tagName);
-    if (isBlock && parts.length > 0 && !parts[parts.length - 1]?.endsWith('\n')) parts.push('\n');
-    for (const child of Array.from(node.childNodes)) walk(child);
-    if (isBlock && !(parts[parts.length - 1] ?? '').endsWith('\n')) parts.push('\n');
-  };
-  walk(element);
-
-  // One trailing newline is an artefact of the final block, not user content.
-  return parts.join('').replace(/\n$/u, '');
-}
-
-const BLOCK_TAGS = new Set(['P', 'DIV', 'LI', 'BLOCKQUOTE', 'PRE', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6']);
-
-/**
- * Replaces a contenteditable composer's contents.
- *
- * Uses execCommand('insertText') rather than assigning textContent. ProseMirror
- * owns this DOM: it maintains its own document model and reconciles the DOM
- * against it, so a direct textContent assignment is either reverted on the next
- * transaction or leaves the editor's model disagreeing with what is on screen —
- * and the model is what gets submitted. execCommand goes through the browser's
- * own editing pipeline and raises the beforeinput/input events the editor
- * listens for, so the model updates with it.
- *
- * It is deprecated and it is still the only mechanism that works across
- * contenteditable editors. writeAndVerify is what makes relying on it safe:
- * if it silently does nothing, the read-back check fails and the send blocks.
- */
-function writeEditableText(element: HTMLElement, text: string): void {
-  if (element instanceof HTMLTextAreaElement || element instanceof HTMLInputElement) {
-    element.value = text;
-    element.dispatchEvent(new Event('input', { bubbles: true }));
-    return;
-  }
-
-  element.focus();
-  const doc = element.ownerDocument;
-  const selection = doc.defaultView?.getSelection();
-  if (selection === null || selection === undefined) {
-    throw new Error('NoSelection');
-  }
-  const range = doc.createRange();
-  range.selectNodeContents(element);
-  selection.removeAllRanges();
-  selection.addRange(range);
-
-  if (!doc.execCommand('insertText', false, text)) {
-    throw new Error('InsertTextRejected');
-  }
 }
 
 export class ClaudeAdapter implements SiteAdapter {

@@ -52,7 +52,15 @@ awkward ones:
 | `composer-decoy.html` | Two *valid* candidates produce a hard `ambiguous` failure — and, critically, the decoy comes FIRST in document order, so a "first match wins" resolver would pick exactly the wrong one. |
 | `composer-hidden-clone.html` | An inert `aria-hidden` duplicate does **not** trip the ambiguity rule. Blocking a healthy page is its own failure mode. |
 
-That last fixture has already earned its keep: it caught a real ordering bug,
+ChatGPT and Gemini have their own suites, with fixtures chosen for what makes
+each site different: for ChatGPT, duplicate `id="prompt-textarea"` elements, an
+open message-edit editor (a second *real* editor that must NOT block), the
+legacy `textarea` build, and a streaming stop button; for Gemini, open and
+closed shadow roots, an immersive Canvas editor beside the composer, an Arabic
+RTL page with the send button first in its row, and a page where only the
+English label matches.
+
+That last Claude fixture has already earned its keep: it caught a real ordering bug,
 in which the ambiguity count was taken before invariants were applied, so any
 hidden clone would have blocked every send on a working page. The invariants
 now run first — they decide what counts as a candidate; ambiguity then
@@ -88,6 +96,58 @@ site's markup, so no redesign can break it. See the header of
 
 This is what makes it acceptable for the selectors to be uncertain. They are
 the part of the system allowed to be wrong.
+
+## What healthCheck covers, per adapter — and what it cannot
+
+`healthCheck()` is a LIVENESS check, not a correctness check. It answers "can
+the adapter still find its elements", never "did it find the right ones". That
+distinction is the whole reason `binding.ts` exists, and it is worth being
+explicit about because a green health badge is easy to over-read.
+
+**Covered by every adapter:**
+
+| Detects | How it surfaces |
+| --- | --- |
+| Composer missing entirely | `not-found` failure, degraded state, sends blocked |
+| Two valid composer candidates | `ambiguous` failure, sends blocked |
+| Composer present but the wrong kind of element | `invariant` failure |
+| Composer found only by a weak tier | **warning**, not failure — still works, but one redesign from breaking |
+| Response root missing or ambiguous | `not-found` / `ambiguous` failure |
+
+**Per-adapter specifics:**
+
+- **Claude** — additionally fails when no send button matches, because Claude's
+  send control is always present when the composer is.
+- **ChatGPT** — deliberately does **not** require a *send* button. During a
+  response stream the same slot holds a stop control, so demanding a send
+  button would drop the extension into a degraded state every time the
+  assistant replied. It requires a *submit control* (send **or** stop) instead.
+  Pinned by `streaming-stop-button`.
+- **Gemini** — additionally **warns** when the send control matched only via
+  its English `aria-label`. Every locale-independent marker being gone means
+  pointer sends would be undecidable on a non-English UI, while looking
+  perfectly healthy to an English-speaking developer. Pinned by
+  `composer-english-label-only`.
+
+**What healthCheck cannot detect, on any site:**
+
+1. **Whether the composer it found is the right one.** A confident wrong answer
+   and a correct answer are indistinguishable to it. This is the gap that
+   submit-time identity binding closes, and the reason health is not treated as
+   a safety mechanism.
+2. **Whether a write will stick.** Only attempting one tells you, and a health
+   check that wrote into the composer would clobber the user's text. The
+   read-back in `writeAndVerify` covers this at send time instead.
+3. **Whether the site will actually submit what we wrote.** Unknowable without
+   sending.
+4. **Whether the send button it found is the send button.** It could be some
+   other submit control in the same region.
+5. **Localisation, except where explicitly checked.** A strategy that matched
+   via an English attribute value passes health in English and fails elsewhere.
+   Gemini warns about this specific case; the general problem is unsolved by
+   health checking and is why the fixtures include non-English pages.
+6. **Races.** Health is a snapshot. The composer can be replaced a millisecond
+   later. Mitigated by re-resolving at submit rather than trusting the snapshot.
 
 ## What fixtures CANNOT catch — stated plainly
 

@@ -1,0 +1,20 @@
+<!doctype html>
+<!--
+  SYNTHETIC fixture: the ProseMirror build of ChatGPT's composer.
+  Pins the happy path - resolves at the 'attribute' tier via
+  chatgpt/composer-id, with no health warnings.
+-->
+<html lang="en">
+  <body>
+    <div id="app">
+      <main>
+        <article data-message-author-role="user"><p>lorem ipsum</p></article>
+        <article data-message-author-role="assistant"><p>lorem ipsum</p></article>
+      </main>
+      <form data-type="unified-composer">
+        <div id="prompt-textarea" class="ProseMirror" contenteditable="true"><p>lorem ipsum</p></div>
+        <button id="composer-submit-button" data-testid="send-button" type="submit">lorem</button>
+      </form>
+    </div>
+  </body>
+</html>

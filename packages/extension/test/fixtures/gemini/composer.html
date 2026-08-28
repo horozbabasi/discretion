@@ -1,0 +1,25 @@
+<!doctype html>
+<!--
+  SYNTHETIC fixture: Gemini's happy path, entirely in light DOM.
+  Pins resolution at the 'attribute' tier with no health warnings.
+-->
+<html lang="en">
+  <body>
+    <div id="app">
+      <main>
+        <chat-window>
+          <model-response><message-content><p>lorem ipsum</p></message-content></model-response>
+        </chat-window>
+      </main>
+      <div class="input-area">
+        <rich-textarea>
+          <div class="ql-editor" contenteditable="true" role="textbox" aria-multiline="true"
+               aria-label="Enter a prompt here"><p>lorem ipsum</p></div>
+        </rich-textarea>
+        <button class="send-button" data-test-id="send-button">
+          <mat-icon fonticon="send">lorem</mat-icon>
+        </button>
+      </div>
+    </div>
+  </body>
+</html>

@@ -28,13 +28,34 @@
  */
 
 import { COMPOSER_INVARIANTS, RESPONSE_ROOT_INVARIANTS } from '../adapters/invariants.js';
-import {
-  CLAUDE_COMPOSER_STRATEGIES,
-  CLAUDE_RESPONSE_STRATEGIES,
-  ClaudeAdapter,
-} from '../adapters/claude.js';
-import { InputWitness } from '../adapters/binding.js';
+import { CLAUDE_COMPOSER_STRATEGIES, CLAUDE_RESPONSE_STRATEGIES } from '../adapters/claude.js';
+import { CHATGPT_COMPOSER_STRATEGIES, CHATGPT_RESPONSE_STRATEGIES } from '../adapters/chatgpt.js';
+import { GEMINI_COMPOSER_STRATEGIES, GEMINI_RESPONSE_STRATEGIES } from '../adapters/gemini.js';
+import { InputWitness, pickAdapter } from '../adapters/index.js';
 import type { ElementStrategy, Invariant, SiteAdapter } from '../adapters/types.js';
+
+/**
+ * The strategy lists to observe for each site.
+ *
+ * Keyed by adapter id so the probe reports on the SAME lists the adapter used,
+ * rather than a copy that could drift out of step with it.
+ */
+const STRATEGIES_BY_SITE: Readonly<
+  Record<string, { composer: readonly ElementStrategy<Element>[]; response: readonly ElementStrategy[] }>
+> = {
+  claude: {
+    composer: CLAUDE_COMPOSER_STRATEGIES as readonly ElementStrategy<Element>[],
+    response: CLAUDE_RESPONSE_STRATEGIES,
+  },
+  chatgpt: {
+    composer: CHATGPT_COMPOSER_STRATEGIES as readonly ElementStrategy<Element>[],
+    response: CHATGPT_RESPONSE_STRATEGIES,
+  },
+  gemini: {
+    composer: GEMINI_COMPOSER_STRATEGIES as readonly ElementStrategy<Element>[],
+    response: GEMINI_RESPONSE_STRATEGIES,
+  },
+};
 
 export interface StrategyObservation {
   readonly id: string;
@@ -112,6 +133,7 @@ function observe(
 }
 
 function buildReport(adapter: SiteAdapter, witness: InputWitness): LiveProbeReport {
+  const lists = STRATEGIES_BY_SITE[adapter.id] ?? { composer: [], response: [] };
   const composer = adapter.getComposer();
   const responseRoot = adapter.getResponseRoot();
   const health = adapter.healthCheck();
@@ -147,8 +169,10 @@ function buildReport(adapter: SiteAdapter, witness: InputWitness): LiveProbeRepo
       resolved: responseRoot.ok,
       failureKind: responseRoot.ok ? null : responseRoot.failure.kind,
     },
+    // Coarse, site-agnostic count. The authoritative answer is health.failures,
+    // which each adapter computes with its own send-control rules.
     sendButtons: document.querySelectorAll(
-      'button[data-testid="send-button"], button[aria-label="Send message" i], button[type="submit"]',
+      'button[data-testid="send-button"], button[data-test-id="send-button"], button.send-button, button[type="submit"]',
     ).length,
     health: {
       ok: health.ok,
@@ -156,11 +180,8 @@ function buildReport(adapter: SiteAdapter, witness: InputWitness): LiveProbeRepo
       warnings: health.warnings.map((w) => `${w.target}:${w.tier}`),
     },
     strategies: [
-      ...observe(
-        CLAUDE_COMPOSER_STRATEGIES as readonly ElementStrategy<Element>[],
-        COMPOSER_INVARIANTS as readonly Invariant<Element>[],
-      ),
-      ...observe(CLAUDE_RESPONSE_STRATEGIES, RESPONSE_ROOT_INVARIANTS),
+      ...observe(lists.composer, COMPOSER_INVARIANTS as readonly Invariant<Element>[]),
+      ...observe(lists.response, RESPONSE_ROOT_INVARIANTS),
     ],
     witnessWorks,
     readBackLength,
@@ -173,8 +194,12 @@ const sharedWitness = new InputWitness(document);
 sharedWitness.start();
 
 declare global {
-  var __PS_PROBE__: (() => LiveProbeReport) | undefined;
+  var __PS_PROBE__: (() => LiveProbeReport | null) | undefined;
 }
 
-globalThis.__PS_PROBE__ = (): LiveProbeReport =>
-  buildReport(new ClaudeAdapter(document, sharedWitness), sharedWitness);
+globalThis.__PS_PROBE__ = (): LiveProbeReport | null => {
+  // Uses the real registry, so the probe cannot verify a site the product
+  // would not have recognised.
+  const adapter = pickAdapter(location.href, document, sharedWitness);
+  return adapter === null ? null : buildReport(adapter, sharedWitness);
+};

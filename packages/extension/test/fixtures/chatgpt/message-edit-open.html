@@ -1,0 +1,32 @@
+<!doctype html>
+<!--
+  SYNTHETIC fixture: ChatGPT's counterweight to Claude's hidden clone - except
+  this second editor is NOT inert.
+
+  Editing one of your own messages opens an editor that is visible, focusable,
+  genuinely contenteditable, and passes every composer invariant. Nothing about
+  it is suspicious. A document-wide [contenteditable][role="textbox"] strategy -
+  which is what claude.ts leads with - would union it with the real composer and
+  hard-fail 'ambiguous' every time a user clicks the edit pencil.
+
+  That is a healthy page blocked, which resolve.ts names as its own failure
+  mode. The composer strategies here exclude transcript turns for exactly this
+  reason, and this fixture is what holds them to it.
+-->
+<html lang="en">
+  <body>
+    <div id="app">
+      <main>
+        <article data-message-author-role="user">
+          <div class="ProseMirror" contenteditable="true" role="textbox"><p>lorem ipsum</p></div>
+          <button type="button">lorem</button>
+        </article>
+        <article data-message-author-role="assistant"><p>lorem ipsum</p></article>
+      </main>
+      <form data-type="unified-composer">
+        <div id="prompt-textarea" class="ProseMirror" contenteditable="true" role="textbox"><p>lorem ipsum</p></div>
+        <button id="composer-submit-button" data-testid="send-button" type="submit">lorem</button>
+      </form>
+    </div>
+  </body>
+</html>

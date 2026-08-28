@@ -1,0 +1,24 @@
+<!doctype html>
+<!--
+  SYNTHETIC fixture: the LEGACY textarea build, which ChatGPT has served and
+  A/B tested against the ProseMirror one.
+
+  Pins that the SAME adapter resolves both with no branching by build: the
+  shared text.ts helpers handle textarea and contenteditable alike. An adapter
+  that only worked on the build its author happened to be served is a bug that
+  appears at random for other users.
+-->
+<html lang="en">
+  <body>
+    <div id="app">
+      <main>
+        <article data-message-author-role="user"><p>lorem ipsum</p></article>
+        <article data-message-author-role="assistant"><p>lorem ipsum</p></article>
+      </main>
+      <form data-type="unified-composer">
+        <textarea id="prompt-textarea">lorem ipsum</textarea>
+        <button id="composer-submit-button" data-testid="send-button" type="submit">lorem</button>
+      </form>
+    </div>
+  </body>
+</html>

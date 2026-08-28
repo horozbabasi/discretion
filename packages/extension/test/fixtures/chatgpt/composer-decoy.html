@@ -1,0 +1,30 @@
+<!doctype html>
+<!--
+  SYNTHETIC adversarial fixture, in the form ChatGPT specifically makes
+  possible: TWO elements carrying id="prompt-textarea".
+
+  Duplicate ids are invalid HTML but perfectly legal in the DOM, and the
+  platform's own lookup (getElementById, and the id fast path some selector
+  engines take) is first-match-wins - exactly the tie-break the ambiguity rule
+  forbids. This is why the strategy uses the attribute form [id="..."] with
+  querySelectorAll, which returns every duplicate, rather than #prompt-textarea.
+
+  Expected: a hard 'ambiguous' failure and a blocked send.
+-->
+<html lang="en">
+  <body>
+    <div id="app">
+      <main>
+        <article data-message-author-role="user"><p>lorem ipsum</p></article>
+        <article data-message-author-role="assistant"><p>lorem ipsum</p></article>
+      </main>
+      <aside class="side-panel">
+        <div id="prompt-textarea" class="ProseMirror" contenteditable="true"><p>lorem</p></div>
+      </aside>
+      <form data-type="unified-composer">
+        <div id="prompt-textarea" class="ProseMirror" contenteditable="true"><p>lorem ipsum</p></div>
+        <button id="composer-submit-button" data-testid="send-button" type="submit">lorem</button>
+      </form>
+    </div>
+  </body>
+</html>

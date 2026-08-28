@@ -1,0 +1,25 @@
+<!doctype html>
+<!--
+  SYNTHETIC fixture: a response is streaming, so the send button has been
+  replaced IN THE SAME SLOT by the stop button.
+
+  Two things are pinned. The composer must still resolve - a health check that
+  failed mid-stream would put the extension into a degraded state every time
+  the assistant replied. And healthCheck must not demand a SEND button
+  specifically, because during a stream there isn't one, and that is a normal
+  page state rather than a broken adapter.
+-->
+<html lang="en">
+  <body>
+    <div id="app">
+      <main>
+        <article data-message-author-role="user"><p>lorem ipsum</p></article>
+        <article data-message-author-role="assistant"><p>lorem ipsum</p></article>
+      </main>
+      <form data-type="unified-composer">
+        <div id="prompt-textarea" class="ProseMirror" contenteditable="true"></div>
+        <button id="composer-submit-button" data-testid="stop-button" type="button">lorem</button>
+      </form>
+    </div>
+  </body>
+</html>

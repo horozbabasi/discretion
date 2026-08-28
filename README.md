@@ -105,9 +105,10 @@ favourable on both axes.** The measured 5.8 ms gap is a lower bound, and the
 production gap is larger by an amount this project has not yet measured.
 Reporting it as "a 2.3% miss" would understate it.
 
-p95 clears at 354.9 ms against 600 ms, and the same two factors work against
-it, so that margin was never as comfortable as it looked — the browser
-measurement below confirms it does not survive the runtime change.
+p95 is 354.9 ms against 600 ms on this runtime, but that margin does not
+survive the runtime change: **on the runtime that actually ships, BOTH
+percentiles miss.** See the browser measurement below. No figure in this
+document should be read as "p95 is within budget".
 
 The cost is the NER model, not the rest of the pipeline: Stages 0–3 alone
 finish in about a twentieth of the budget.
@@ -161,9 +162,15 @@ spread is visible rather than hidden behind a tilde.
 
 Bold is the median of the three runs. **Measurement conditions**, recorded by
 the harness on every run: Intel Core Ultra 7 258V, Windows, Edge headless, on
-battery at 76%, `% Processor Performance` 81–85%, CPU otherwise idle. Run-to-run
-spread on the window-400 cold p50 is 325 ms across three runs — this machine's
-performance state drifts, and quoting a single number would misrepresent it.
+battery at 76%, `% Processor Performance` 81–85%, CPU otherwise idle.
+
+**The run-to-run spread is ±29%** on the window-400 cold p50 (562–887 ms across
+three runs), on an idle machine with conditions recorded. That is large enough
+that a single number misrepresents the measurement, which is why all three runs
+are shown in every cell rather than a median with a tilde in front of it.
+
+**A known unexplained state invalidates any figure measured while it is
+active** — see below.
 
 ### The measurement conditions are part of the result
 
@@ -187,7 +194,14 @@ them. Those proxies are not a complete description of a machine's power state.
 They are enough to notice that two runs happened in different states, which is
 the thing that was missing.
 
-Full account: ARCHITECTURE.md D27.
+**This remains OPEN, not solved.** The slow state reproduced three consecutive
+times, so it will recur, and **any latency figure measured while it is active is
+invalid** — it is roughly 4-5x slower, far outside the ±29% normal spread.
+Anyone re-running this benchmark should compare against the conditions above
+before trusting a result. Candidates and how to tell them apart are recorded in
+ARCHITECTURE.md D27a.
+
+Full account: ARCHITECTURE.md D27 and D27a.
 
 ### WebGPU was measured and rejected
 
@@ -289,23 +303,30 @@ easier one launder the harder one's result.
 2000-character input is the **cold path**: nothing cached, every chunk
 inferred.
 
-| | measured (median of 3) | budget | |
-| --- | ---: | ---: | --- |
-| cold p50 | 691 ms | 250 ms | **missed, 2.8x over** |
-| cold p95 | 751 ms | 600 ms | **missed, 1.25x over** |
+| | median of 3 runs | all 3 runs | budget | |
+| --- | ---: | :--- | ---: | --- |
+| cold p50 | 691 ms | 562 / 887 / 691 | 250 ms | **missed, 2.8x over** |
+| cold p95 | 751 ms | 620 / 1053 / 751 | 600 ms | **missed, 1.25x over** |
+
+**Both percentiles miss.** Conditions: Intel Core Ultra 7 258V, Edge headless,
+battery 76%, `% Processor Performance` 81–85%, CPU idle. The run spread on the
+p50 is **±29%** (562–887 ms) on an otherwise idle machine with conditions
+recorded, so the median alone misrepresents this measurement — every place the
+figure appears states the spread with it.
 
 **The interactive requirement (SPEC line 241):** *"Incremental detection as the
 user types, debounced, with results cached by content hash so pressing send is
 instant."* A separate requirement about the steady state while typing, which
 the incremental measurement speaks to.
 
-| | measured (median of 3) | |
-| --- | ---: | --- |
-| incremental p50 | 112 ms | one or two chunks re-inferred per edit |
-| incremental p95 | 237 ms | |
+| | median of 3 runs | all 3 runs | |
+| --- | ---: | :--- | --- |
+| incremental p50 | 112 ms | 79 / 124 / 112 | one or two chunks re-inferred per edit |
+| incremental p95 | 237 ms | 165 / 299 / 237 | |
 
-At 112 ms median an edit is re-analysed well inside a debounce interval, so
-this requirement is met on the measured machine. SPEC attaches no number to
+Same conditions and the same caveat: the spread is wide relative to the median.
+At 112 ms an edit is re-analysed well inside a debounce interval, so this
+requirement is met on the measured machine. SPEC attaches no number to
 "instant", so this is reported as a measurement rather than scored against a
 threshold.
 

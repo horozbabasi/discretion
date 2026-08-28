@@ -1348,7 +1348,10 @@ battery median of 691 ms matches the earlier session's "mains" figure of
 697 ms almost exactly. **The fast state is the normal state; the ~3000 ms
 runs were the anomaly, and power source was not the variable.**
 
-**What the variable actually was: not established.** The machine runs
+**What the variable actually was: NOT ESTABLISHED, and recorded as an
+open item in D27a rather than left as a shrug.** It reproduced three
+times running, so it is a state the machine enters and will enter again;
+any latency figure measured while it is active is invalid. The candidates: The machine runs
 ASUS power-management services (`ipf_helper`,
 `AsusOptimizationStartupTask`), which switch performance profiles on
 their own. A background scan of the 300 MB model cache, a thermal
@@ -1387,6 +1390,49 @@ NAMED as a condition without being varied. Observing "on battery" beside
 publishing an unconditioned number, with a false explanation attached
 that makes it look rigorous. **Naming a condition you did not vary is
 worse than naming none, because it stops the next person looking.**
+
+### D27a — OPEN: an unexplained ~4-5x slow state, which invalidates any latency figure measured while it is active (M9)
+
+Split out of D27 so it is not mistaken for a solved problem. D27 records
+what the cause was NOT (power source). This records that the cause is
+still unknown, and what a future session should do about it.
+
+**The observation.** Three consecutive runs measured cold p50 at
+3022 / 3024 / 3056 ms at window 400, where the normal figure is
+562 / 887 / 691 ms. That is roughly 4-5x, far outside the ±29% run-to-run
+spread seen in the normal state. An A/B against a byte-identical older
+harness reproduced the slow numbers, so the benchmark code is not the
+cause.
+
+**Why it matters more than a one-off oddity.** It reproduced three times
+in a row, which means it is a STATE the machine enters rather than a
+transient blip — so it will recur. **Any latency figure measured while it
+is active is invalid**, and nothing in the numbers themselves says which
+state produced them. The recorded conditions are the only defence, and
+they did not distinguish the two states: `% Processor Performance` was
+not being captured when the slow runs happened.
+
+**Candidates, and what would distinguish them:**
+
+| Candidate | Why plausible | What would confirm or exclude it |
+| --- | --- | --- |
+| OEM power/performance profile (ASUS) | `ipf_helper` and `AsusOptimizationStartupTask` run on this machine and switch profiles on their own, including on AC/battery transitions and charge thresholds | Log the active MyASUS/Armoury Crate performance mode alongside each run; correlate a slow run with a mode change. Also log PL1/PL2 package power limits, which is where such a profile acts |
+| Windows Defender scanning the model cache | `.hf-cache` holds ~300 MB of model weights that the benchmark reads on every run; a scheduled or triggered scan would contend for I/O and CPU exactly during a run | Check Defender's scan history against run timestamps; or run once with the cache directory excluded and compare |
+| Thermal throttling | Sustained inference on a thin-and-light will heat-soak | Log package temperature and `% Processor Performance` continuously through a run. NOTE: this candidate is *weakened* by the observed sequence — the machine was CHARGING (which adds heat) shortly before the fast runs, so the fast state followed the hotter period, which is the wrong way round |
+| Background Windows work (Update, search indexing) | Ordinary and invisible | Correlate against the Windows Update and indexing logs for the run window |
+
+`% Processor Performance` is now captured on every run and is the cheapest
+discriminator: a value far below 100% during a slow run points at
+throttling of some kind (OEM profile or thermal) rather than at
+contention.
+
+**Deliberately not chased now.** Diagnosing it properly means
+instrumenting the machine and reproducing a state that appears on its own
+schedule, which is a poor use of the milestone. The requirement this
+entry satisfies is narrower and sufficient: **a future session finds this
+recorded rather than rediscovering a 4x anomaly from scratch and
+attributing it to something plausible.** That last mistake has already
+been made once, in D27.
 
 ### D28 — The Stage 2 window stays at 400 because a larger one is a CORRECTNESS violation, not a slower tradeoff (M9)
 
@@ -1459,7 +1505,7 @@ script-aware design could safely do: roughly 700 characters for Chinese
 against roughly 2300 for Latin — the cold-path win is available, but only
 per script, never globally.
 
-### D29 — OPEN: node-identity binding has nothing to bind when the composer was never typed into (M9)
+### D29 — M9 BLOCKER: node-identity binding has nothing to bind when the composer was never typed into
 
 Recorded as a known gap rather than resolved, because the right answer
 is not obvious and guessing at it would be worse than naming it.
@@ -1509,6 +1555,26 @@ clicking a suggested prompt" is the kind of defect that gets it
 uninstalled — which protects nobody. The witness is the weakest of the
 four constructions precisely here: it is the only one that can be wrong
 in the SAFE direction and still do damage.
+
+**PROMOTED FROM AN OPEN NOTE TO AN M9 BLOCKER.** The first framing
+treated this as an edge case to carry forward. It is not one.
+
+The blocked set includes **suggested-prompt chips**, which are a
+first-run path on both Gemini and ChatGPT — plausibly the first thing a
+new user clicks. So the current behaviour is: install the extension, open
+the site, click the suggestion the site is showing you, and the send is
+blocked. That is not an edge case, it is an adoption failure, and an
+uninstalled extension protects nobody.
+
+Fail-closed is correct and stays; blocking is the right response to an
+unbindable composer. What is wrong is having no path THROUGH the block
+for a legitimate flow. **This must be resolved before M9 closes**, not
+carried into M10.
+
+**Sequencing.** The dependency on the review panel is real and fine: the
+resolution belongs with the content-script flow batch, where the panel
+exists. It is a blocker on M9's completion, not on the next batch's
+start.
 
 **Not redesigned yet, on purpose.** The candidate answers each have a
 cost worth weighing rather than picking:

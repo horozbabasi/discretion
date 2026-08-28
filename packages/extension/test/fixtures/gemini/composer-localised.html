@@ -1,0 +1,31 @@
+<!doctype html>
+<!--
+  SYNTHETIC fixture: an Arabic UI with dir="rtl", and the send button placed
+  FIRST in its row as an RTL layout orders it.
+
+  Every locale-independent marker is present and every visible string is
+  non-English. This fixture exists because without it the whole suite would
+  pass identically whether or not a strategy secretly depended on English text
+  or on English DOM ordering - and silent failure for non-English users is the
+  failure class this project treats as most serious.
+-->
+<html lang="ar" dir="rtl">
+  <body>
+    <div id="app">
+      <main>
+        <chat-window>
+          <model-response><message-content><p>lorem ipsum</p></message-content></model-response>
+        </chat-window>
+      </main>
+      <div class="input-area">
+        <button class="send-button" data-test-id="send-button">
+          <mat-icon fonticon="send">ارسال</mat-icon>
+        </button>
+        <rich-textarea>
+          <div class="ql-editor" contenteditable="true" role="textbox" aria-multiline="true"
+               aria-label="اكتب هنا"><p>لوريم</p></div>
+        </rich-textarea>
+      </div>
+    </div>
+  </body>
+</html>

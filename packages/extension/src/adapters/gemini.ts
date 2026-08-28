@@ -263,6 +263,19 @@ export interface IconHostReport {
   readonly enclosingControlTag: string | null;
   readonly enclosingControlRole: string | null;
   readonly matchedByControlSelector: boolean;
+  /**
+   * Whether the enclosing control is in the set the composer-anchored walk
+   * COLLECTED.
+   *
+   * This is the field that actually answers "can the fallback see the send
+   * button". `matchedByControlSelector` says only that SOME control encloses
+   * the icon; it can be true while the walk never reached that control, and
+   * those look identical in every other column.
+   */
+  readonly enclosingControlInCollectedSet: boolean;
+  /** The enclosing control's own attributes - what a positive clause is
+   *  written against. */
+  readonly enclosingControlAttributes: readonly string[];
   readonly parentTag: string;
   /** The chain above the icon, nearest first. This is what identifies the
    *  real control when CONTROL_SELECTOR matches nothing. */
@@ -529,7 +542,7 @@ function walkRegion(composer: Element): { controls: HTMLElement[]; trace: SendSe
         raw: deepQueryAll(doc, CONTROL_SELECTOR).length,
         rendered: deepQueryAll<HTMLElement>(doc, CONTROL_SELECTOR).filter(isRenderedControl).length,
       },
-      iconHosts: collectIconHosts(doc),
+      iconHosts: collectIconHosts(doc, collected),
         discriminator: null,
         stoppedBecause,
         regionControls: 0,
@@ -549,7 +562,7 @@ function walkRegion(composer: Element): { controls: HTMLElement[]; trace: SendSe
         raw: deepQueryAll(doc, CONTROL_SELECTOR).length,
         rendered: deepQueryAll<HTMLElement>(doc, CONTROL_SELECTOR).filter(isRenderedControl).length,
       },
-      iconHosts: collectIconHosts(doc),
+      iconHosts: collectIconHosts(doc, collected),
         discriminator: null,
         stoppedBecause,
         regionControls: 1,
@@ -574,7 +587,7 @@ function walkRegion(composer: Element): { controls: HTMLElement[]; trace: SendSe
         raw: deepQueryAll(doc, CONTROL_SELECTOR).length,
         rendered: deepQueryAll<HTMLElement>(doc, CONTROL_SELECTOR).filter(isRenderedControl).length,
       },
-      iconHosts: collectIconHosts(doc),
+      iconHosts: collectIconHosts(doc, collected),
       discriminator: outcome,
       stoppedBecause,
       regionControls: collected.length,
@@ -635,7 +648,7 @@ function describeIconAncestor(element: Element): IconAncestor {
 }
 
 /** Every distinct icon name, and the control (if any) that encloses it. */
-function collectIconHosts(root: ParentNode): IconHostReport[] {
+function collectIconHosts(root: ParentNode, collected: readonly HTMLElement[]): IconHostReport[] {
   const seen = new Set<string>();
   const out: IconHostReport[] = [];
   for (const icon of deepQueryAll<HTMLElement>(root, 'mat-icon')) {
@@ -656,6 +669,15 @@ function collectIconHosts(root: ParentNode): IconHostReport[] {
       enclosingControlTag: control === null ? null : control.tagName.toLowerCase(),
       enclosingControlRole: control === null ? null : control.getAttribute('role'),
       matchedByControlSelector: control !== null,
+      enclosingControlInCollectedSet:
+        control instanceof HTMLElement && collected.includes(control),
+      enclosingControlAttributes:
+        control === null
+          ? []
+          : Array.from(control.attributes)
+              .map((a) => `${a.name}="${guardValue(a.value)}"`)
+              .sort()
+              .slice(0, 16),
       parentTag: (parentAcrossShadow(icon)?.tagName ?? '').toLowerCase(),
       ancestors,
     });
@@ -691,7 +713,7 @@ export function describeSendSearch(doc: Document): SendSearchTrace {
       steps: [],
       regionControlDetail: [],
       documentControls: { raw: 0, rendered: 0 },
-      iconHosts: collectIconHosts(doc),
+      iconHosts: collectIconHosts(doc, []),
       discriminator: null,
       stoppedBecause: 'no-composer',
       regionControls: 0,

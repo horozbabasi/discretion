@@ -269,42 +269,70 @@ function renderForensics(f: EnvironmentForensics, diagnostic: AdapterDiagnostic)
           enclosingControl: h.enclosingControlTag ?? 'NONE',
           role: h.enclosingControlRole ?? '',
           matchedBySelector: h.matchedByControlSelector,
+          inCollectedSet: h.enclosingControlInCollectedSet,
+          controlAttributes: h.enclosingControlAttributes.join(' '),
         })),
       );
+
+      // ANCESTORS ARE ALWAYS PRINTED.
+      //
+      // They were gated on "no control encloses this icon", which emitted them
+      // precisely when they were least useful and withheld them from the
+      // reading that mattered: on a page where the other controls ARE real
+      // buttons, nothing is unmatched, so nothing printed - and the enclosing
+      // control is exactly what a positive clause gets written against. Same
+      // family as the forensics once gated on composer resolution. Three
+      // icons, one small table each; there is no cost worth gating for.
+      for (const host of search.iconHosts) {
+        console.log(
+          `ancestors of <mat-icon>${host.iconName}</mat-icon>` +
+            (host.enclosingControlTag === null
+              ? ' (NO enclosing control)'
+              : ` (inside <${host.enclosingControlTag}>)`) +
+            ':',
+        );
+        console.table(
+          host.ancestors.map((a) => ({
+            tag: a.tag,
+            custom: a.isCustomElement,
+            role: a.role ?? '',
+            tabindex: a.tabIndex ?? '',
+            ariaLabel: a.ariaLabelPresent,
+            cursorPointer: a.cursorPointer,
+            inlineHandler: a.hasInlineHandler,
+            formAssoc: a.formAssociated,
+            disabled: a.disabledState ?? '',
+            attributes: a.attributes.join(' '),
+          })),
+        );
+      }
+
       const unmatched = search.iconHosts.filter((h) => !h.matchedByControlSelector);
+      const unreachable = search.iconHosts.filter(
+        (h) => h.matchedByControlSelector && !h.enclosingControlInCollectedSet,
+      );
       if (unmatched.length > 0) {
         console.warn(
           `${unmatched.length} icon(s) have NO enclosing control that CONTROL_SELECTOR matches ` +
-            `(${unmatched.map((h) => h.iconName).join(', ')}). The control they sit in is not ` +
-            'recognised as a control at all - so no clause and no fallback can reach it. The ' +
-            'ancestor chains below are what identifies the real control.',
-        );
-        for (const host of unmatched) {
-          console.log(`ancestors of <mat-icon>${host.iconName}</mat-icon>:`);
-          console.table(
-            host.ancestors.map((a) => ({
-              tag: a.tag,
-              custom: a.isCustomElement,
-              role: a.role ?? '',
-              tabindex: a.tabIndex ?? '',
-              ariaLabel: a.ariaLabelPresent,
-              cursorPointer: a.cursorPointer,
-              inlineHandler: a.hasInlineHandler,
-              formAssoc: a.formAssociated,
-              disabled: a.disabledState ?? '',
-              attributes: a.attributes.join(' '),
-            })),
-          );
-        }
-        console.warn(
-          'NOTE: listeners attached with addEventListener are NOT observable from a content ' +
-            'script (getEventListeners is devtools-only), so "has a click handler" is absent ' +
-            'from these columns by necessity. If an ancestor has NO role, NO durable tag, no ' +
-            'tabindex and no form association, the control is exposed by nothing a selector or ' +
-            'a screen reader can find - which is a finding about the site, not a selector to ' +
-            'write harder.',
+            `(${unmatched.map((h) => h.iconName).join(', ')}) - so no clause and no fallback can ` +
+            'reach them. The chains above are what identifies the real control.',
         );
       }
+      if (unreachable.length > 0) {
+        console.warn(
+          `${unreachable.length} icon(s) sit inside a RECOGNISED control that the walk never ` +
+            `COLLECTED (${unreachable.map((h) => h.iconName).join(', ')}). That is a DIFFERENT ` +
+            'failure from "not a control": the element is findable and the collection did not ' +
+            'reach it.',
+        );
+      }
+      console.warn(
+        'NOTE: listeners attached with addEventListener are NOT observable from a content ' +
+          'script (getEventListeners is devtools-only), so "has a click handler" is absent from ' +
+          'these columns by necessity. An ancestor with no role, no durable tag, no tabindex and ' +
+          'no form association is exposed by nothing a selector or a screen reader can find - ' +
+          'which is a finding about the site, not a selector to write harder.',
+      );
     }
     if (search.outcome === 'no-region' && search.stoppedBecause !== 'no-composer') {
       console.warn(

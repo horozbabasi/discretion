@@ -2936,13 +2936,34 @@ invisible to every clause however well the walk works - and that would
 explain both findings at once.
 
 
-### D34r - RESOLVED: Gemini's send control is not exposed as a control at all (M9)
+### D34r - SCOPED: the "not exposed as a control" finding is the LANDING PAGE only (M9)
 
-The icon table settled it: `plus`, `mic` and `arrow_upward` ALL report
-`enclosingControl: NONE`, `matchedBySelector: false`. Gemini's send button
-is not a `<button>`, carries no `role="button"`, and is not an
-`input[type=submit]`. **Every clause in the adapter, and the
-composer-anchored fallback, are structurally unable to see it.**
+**CORRECTION FIRST.** This entry was written as "RESOLVED: Gemini's send
+control is not exposed as a control at all". That claim is scoped to the
+LANDING PAGE and is UNVERIFIED for a conversation page. It is corrected
+here rather than edited away, because it is the third confident diagnosis
+of this symptom to be wrong and the pattern is the useful part.
+
+**What the reading actually showed, and where.** `plus`, `mic` and
+`arrow_upward` all reported `enclosingControl: NONE`. But the container
+was `initial-input-area-container`, and the editable surface in the same
+reading was a bare `<textarea class="placeholder">` sitting at
+`div < div < body < html`. That is Gemini's PRE-CONVERSATION HOME STATE.
+The real composer sits roughly twenty hops deep under `input-area-v2`,
+as the later reading in the same log shows.
+
+**So the finding stands for the landing page and says nothing about the
+conversation page**, where `gem-icon-button`, `gem-icon` and
+`input-area-v2` are all present and both other controls (Add files,
+Dictate) resolve as real `<button>` elements. The send control may well
+be a button in that state too.
+
+**`CONTROL_SELECTOR` is not changed on the strength of a landing-page
+reading**, and the branch criteria in this entry stand unchanged: a named
+custom element or durable attribute means a narrow positive addition;
+nothing durable means a permanent limitation recorded in
+ADAPTER-VERIFICATION.md, SPEC's limitations and the README, with the
+accessibility observation stated plainly.
 
 **The walk is correct and needs no further work.** The chain columns
 prove it rather than suggest it: raw 2 at hops 5-16, 5 at
@@ -3030,6 +3051,43 @@ Recorded rather than fixed because fixing it now would be an adjacent
 tightening of exactly the kind D34n warns about: it closes no observed
 defect, and the last such change broke the path it was meant to protect.
 Revisit when a discriminator actually fires.
+
+
+### D34t - The evidence was withheld from the reading that needed it, for the third time (M9)
+
+The icon ancestor table printed for the landing-page reading and NOT for
+the painted conversation reading, which is the one that mattered.
+
+**Cause:** it was gated on `unmatched.length > 0` - emitted only when
+some icon had NO enclosing control. On a conversation page where Add
+files and Dictate are real `<button>` elements, nothing is unmatched, so
+nothing printed.
+
+**The gate encoded a wrong assumption about when the evidence is
+interesting:** that ancestors matter only when nothing encloses the icon.
+The opposite is closer to true. When something DOES enclose it, that
+enclosing control is exactly what a positive clause gets written against
+- so the reading suppressed the data precisely when it was most usable.
+
+**Third instance of this family.** D34d gated forensics on composer
+resolution, so a send-only failure emitted nothing. D34e gated the
+reading on an element count that could contradict the probes. This gated
+ancestors on a condition that is false whenever the page is working
+normally. Each time the instrument went quiet on the case that mattered,
+and each time the gate looked reasonable when written.
+
+**Fixed by removing the gate, not by widening its condition.** Ancestors
+now print for every icon - three icons, one small table each, no cost
+worth gating for. That is the same repair D34e needed: a gate that
+withholds evidence should be deleted unless it is paying for something.
+
+**A new column that separates two failures which looked identical.**
+`enclosingControlInCollectedSet` reports whether the enclosing control is
+in the set the composer-anchored walk actually collected.
+`matchedByControlSelector` alone could be TRUE while the walk never
+reached that control, and "not a control" versus "a control the
+collection missed" need completely different fixes. The reading now says
+which.
 
 
 ## Status after M2

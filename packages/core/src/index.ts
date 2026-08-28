@@ -109,6 +109,14 @@ export type { GazetteerHit, GazetteerType } from './gazetteer/index.js';
 
 // ── Stage 4: overlap resolution (M8) ──
 export { resolveOverlaps, coverageHoles } from './fuse/resolve.js';
+export { fitCalibration, calibrate, reliability } from './fuse/calibrate.js';
+export type {
+  CalibrationBin,
+  CalibrationCurve,
+  CalibrationModel,
+  CalibrationSample,
+  ReliabilityPoint,
+} from './fuse/calibrate.js';
 export type { ScoredForResolution, ResolutionResult } from './fuse/resolve.js';
 
 // ── The composed pipeline (M7) ──

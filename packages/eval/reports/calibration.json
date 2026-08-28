@@ -1,0 +1,232 @@
+{
+  "model": {
+    "perType": {
+      "API_KEY": {
+        "bins": [
+          {
+            "from": 0.8,
+            "to": 1,
+            "precision": 0.979296066252588,
+            "samples": 483
+          }
+        ],
+        "samples": 483
+      },
+      "HEALTH_DATA": {
+        "bins": [
+          {
+            "from": 0.3,
+            "to": 0.4,
+            "precision": 0,
+            "samples": 6
+          },
+          {
+            "from": 0.6,
+            "to": 0.7,
+            "precision": 0.9888641425389755,
+            "samples": 449
+          }
+        ],
+        "samples": 455
+      },
+      "PHONE": {
+        "bins": [
+          {
+            "from": 0.8,
+            "to": 0.9,
+            "precision": 1,
+            "samples": 80
+          },
+          {
+            "from": 0.9,
+            "to": 1,
+            "precision": 1,
+            "samples": 552
+          }
+        ],
+        "samples": 632
+      },
+      "CRYPTO_WALLET": {
+        "bins": [
+          {
+            "from": 0.6,
+            "to": 0.7,
+            "precision": 1,
+            "samples": 138
+          },
+          {
+            "from": 0.8,
+            "to": 0.9,
+            "precision": 1,
+            "samples": 192
+          },
+          {
+            "from": 0.9,
+            "to": 1,
+            "precision": 1,
+            "samples": 243
+          }
+        ],
+        "samples": 573
+      },
+      "EMAIL": {
+        "bins": [
+          {
+            "from": 0.8,
+            "to": 0.9,
+            "precision": 0.8345323741007195,
+            "samples": 139
+          },
+          {
+            "from": 0.9,
+            "to": 1,
+            "precision": 0.970873786407767,
+            "samples": 515
+          }
+        ],
+        "samples": 654
+      },
+      "NATIONAL_ID": {
+        "bins": [
+          {
+            "from": 0.3,
+            "to": 0.6,
+            "precision": 0.037037037037037035,
+            "samples": 27
+          },
+          {
+            "from": 0.6,
+            "to": 0.7,
+            "precision": 0.48333333333333334,
+            "samples": 120
+          },
+          {
+            "from": 0.7,
+            "to": 1,
+            "precision": 0.942,
+            "samples": 500
+          }
+        ],
+        "samples": 647
+      },
+      "IP_ADDRESS": {
+        "bins": [
+          {
+            "from": 0.6,
+            "to": 0.7,
+            "precision": 1,
+            "samples": 4
+          },
+          {
+            "from": 0.8,
+            "to": 0.9,
+            "precision": 1,
+            "samples": 105
+          },
+          {
+            "from": 0.9,
+            "to": 1,
+            "precision": 1,
+            "samples": 125
+          }
+        ],
+        "samples": 234
+      },
+      "TAX_ID": {
+        "bins": [
+          {
+            "from": 0.6,
+            "to": 0.7,
+            "precision": 0.3088235294117647,
+            "samples": 68
+          },
+          {
+            "from": 0.8,
+            "to": 0.9,
+            "precision": 0.6923076923076923,
+            "samples": 78
+          },
+          {
+            "from": 0.9,
+            "to": 1,
+            "precision": 0.9682539682539683,
+            "samples": 63
+          }
+        ],
+        "samples": 209
+      }
+    },
+    "pooled": {
+      "bins": [
+        {
+          "from": 0.3,
+          "to": 0.6,
+          "precision": 0.6694915254237288,
+          "samples": 118
+        },
+        {
+          "from": 0.6,
+          "to": 0.7,
+          "precision": 0.8783505154639175,
+          "samples": 970
+        },
+        {
+          "from": 0.7,
+          "to": 0.9,
+          "precision": 0.950625,
+          "samples": 1600
+        },
+        {
+          "from": 0.9,
+          "to": 1,
+          "precision": 0.9745022703457912,
+          "samples": 2863
+        }
+      ],
+      "samples": 5551
+    },
+    "fittedOn": "2620 documents, seeds 5904129/5904130"
+  },
+  "reliability": {
+    "points": [
+      {
+        "bucket": "0.0–0.1",
+        "predicted": 0.026748971193415638,
+        "observed": 0.05555555555555555,
+        "samples": 18
+      },
+      {
+        "bucket": "0.3–0.4",
+        "predicted": 0.30882352941176455,
+        "observed": 0.16883116883116883,
+        "samples": 77
+      },
+      {
+        "bucket": "0.4–0.5",
+        "predicted": 0.48333333333333384,
+        "observed": 0.6283185840707964,
+        "samples": 113
+      },
+      {
+        "bucket": "0.6–0.7",
+        "predicted": 0.6801276332944488,
+        "observed": 0.8270676691729323,
+        "samples": 133
+      },
+      {
+        "bucket": "0.8–0.9",
+        "predicted": 0.8600016687680793,
+        "observed": 0.98125,
+        "samples": 320
+      },
+      {
+        "bucket": "0.9–1.0",
+        "predicted": 0.9779960542558562,
+        "observed": 0.9899053627760253,
+        "samples": 4755
+      }
+    ],
+    "expectedCalibrationError": 0.02633909091506911
+  },
+  "rawExpectedCalibrationError": 0.12333087149186128
+}

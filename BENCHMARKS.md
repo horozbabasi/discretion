@@ -594,3 +594,89 @@ false positives go: 2,047 of 2,053 GENERIC_SECRET overlaps have a validated
 type covering the same characters, and URL_WITH_CREDENTIALS loses 140 of 140
 equal-span contests to CONNECTION_STRING. Resolution addresses them by
 construction; the numbers for that land with fusion.
+
+---
+
+## M8 — Stage 4: overlap resolution and calibration
+
+### The split, stated first because the numbers mean nothing without it
+
+The calibration curve is **fitted and evaluated on disjoint documents**.
+
+| split | seeds | documents | observations |
+| --- | --- | ---: | ---: |
+| fit | `0x5a1701` / `0x5a1702` | 2,620 | 5,551 |
+| held out | `0xd15101` / `0xd15102` | 2,442 | 5,416 |
+
+Different seeds are **not sufficient on their own**, and assuming they were
+would have leaked. The hard-negative builders are templated with only a few
+random fields, so short negatives collide across seeds: the first run shared
+**91 identical documents**, and at 2,000 documents per split it was **181**.
+Those are now dropped from the held-out split explicitly, and the harness
+prints the count and asserts zero overlap on every run. Reproduce with
+`node packages/eval/dist/bench/calibration.js --fit 2000 --eval 2000`.
+
+### Method
+
+**Isotonic regression, fitted per entity type**, over ten score bins, with
+pool-adjacent-violators enforcing monotonicity. Chosen over Platt scaling for
+two reasons: the raw scores are a base confidence plus additive Stage 3
+contributions, so there is no reason to expect a logistic shape and a
+two-parameter family would impose one; and the fitted model is a step function
+whose steps are empirical precisions, so "0.8 means 80%" is readable off the
+table rather than inferred from coefficients.
+
+Per type because the types are not comparable — a validated IBAN and a
+shape-only postal code carry the same raw score and mean different things,
+which is exactly what calibration removes. Types with fewer than 200
+observations fall back to a pooled curve rather than fitting noise; 8 types
+cleared that bar.
+
+Prediction is **piecewise constant**, the standard isotonic prediction. An
+earlier revision interpolated between step midpoints to smooth the output;
+because the steps are coarse where data is sparse, that systematically pulled
+predictions toward the step below and left the model under-confident through
+0.7–0.8. Removing the embellishment improved held-out ECE from 3.90% to 2.63%.
+
+### The reliability curve, on held-out documents
+
+| predicted | observed | samples | gap |
+| ---: | ---: | ---: | ---: |
+| 2.7% | 5.6% | 18 | +2.9 |
+| 30.9% | 16.9% | 77 | −14.0 |
+| 48.3% | 62.8% | 113 | +14.5 |
+| 68.0% | 82.7% | 133 | +14.7 |
+| 86.0% | 98.1% | 320 | +12.1 |
+| 97.8% | 99.0% | 4,755 | +1.2 |
+
+**Expected calibration error: 2.63%, against 12.33% for the raw scores** — a
+4.7× improvement.
+
+SPEC's own test, "a confidence of 0.8 empirically means roughly 80%
+precision", checked on held-out data:
+
+| calibrated confidence | observed precision | candidates |
+| ---: | ---: | ---: |
+| 0.50 | 62.8% | 113 |
+| 0.70 | 82.7% | 133 |
+| 0.80 | 100.0% | 134 |
+| 0.90 | 96.7% | 604 |
+
+### Where this is honest rather than flattering
+
+The curve is **conservative, not accurate, in the middle**. Every mid-range
+bucket runs 12–15 points *above* what it predicts, so a candidate reported at
+0.68 is right about 83% of the time. That errs in the safe direction — the
+tool under-claims rather than over-claims — but it is not what calibration is
+supposed to deliver, and it should not be described as though it were.
+
+The cause is distribution, not method: **4,755 of 5,416 held-out observations
+sit in the top bucket**, because most surviving candidates are checksum-
+validated. The mid-range bins that most need resolution are the ones with the
+least data to fit. More corpus depth in the 0.3–0.8 band is the fix, and it is
+M8-second-half work rather than something to paper over by retuning bins until
+the table looks better.
+
+One bucket runs the other way: 30.9% predicted against 16.9% observed, on 77
+samples. That is over-confidence, the direction that matters, and it is small
+and sparse but real.

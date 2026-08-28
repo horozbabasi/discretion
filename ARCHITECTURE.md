@@ -636,6 +636,32 @@ states both its principle and its risk. A suppression rule whose author
 cannot name what it might wrongly suppress has not been thought
 through.
 
+**Three standing measurement rules now sit together, each earned the
+hard way.** They are stated as one block because they fail in the same
+direction — a check that looks like it passed when it never ran:
+
+1. **Executed counterexamples** (D18, M7). No suppression rule ships
+   until someone has CONSTRUCTED and EXECUTED a real sensitive value it
+   wrongly suppresses. Reasoning about these rules is unreliable: the
+   `uri-authority` case looked unsafe by inspection and turned out safe
+   for the wrong reason, which neither conclusion reached without
+   running it.
+2. **A measurement far better than its target is a defect report about
+   the measurement** (M7, the gazetteer). A Bloom filter sized for 0.1%
+   measured 0.000%; the probe's PRNG had lost precision above 2^53 and
+   generated 1,731 distinct tokens from 20,000 draws. Suspiciously good
+   numbers get audited before they get published.
+3. **An exemption must be scoped to the CHECK it excuses, not to the
+   DETECTOR that earned it** (M8, span hygiene). A PEM block and an MRZ
+   are legitimately multi-line, so both were exempted from the
+   line-crossing check — but a scratch audit written as an else-if chain
+   attributed each span to the first check it failed, so 48 MRZ spans
+   carrying a leading newline were absorbed into the exempt bucket and
+   never tested for whitespace. The gate found them because it evaluates
+   every check independently and exempts per check. An exemption granted
+   at detector granularity silently excuses defects that have nothing to
+   do with the reason it was granted.
+
 **Known and deliberately not fixed here.** The rules scan ASCII digits,
 so they neither fire nor leak on Arabic-Indic (٠١٢٣) or Devanagari
 digits. That is a fail-to-fire, not a leak, and the correct fix is

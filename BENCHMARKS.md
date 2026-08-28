@@ -272,7 +272,19 @@ fixed, per the milestone boundary.
 
 ---
 
-## M7 — Stage 3 context scoring (in progress)
+## M7 — Stage 3 context scoring
+
+> **SUPERSEDED BY THE M8 CORPUS CHANGE — every per-type figure in this section
+> predates Stage 0 decimal-digit folding (ARCHITECTURE.md D21).** The fold made
+> identifiers written in Arabic-Indic, Devanagari, Bengali and Thai digits
+> detectable at all, and the corpus now plants native digits in six languages
+> plus a `native-digit-noise` hard-negative category. Both the numerator and
+> the denominator moved, so these numbers describe a corpus that no longer
+> exists. They are kept, labelled, rather than silently replaced — the M7
+> conclusions they support are still sound, and the measured cost of the fold
+> is published in the M8 section below. The republished baseline follows the
+> full re-run.
+
 
 This section is written as the stage is built and is extended when Stage 2b
 and Stage 2c land. The numbers below are Stage 1 + Stage 3 on the standing
@@ -461,3 +473,75 @@ CONNECTION_STRING — which is Stage 4 resolution and deliberately outside
 Stage 3's remit. LOCATION's 59.1% is dominated by the same effect measured at
 M6: its false positives are largely correct city names sitting inside
 STREET_ADDRESS ground truth.
+
+---
+
+## M8 — Stage 0 digit folding: what it bought and what it cost
+
+Stage 0 now folds every Unicode decimal digit to ASCII (ARCHITECTURE.md D21).
+Before it, an identifier written in Arabic-Indic, Extended Arabic-Indic,
+Devanagari, Bengali or Thai digits matched nothing at all — a Turkish national
+identity number, an Iranian phone number, a Hindi Aadhaar number, a Thai
+national ID and a Bengali credit card each returned **zero detections**.
+
+Both halves of the trade are reported. Measured on the 2,600-document corpus
+with the fold off and on, changing nothing else.
+
+### What it bought
+
+| language group | GT spans | recall off | recall on | change |
+| --- | ---: | ---: | ---: | ---: |
+| native-digit languages (ar, fa, ur, hi, bn, th) | 804 | 66.17% | 99.75% | **+33.58pp** |
+| every other language | 4,425 | 99.44% | 99.44% | +0.00pp |
+
+Per type, recall rises across essentially the whole detector set: PHONE
+93.1→100%, IBAN 93.8→100%, JWT 95.1→100%, PASSPORT_MRZ 93.8→100%, VIN
+95.1→100%, MAC_ADDRESS 92.0→100%, VAT_NUMBER 92.6→100%, CRYPTO_WALLET
+91.0→100%, IN_IFSC 92.3→100%, API_KEY 93.9→99.6%, COORDINATES 89.6→97.4%.
+
+### What it cost
+
+Folding native digits to ASCII means every digit-run heuristic now fires on
+text it previously could not see, so a precision cost is expected. The
+`native-digit-noise` hard-negative category was added to measure exactly this,
+and it is the whole of the new hard-negative cost:
+
+| hard-negative category | fold off | fold on | change |
+| --- | ---: | ---: | ---: |
+| **native-digit-noise** | 0 | **121** | **+121** |
+| base64-blob | 92 | 92 | 0 |
+| checksum-failures | 71 | 71 | 0 |
+| labeled-examples | 60 | 60 | 0 |
+| order-numbers | 51 | 51 | 0 |
+| placeholder-code | 33 | 33 | 0 |
+| version-numbers | 8 | 8 | 0 |
+| hex-artifacts | 3 | 3 | 0 |
+| **total** | **318** | **439** | **+121** |
+
+Overall: predictions 8,756 → 9,335 (+579), false positives 3,728 → 4,037
+(+309). Per-type precision, for the types the fold moved:
+
+| type | precision off → on | FP off → on |
+| --- | ---: | ---: |
+| TAX_ID | 52.3% → **46.0%** | 113 → 149 |
+| NATIONAL_ID | 65.8% → **64.4%** | 286 → 318 |
+| CREDIT_CARD | 98.0% → 96.8% | 3 → 5 |
+| IP_ADDRESS | 88.4% → 87.8% | 29 → 32 |
+| POSTAL_CODE | 7.4% → **6.7%** | 839 → 962 |
+| HEALTH_DATA | 93.0% → 92.9% | 29 → 32 |
+| GENERIC_SECRET | 3.3% → 3.3% | 2,065 → 2,174 |
+
+### The judgement
+
+The cost is real and concentrated in the types that were already weakest —
+TAX_ID, POSTAL_CODE, GENERIC_SECRET — which are the same types M8's fusion and
+calibration exist to improve, and whose residual errors are cross-type overlap
+rather than shape errors. The benefit is that an entire class of identifier
+stops being invisible for six languages' users.
+
+A missed identifier is a leak; a false positive is a visible annoyance the
+user can dismiss. The fold trades the second for the first, and does it on the
+users the multilingual work exists to serve. It is also strictly *reversible*
+in a way the alternative is not: precision is what calibration and fusion are
+for, whereas an input class the pipeline cannot see cannot be recovered
+downstream at all.

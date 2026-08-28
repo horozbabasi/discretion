@@ -99,14 +99,87 @@ const SEND_MARKER_SELECTOR = [
 ].join(', ');
 
 /**
- * A Material icon named "send". Locale-independent, and the marker that
- * survives when the test id is dropped.
+ * A Material icon named "send", in either of the two forms Angular Material
+ * uses.
+ *
+ * The attribute forms (`fonticon`, `data-mat-icon-name`) were already here.
+ * The LIGATURE form was not, and it is the more common one: Material renders
+ * `<mat-icon>send</mat-icon>` by using the icon name as a font ligature, so the
+ * name lives in the element's TEXT rather than in an attribute.
+ *
+ * Matching that text is not a locale violation, and the distinction matters
+ * because the contract forbids keying on visible strings. A ligature name is
+ * an ICON IDENTIFIER, always the English token `send` in every locale - it is
+ * closer to a class name than to UI copy, and it does not change when the
+ * interface is translated. What the contract forbids is matching text a
+ * translator would touch.
  *
  * Its enclosing CONTROL is resolved with CONTROL_SELECTOR rather than
- * `button`: the icon being present while the clause matched nothing is exactly
- * the signature of an icon inside a non-button control.
+ * `button`: an icon present while the clause matches nothing is the signature
+ * of an icon inside a non-button control.
  */
-const SEND_ICON_SELECTOR = 'mat-icon[fonticon="send"], mat-icon[data-mat-icon-name="send"]';
+const SEND_ICON_ATTRIBUTE_SELECTOR =
+  'mat-icon[fonticon="send"], mat-icon[data-mat-icon-name="send"]';
+
+/** Ligature-form icons, matched on their icon identifier, not on UI copy. */
+function findSendIconsByLigature(root: ParentNode): HTMLElement[] {
+  return deepQueryAll<HTMLElement>(root, 'mat-icon').filter(
+    (icon) => (icon.textContent ?? '').trim().toLowerCase() === 'send',
+  );
+}
+
+/**
+ * The send control located RELATIVE TO THE COMPOSER.
+ *
+ * D34c recorded that `composer-in-send-region` is not independent coverage,
+ * because it anchors the composer on the send control. This is the inverse,
+ * and the direction is deliberate: the composer resolves by four independent
+ * attribute and class strategies and is the reliably-found element on this
+ * site, so anchoring the send control on IT is anchoring the weak thing to the
+ * strong one rather than the other way round.
+ *
+ * It is markup-agnostic - no test id, no class, no icon name - so it survives
+ * exactly the renames that defeat every marker clause.
+ *
+ * UNIQUENESS IS STILL REQUIRED. A composer region usually holds several
+ * controls (attach, microphone, send), and this returns nothing rather than
+ * guessing among them. That makes it a narrow fallback, not a general answer -
+ * but "nothing" is the correct output when the alternative is picking the
+ * wrong control and intercepting the wrong click.
+ */
+function findSendControlNearComposer(root: ParentNode): HTMLElement[] {
+  // MUST EXCLUDE the send-region strategy, or this recurses forever:
+  // composer-in-send-region calls findSendButtons, which calls this, which
+  // resolves the composer, which runs composer-in-send-region again.
+  //
+  // That infinite loop is D34c's coupling turned into a hard failure. The
+  // record said a strategy anchored on another element inherits its failure
+  // modes; it now also says that anchoring in BOTH directions is a cycle. The
+  // send control may be found from the composer, or the composer from the send
+  // control, but the strategies used in one direction must be independent of
+  // the other.
+  const independent = GEMINI_COMPOSER_STRATEGIES.filter(
+    (strategy) => strategy.id !== 'gemini/composer-in-send-region',
+  );
+  const composer = resolveUnique('composer', root, independent, COMPOSER_INVARIANTS);
+  if (!composer.ok) return [];
+
+  let region: Element | null = composer.value.node;
+  let hops = 0;
+  while (region !== null && hops < 6) {
+    const controls = deepQueryAll<HTMLElement>(region, CONTROL_SELECTOR).filter(
+      (control) => !control.contains(composer.value.node) && control !== composer.value.node,
+    );
+    if (controls.length === 1) return controls;
+    // More than one control here: stop rather than widening further, because a
+    // wider region only adds more controls and never fewer.
+    if (controls.length > 1) return [];
+    const parent: Element | null = region.parentElement;
+    region = parent ?? (region.getRootNode() instanceof ShadowRoot ? (region.getRootNode() as ShadowRoot).host : null);
+    hops += 1;
+  }
+  return [];
+}
 
 /** Whether an element acts as a control, regardless of its tag. */
 function isControl(element: Element): boolean {
@@ -130,7 +203,11 @@ function findSendButtons(root: ParentNode): { buttons: HTMLElement[]; usedEnglis
     .map((element) => (isControl(element) ? element : closestAcrossShadow(element, CONTROL_SELECTOR)))
     .filter((el): el is HTMLElement => el instanceof HTMLElement);
 
-  const byIcon = deepQueryAll<HTMLElement>(root, SEND_ICON_SELECTOR)
+  const icons = [
+    ...deepQueryAll<HTMLElement>(root, SEND_ICON_ATTRIBUTE_SELECTOR),
+    ...findSendIconsByLigature(root),
+  ];
+  const byIcon = icons
     .map((icon) => closestAcrossShadow(icon, CONTROL_SELECTOR))
     .filter((el): el is HTMLElement => el instanceof HTMLElement);
 
@@ -139,6 +216,11 @@ function findSendButtons(root: ParentNode): { buttons: HTMLElement[]; usedEnglis
     if (!found.includes(button)) found.push(button);
   }
   if (found.length > 0) return { buttons: found, usedEnglishFallback: false };
+
+  // Structural fallback: the single control beside the composer. Tried before
+  // the English label, because it is locale-independent and the label is not.
+  const nearComposer = findSendControlNearComposer(root);
+  if (nearComposer.length > 0) return { buttons: nearComposer, usedEnglishFallback: false };
 
   const english = deepQueryAll<HTMLElement>(root, '[aria-label="Send message" i]')
     .map((element) => (isControl(element) ? element : closestAcrossShadow(element, CONTROL_SELECTOR)))
@@ -238,7 +320,10 @@ export function composerRegionOf(from: Element): Element | null {
   let hops = 0;
   while (node !== null && hops < 10) {
     if (
-      deepQueryAll(node, SEND_MARKER_SELECTOR).length + deepQueryAll(node, SEND_ICON_SELECTOR).length > 0 &&
+      deepQueryAll(node, SEND_MARKER_SELECTOR).length +
+        deepQueryAll(node, SEND_ICON_ATTRIBUTE_SELECTOR).length +
+        findSendIconsByLigature(node).length >
+        0 &&
       deepQueryAll(node, EDITABLE_SELECTOR).length > 0
     ) {
       return node;

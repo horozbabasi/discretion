@@ -150,3 +150,54 @@ describe('every registered adapter has strategies in the diagnostic', () => {
     expect(diagnostic.responseRoot.strategies.length).toBeGreaterThan(0);
   });
 });
+
+describe('disabled composer is not selector rot', () => {
+  it('reads a found-but-disabled composer as page state', () => {
+    // Selector rot cannot produce "matched 1, admitted 0". A candidate that was
+    // FOUND and then rejected means the selector still describes something and
+    // the element's STATE disqualified it. Rewriting the selector against this
+    // reading would break a selector that was working.
+    resetDocument();
+    document.body.innerHTML =
+      '<main><article data-message-author-role="assistant"><p>lorem</p></article></main>' +
+      '<form data-type="unified-composer">' +
+      '<textarea id="prompt-textarea" disabled></textarea>' +
+      '<input type="file">' +
+      '<button id="composer-submit-button" data-testid="stop-button">stop</button>' +
+      '</form>';
+    giveEverythingLayout();
+
+    const diagnostic = buildDiagnostic(new ChatGptAdapter(document, witness()), document);
+    expect(diagnostic.composer.resolved).toBe(false);
+    expect(diagnostic.composer.failureKind).toBe('invariant');
+
+    const strategy = diagnostic.composer.strategies.find(
+      (st) => st.id === 'chatgpt/composer-in-composer-form',
+    );
+    expect(strategy?.matched).toBe(1);
+    expect(strategy?.admitted).toBe(0);
+    expect(strategy?.rejectedBy['editable']).toBe(1);
+
+    renderDiagnostic(diagnostic);
+    const reading = warnings.filter((w) => w.startsWith('READING:'));
+    expect(reading[0]).toContain('PAGE STATE, NOT');
+    expect(reading[0]).not.toContain('STALE');
+  });
+
+  it('still reads a genuinely absent composer as rot', () => {
+    // The fix must not turn every failure into "page state".
+    resetDocument();
+    document.body.innerHTML =
+      '<main><article data-message-author-role="assistant"><p>lorem</p></article></main>' +
+      '<div class="renamed"><div contenteditable="true">x</div>' +
+      '<button class="unrelated">menu</button></div>';
+    giveEverythingLayout();
+
+    const diagnostic = buildDiagnostic(new ChatGptAdapter(document, witness()), document);
+    expect(diagnostic.composer.failureKind).toBe('not-found');
+
+    renderDiagnostic(diagnostic);
+    const reading = warnings.filter((w) => w.startsWith('READING:'));
+    expect(reading[0]).toContain('STALE');
+  });
+});

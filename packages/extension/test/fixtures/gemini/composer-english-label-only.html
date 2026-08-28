@@ -9,6 +9,14 @@
   see, so healthCheck must WARN rather than report a clean bill of health.
 
   Pins that the warning fires. A silent pass here is the defect.
+
+  TWO controls sit in the composer region - an attach button beside the send
+  button - which is what a real composer looks like. It also matters for the
+  test: with a SINGLE control the locale-independent structural fallback
+  (the one control beside the composer) resolves it without ever reaching the
+  English clause, and the warning correctly would not fire. Two controls make
+  the structural fallback decline, leaving the English label as the only thing
+  that can match - which is the state this fixture exists to pin.
 -->
 <html lang="en">
   <body>
@@ -23,6 +31,7 @@
           <div class="ql-editor" contenteditable="true" role="textbox" aria-multiline="true"
                aria-label="Enter a prompt here"><p>lorem ipsum</p></div>
         </rich-textarea>
+        <button aria-label="Attach file">lorem</button>
         <button aria-label="Send message">lorem</button>
       </div>
     </div>

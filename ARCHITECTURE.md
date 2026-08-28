@@ -2278,11 +2278,37 @@ earlier "editable invariant rejection on
 superseded, not as a second finding to chase - it came from an unpainted
 page.
 
-**Composer: ordinary selector rot, target in plain view.** The probe
-`[contenteditable][role="textbox"]` returns 1 - visible, editable,
-failing no invariants, carrying `aria-multiline` and `role`. Adapter
-strategies matched 0. The element is right there and the selectors do not
-describe it.
+**Composer: CORRECTED - the invariant rejection is real, and it changes
+the diagnosis.**
+
+The first version of this entry recorded the earlier "editable invariant
+rejection on `chatgpt/composer-in-composer-form`" as an unpainted
+artefact, superseded. **That was wrong.** It reproduces on a painted
+page: `matched 1, admitted 0`.
+
+**Selector rot cannot produce `matched 1`.** A stale selector matches
+nothing. A candidate that was FOUND and then rejected means the selector
+still describes something real and the ELEMENT'S STATE disqualified it -
+`isEditableSurface` returns false for a disabled or readonly textarea, so
+`form[data-type="unified-composer"] textarea` finding a DISABLED textarea
+produces exactly this signature.
+
+Two painted readings disagree, and the difference is state, not markup:
+
+  Reading A: a VISIBLE contenteditable with aria-multiline and role,
+             failing NO invariants; strategies matched 0.
+  Reading B: no contenteditable at all - four surfaces, all file inputs
+             plus a DISABLED textarea, every one failing `editable`; and
+             `composer-in-composer-form` matched 1, admitted 0.
+
+The textarea and both file inputs are disabled in B and were not in A.
+That points at page state - composer locked mid-generation, rate-limited,
+or still initialising - rather than at markup.
+
+**Which is true is NOT yet established**, and it needs readings across
+states (idle, mid-generation, immediately after load) rather than more
+reasoning. What IS established is that the two failures are different in
+kind and cannot share a fix.
 
 **Send control: the tag finding is NOT confirmed by this.** The reading
 shows 6 visible `<button>` candidates AND one visible `div[role="button"]`
@@ -2306,6 +2332,77 @@ defective READING line described in D34g, and although the ChatGPT
 composer conclusion is independently supported by the resolver's own
 `not-found` plus the editable table, the instruction stands: re-take both
 with a strategy table attached before writing selectors against them.
+
+
+### D34i - OPEN: a momentarily disabled composer must not put the adapter into DEGRADED (M9)
+
+Raised by the ChatGPT painted readings and not yet resolved, because the
+evidence needed is live readings across page states rather than
+reasoning.
+
+**The mechanism, which is certain.** `isEditableSurface` returns false for
+a disabled or readonly textarea. The `editable` invariant therefore
+rejects it, `resolveUnique` reports `invariant`, `healthCheck` fails, and
+the extension enters its degraded state.
+
+**The consequence, if the ChatGPT reading is what it looks like.** A
+composer is disabled every time a response is generating - which is not
+an edge case, it is most of the time a user spends on these sites. An
+adapter that goes DEGRADED and blocks sends whenever the composer is
+momentarily disabled would appear broken constantly.
+
+**Why blocking is the WRONG response here specifically.** Fail-closed
+exists to stop unmasked text being sent. A disabled composer cannot send
+anything - there is nothing to protect at that instant and nothing to
+fail closed against. Blocking buys no safety and costs all the
+credibility.
+
+**The shape of the answer**, to be decided with the content-script batch:
+the health model needs a third state. Today it is binary, ok or degraded.
+It needs to distinguish:
+
+  - healthy, composer available          -> normal
+  - healthy, composer TEMPORARILY unavailable (disabled/generating)
+                                         -> not degraded, no badge, no block
+  - degraded, adapter cannot find what it should
+                                         -> visible, blocking
+
+The second state must be entered only on POSITIVE evidence that the
+element was found and is disabled - never on a `not-found`, which is
+exactly the case a missing composer must not be able to masquerade as.
+That distinction is the whole risk in this change, and it is why the
+diagnostic now separates found-and-disabled from not-found before
+anything acts on it.
+
+**Belongs with D29 and D36.** All three are cases where fail-closed
+blocks a legitimate flow and the answer is a path THROUGH the block
+rather than removing it, and all three need the same in-page surface.
+Same batch, same M9 blocker set.
+
+### D34j - Anchoring strategies in both directions is a cycle, not a fallback (M9)
+
+Introduced and caught within one change, recorded because the near-miss
+is instructive.
+
+D34c established that `composer-in-send-region` is not independent
+coverage, because it anchors the composer on the send control. The
+obvious repair - anchor the SEND CONTROL on the composer, which is the
+element that resolves reliably - is sound in direction and was
+implemented as `findSendControlNearComposer`.
+
+It caused **infinite recursion**: the new function resolved the composer,
+which ran `composer-in-send-region`, which called `findSendButtons`,
+which called the new function. The test suite failed with
+"Maximum call stack size exceeded" rather than anything resembling a
+selector problem.
+
+Fixed by resolving the composer from the strategies that are INDEPENDENT
+of the send control - explicitly excluding `composer-in-send-region`.
+
+The rule this adds to D34c: a strategy may anchor on another element, but
+the strategies used in one direction must be independent of the other
+direction. Anchoring both ways is not two fallbacks; it is a cycle, and a
+cycle fails in a way that looks nothing like the problem it came from.
 
 
 ## Status after M2

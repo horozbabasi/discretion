@@ -222,7 +222,12 @@ function renderForensics(f: EnvironmentForensics, diagnostic: AdapterDiagnostic)
   // answers "is that lone textarea the composer, or a hidden form field?" —
   // both count as 1 in the probe table.
   if (f.editableCandidates.length > 0) {
-    console.log('editable surfaces found:');
+    const kinds = [...new Set(f.editableCandidates.map((c) => c.tag))].join(', ');
+    const blocked = f.editableCandidates.filter((c) => c.disabled || c.readOnly).length;
+    console.log(
+      `editable surfaces found (${f.editableCandidates.length}; kinds: ${kinds}` +
+        `${blocked > 0 ? `; ${blocked} DISABLED or READONLY` : ''}):`,
+    );
     console.table(
       f.editableCandidates.map((c) => ({
         tag: c.tag,
@@ -371,9 +376,30 @@ function renderReading(f: EnvironmentForensics, diagnostic: AdapterDiagnostic): 
     return;
   }
   if (kind === 'invariant') {
+    // SELECTOR ROT CANNOT PRODUCE THIS. A stale selector matches nothing; a
+    // candidate that was found and then rejected means the selector still
+    // describes something real and the ELEMENT's state disqualified it. The
+    // two need opposite fixes, and conflating them would rewrite a selector
+    // that was working.
+    const disabled = f.editableCandidates.filter((c) => c.disabled || c.readOnly);
+    const onlyEditableFailed = f.editableCandidates
+      .filter((c) => c.failsInvariants.length > 0)
+      .every((c) => c.failsInvariants.every((id) => id === 'editable'));
+
+    if (disabled.length > 0 && onlyEditableFailed) {
+      console.warn(
+        `READING: the composer was FOUND and rejected only because it is not currently editable ` +
+          `(${disabled.length} disabled/readonly surface(s) present). THIS IS PAGE STATE, NOT ` +
+          'SELECTOR ROT — the selectors are working. Common causes: a response is generating, ' +
+          'the account is rate-limited, or the app is still initialising. Re-read with the ' +
+          'composer IDLE before changing any selector.',
+      );
+      return;
+    }
     console.warn(
       'READING: candidates were FOUND and every one was rejected by an invariant. The selectors ' +
-        'are finding something; the strategy table names which invariant rejected it.',
+        'are finding something, so this is not rot; the strategy table names which invariant ' +
+        'rejected it.',
     );
     return;
   }

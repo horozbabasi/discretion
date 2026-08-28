@@ -237,8 +237,8 @@ send it. This is what exercises the read path.
 | | Claim A (logic correct) | Claim B (site still has that shape) | Last live check |
 | --- | --- | --- | --- |
 | Claude | verified — 20 fixture tests | *not verified* | — |
-| ChatGPT | verified — 21 fixture tests | **composer ROT, send control unresolved** | 2026-08-29, painted |
-| Gemini | verified — 19 fixture tests | **composer HEALTHY, send control FAILING** | **2026-08-29, painted** |
+| ChatGPT | verified — 23 fixture tests | **UNRESOLVED: transient-disabled vs rot** | 2026-08-29, painted ×2 (disagree) |
+| Gemini | verified — 23 fixture tests | composer HEALTHY; send control **fix applied, unverified** | 2026-08-29, painted |
 
 ### Gemini — 2026-08-29, confirmed-painted reading
 
@@ -306,13 +306,29 @@ of *verdict* rather than only of `health.ok`.
 
 ### ChatGPT — 2026-08-29 painted reading
 
-Supersedes the earlier one entirely. The earlier "editable invariant rejection
-on `chatgpt/composer-in-composer-form`" is **not reproduced** and is superseded,
-not a second finding to chase — it came from an unpainted page.
+**Correction: the "editable invariant rejection" is REAL, not an unpainted
+artefact.** It reproduces on a painted page — `chatgpt/composer-in-composer-form`
+matched 1, admitted 0. It was recorded as superseded here and that was wrong.
 
-- **Composer: ordinary selector rot, target in plain view.** The probe
-  `[contenteditable][role="textbox"]` returns 1 — visible, editable, failing no
-  invariants, carrying `aria-multiline` and `role`. Adapter strategies matched 0.
+**Selector rot cannot produce `matched 1`.** A stale selector matches nothing. A
+candidate found and then rejected means the selector still describes something
+and the *element's state* disqualified it — `isEditableSurface` returns false for
+a disabled textarea, so `form[data-type="unified-composer"] textarea` finding a
+**disabled** textarea produces exactly this signature.
+
+**Two painted readings disagree, and the difference is state, not markup:**
+
+| | Reading A | Reading B |
+| --- | --- | --- |
+| composer | visible contenteditable, `aria-multiline`, `role` | **no contenteditable at all** |
+| surfaces | — | 4: file inputs + a **DISABLED** textarea |
+| invariants | failing none | every one failing `editable` |
+| `composer-in-composer-form` | 0 | **matched 1, admitted 0** |
+
+The textarea and both file inputs are disabled in B and were not in A — page
+state (composer locked mid-generation, rate-limited, or still initialising),
+not markup.
+
 - **Send control: 6 visible `<button>` candidates**, plus one visible
   `div[role="button"]` with a `data-testid` **under `nav`**.
 
@@ -327,10 +343,25 @@ stays a fragility finding on its own merits. What would settle it: the
 attributes of the 6 visible button candidates, and whether any carries a send
 marker — which the next reading prints.
 
-**Not being fixed yet.** Both readings were taken with the defective READING
-line (D34g). The composer conclusion is independently supported by the
-resolver's own `not-found` plus the editable table, but the sequencing stands:
-re-take with a strategy table attached before writing selectors.
+**NOT being fixed, and the reason has changed.** It is no longer a sequencing
+question. Which failure ChatGPT has is genuinely unresolved: *transient disabled
+state* and *selector rot* need opposite fixes, and rewriting selectors against a
+disabled-state reading would encode the wrong target.
+
+**What settles it — readings across states**, all on a painted page:
+
+1. **Composer idle**, nothing generating, page settled.
+2. **Mid-generation**, while a response streams.
+3. **Immediately after load**, before the app finishes initialising.
+
+If the composer resolves when idle and fails only when disabled, the failure is
+transient state, not rot — and that belongs with D29 as another case where
+fail-closed blocks a legitimate flow (ARCHITECTURE.md D34i). If it fails when
+idle too, it is rot and the selectors get rewritten against the idle reading.
+
+The diagnostic now tells these apart in the console: a found-but-disabled
+composer reads **"PAGE STATE, NOT SELECTOR ROT"** and names how many surfaces
+are disabled; a genuinely absent one still reads **STALE**.
 
 ## The fixture boundary — what two live failures proved
 

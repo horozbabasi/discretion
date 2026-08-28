@@ -15,6 +15,8 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { ChatGptAdapter } from '../src/adapters/chatgpt.js';
 import { InputWitness, verifyBinding } from '../src/adapters/binding.js';
+import { reverifyBeforeSend } from '../src/adapters/resolve.js';
+import { readEditableText } from '../src/adapters/text.js';
 import type { SubmitIntent } from '../src/adapters/types.js';
 import { loadFixture, resetDocument, witnessTyping } from './dom-helpers.js';
 
@@ -204,6 +206,66 @@ describe('writes', () => {
     if (result.ok) return;
     expect(result.reason).toBe('readback-mismatch');
     expect(result.detail).not.toContain('masked text');
+  });
+});
+
+describe('the async-revert hole', () => {
+  it('writeAndVerify passes, and reverifyBeforeSend catches the revert', () => {
+    // THE HOLE THIS PINS. writeAndVerify reads back synchronously, so a
+    // framework that ACCEPTS the write and reverts it on a later render tick
+    // passes it. React does exactly that when its value tracker was not
+    // updated. Construction #4 would report success while the composer held
+    // the user's ORIGINAL unmasked text.
+    loadFixture('chatgpt/composer-textarea');
+    const { adapter } = makeAdapter();
+    const resolved = adapter.getComposer();
+    expect(resolved.ok).toBe(true);
+    if (!resolved.ok) return;
+
+    const node = resolved.value.node as HTMLTextAreaElement;
+    const original = node.value;
+
+    // The synchronous write and read-back both succeed.
+    expect(adapter.setComposerText(resolved.value, 'MASKED')).toEqual({ ok: true });
+    expect(node.value).toBe('MASKED');
+
+    // ...and then the framework re-renders and puts the original back.
+    node.value = original;
+
+    const verdict = reverifyBeforeSend(resolved.value, 'MASKED', readEditableText);
+    expect(verdict.ok).toBe(false);
+    if (verdict.ok) return;
+    expect(verdict.reason).toBe('readback-mismatch');
+    // Reports lengths, never the content it was guarding.
+    expect(verdict.detail).not.toContain('MASKED');
+    expect(verdict.detail).not.toContain(original);
+  });
+
+  it('passes when the value is still there at send time', () => {
+    loadFixture('chatgpt/composer-textarea');
+    const { adapter } = makeAdapter();
+    const resolved = adapter.getComposer();
+    expect(resolved.ok).toBe(true);
+    if (!resolved.ok) return;
+
+    expect(adapter.setComposerText(resolved.value, 'MASKED')).toEqual({ ok: true });
+    expect(reverifyBeforeSend(resolved.value, 'MASKED', readEditableText)).toEqual({ ok: true });
+  });
+
+  it('blocks when the composer was detached between masking and send', () => {
+    loadFixture('chatgpt/composer-textarea');
+    const { adapter } = makeAdapter();
+    const resolved = adapter.getComposer();
+    expect(resolved.ok).toBe(true);
+    if (!resolved.ok) return;
+
+    expect(adapter.setComposerText(resolved.value, 'MASKED')).toEqual({ ok: true });
+    resolved.value.node.remove();
+
+    const verdict = reverifyBeforeSend(resolved.value, 'MASKED', readEditableText);
+    expect(verdict.ok).toBe(false);
+    if (verdict.ok) return;
+    expect(verdict.reason).toBe('detached');
   });
 });
 

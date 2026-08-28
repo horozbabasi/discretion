@@ -1,0 +1,133 @@
+/**
+ * The observable surface: renders an adapter diagnostic to the page console.
+ *
+ * DEFAULT-ON FOR AN UNPACKED LOAD, off for a store install unless the user
+ * turns it on. The reasoning:
+ *
+ * - An unpacked load is a developer or a reviewer verifying the extension, and
+ *   ADAPTER-VERIFICATION.md's manual procedure is exactly "load unpacked, open
+ *   the site, read the console". Requiring a flag first would mean the default
+ *   development experience is the silent one that caused this module to exist.
+ * - A store install is a normal user, whose console should not be written to
+ *   without reason. They can enable it when reporting a broken site.
+ *
+ * Chrome injects `update_url` into the manifest it returns for a store
+ * install, and does not for an unpacked one. That is the standard way to tell
+ * them apart and needs no extra permission.
+ *
+ * NOTHING HERE PRINTS PAGE TEXT. diagnostics.ts guarantees that at the source;
+ * this module only formats what it is given.
+ */
+
+import type { AdapterDiagnostic } from './diagnostics.js';
+
+const STORAGE_KEY = 'debugLogging';
+const PREFIX = 'PrivacyShield';
+
+let overrideEnabled: boolean | null = null;
+
+/** True when this is an unpacked (development) load. */
+function isUnpackedLoad(): boolean {
+  try {
+    return chrome.runtime.getManifest().update_url === undefined;
+  } catch {
+    return false;
+  }
+}
+
+export function isDebugEnabled(): boolean {
+  return overrideEnabled ?? isUnpackedLoad();
+}
+
+/**
+ * Reads the user's explicit preference, if any.
+ *
+ * Storage is async, so the first report is emitted on the unpacked default and
+ * this refines it afterwards. Losing the flag for one report is better than
+ * delaying every report behind an await — the report is most useful when it
+ * lands at the moment the page settles.
+ */
+export async function loadDebugPreference(): Promise<void> {
+  try {
+    const stored = (await chrome.storage.local.get(STORAGE_KEY)) as Record<string, unknown>;
+    const value = stored[STORAGE_KEY];
+    if (typeof value === 'boolean') overrideEnabled = value;
+  } catch {
+    // Storage unavailable: keep the unpacked-load default rather than failing.
+  }
+}
+
+function verdictLine(diagnostic: AdapterDiagnostic): string {
+  const { composer, health } = diagnostic;
+  if (!health.ok) return `DEGRADED — sends will be blocked`;
+  if (composer.tier !== 'attribute') return `WORKING, but only at the '${composer.tier}' tier`;
+  return 'WORKING';
+}
+
+/**
+ * Prints the diagnostic.
+ *
+ * Uses a collapsed group so it is one line until expanded: a content script
+ * that floods the console gets muted by whoever is trying to debug their own
+ * page, which would restore the silence this exists to remove.
+ */
+export function renderDiagnostic(diagnostic: AdapterDiagnostic): void {
+  if (!isDebugEnabled()) return;
+
+  const { composer, responseRoot, health } = diagnostic;
+  console.groupCollapsed(
+    `${PREFIX} [${diagnostic.displayName}] ${verdictLine(diagnostic)} — click to expand`,
+  );
+
+  console.log(
+    `site=${diagnostic.site} path=${diagnostic.path} checkedAt=${new Date(health.checkedAt).toISOString()}`,
+  );
+
+  for (const element of [composer, responseRoot]) {
+    if (element.resolved) {
+      console.log(
+        `${element.target}: RESOLVED by '${element.strategyId}' at the '${element.tier}' tier ` +
+          `(${element.ambiguityCount} candidate${element.ambiguityCount === 1 ? '' : 's'} admitted)`,
+      );
+    } else {
+      console.warn(
+        `${element.target}: NOT RESOLVED — ${element.failureKind}: ${element.failureDetail}`,
+      );
+    }
+    // Every strategy, including the ones that matched nothing: knowing which
+    // markers have disappeared is what tells you how a site changed.
+    console.table(
+      element.strategies.map((s) => ({
+        strategy: s.id,
+        tier: s.tier,
+        matched: s.matched,
+        admitted: s.admitted,
+        rejectedBy: Object.entries(s.rejectedBy)
+          .map(([id, n]) => `${id}×${n}`)
+          .join(', '),
+      })),
+    );
+  }
+
+  if (health.failures.length > 0) {
+    console.warn(`${PREFIX}: healthCheck FAILED`);
+    for (const failure of health.failures) {
+      console.warn(`  ${failure.target}: ${failure.kind} — ${failure.detail}`);
+      console.warn(`    strategies tried: ${failure.triedStrategies.join(', ')}`);
+    }
+  } else {
+    console.log('healthCheck: ok, no failures');
+  }
+
+  for (const warning of health.warnings) {
+    console.warn(`  warning ${warning.target} (${warning.tier}): ${warning.detail}`);
+  }
+
+  console.groupEnd();
+}
+
+/** Announces that no adapter claimed this page. */
+export function renderUnsupported(url: string): void {
+  if (!isDebugEnabled()) return;
+  console.log(`${PREFIX}: no adapter claims ${new URL(url).hostname}; not active on this page.`);
+}

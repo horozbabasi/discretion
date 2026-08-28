@@ -49,7 +49,7 @@ export function pickAdapter(
 export * from './types.js';
 export { InputWitness, verifyBinding } from './binding.js';
 export type { BindingVerdict, BindingFailureCode } from './binding.js';
-export { resolveUnique, writeAndVerify, stillValid } from './resolve.js';
+export { resolveUnique, writeAndVerify, reverifyBeforeSend, stillValid } from './resolve.js';
 export { COMPOSER_INVARIANTS, RESPONSE_ROOT_INVARIANTS, isEditableSurface } from './invariants.js';
 export { ClaudeAdapter, readEditableText } from './claude.js';
 export { ChatGptAdapter, CHATGPT_COMPOSER_STRATEGIES, CHATGPT_RESPONSE_STRATEGIES } from './chatgpt.js';

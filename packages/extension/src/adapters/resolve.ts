@@ -191,6 +191,57 @@ function equivalentAfterWrite(written: string, readBack: string): boolean {
 }
 
 /**
+ * Re-checks that a previously written value is STILL in the composer.
+ *
+ * ─────────────────────────────────────────────────────────────────────────
+ * WHY writeAndVerify ALONE IS NOT ENOUGH, which was a real hole.
+ *
+ * `writeAndVerify` reads back SYNCHRONOUSLY, in the same task as the write.
+ * That catches a framework that rejects or ignores the write. It does NOT
+ * catch a framework that ACCEPTS the write and reverts it on a later render
+ * tick — and React does exactly that when its value tracker was not updated,
+ * which is the common case for a controlled input.
+ *
+ * So construction #4 could report success and the composer could hold the
+ * user's ORIGINAL, unmasked text microseconds later. A construction meant to
+ * make silent failure impossible could itself silently pass. That is the worst
+ * shape a defect can take in this codebase.
+ *
+ * The write path is now two checks, not one:
+ *   1. writeAndVerify, immediately   — did the write land at all?
+ *   2. reverifyBeforeSend, at the gate — is it STILL there?
+ *
+ * The second must be called as late as possible, in the same task as the
+ * decision to allow the send, so nothing can re-render between the check and
+ * the send. Any await between them reopens the hole.
+ * ─────────────────────────────────────────────────────────────────────────
+ */
+export function reverifyBeforeSend(
+  handle: ComposerHandle,
+  expected: string,
+  read: (node: HTMLElement) => string,
+): WriteResult {
+  if (!handle.node.isConnected) {
+    return {
+      ok: false,
+      reason: 'detached',
+      detail: 'The composer left the document between the write and the send.',
+    };
+  }
+  const current = read(handle.node);
+  if (!equivalentAfterWrite(expected, current)) {
+    return {
+      ok: false,
+      reason: 'readback-mismatch',
+      detail:
+        `The composer held ${expected.length} characters after masking but holds ${current.length} now. ` +
+        'Its contents changed between masking and send, so what would be sent is not what was checked.',
+    };
+  }
+  return { ok: true };
+}
+
+/**
  * Writes text and proves it landed — construction #4.
  *
  * A write that appears to succeed but does not stick is the signature of

@@ -3,22 +3,23 @@
  *
  * SCOPE OF THIS SLICE, stated so its limits are not mistaken for its design.
  * M9 builds the extension in steps. This step establishes the adapter
- * subsystem: site identification, the input witness, and continuous health
- * monitoring. It deliberately does NOT intercept submits yet, because
- * detection is not wired in yet, and a submit interceptor with nothing behind
- * it could only do one of two wrong things — block every send, or wave sends
- * through while looking like protection. Interception lands together with the
- * detection pipeline in the next step, and the binding gate it will call
+ * subsystem: site identification, the input witness, continuous health
+ * monitoring, and the observable diagnostic. It deliberately does NOT intercept
+ * submits yet, because detection is not wired in yet, and a submit interceptor
+ * with nothing behind it could only do one of two wrong things — block every
+ * send, or wave sends through while looking like protection. Interception lands
+ * together with the detection pipeline, and the binding gate it will call
  * (verifyBinding) is already built and tested.
  *
  * SPEC.md: "1. Identify site, load adapter, run healthCheck, warm the NER
- * worker" — the first three of those are here; worker warming arrives with the
- * worker.
+ * worker" — the first three are here; worker warming arrives with the worker.
  */
 
 import type { HealthReport } from './adapters/index.js';
 import { InputWitness, pickAdapter } from './adapters/index.js';
 import type { ExtensionMessage, HealthMessage } from './messages.js';
+import { buildDiagnostic } from './diagnostics.js';
+import { loadDebugPreference, renderDiagnostic, renderUnsupported } from './debug.js';
 
 const HEALTH_INTERVAL_MS = 15_000;
 
@@ -49,11 +50,13 @@ function start(): void {
   const adapter = pickAdapter(location.href, document, witness);
   if (adapter === null) {
     report({ kind: 'unsupported-site' });
+    renderUnsupported(location.href);
     return;
   }
 
   let lastOk: boolean | null = null;
   let lastUrl = location.href;
+
   const check = (): void => {
     if (location.href !== lastUrl) {
       lastUrl = location.href;
@@ -65,16 +68,23 @@ function start(): void {
     if (health.ok !== lastOk) {
       lastOk = health.ok;
       report(summarise(health));
+      // The console diagnostic follows the same rule: it is emitted on the
+      // first check and on every change of state, never on every poll. A
+      // content script that floods the console gets muted by whoever is
+      // debugging their own page, which would restore the silence this exists
+      // to remove.
+      renderDiagnostic(buildDiagnostic(adapter, document));
     }
   };
 
   check();
   const timer = setInterval(check, HEALTH_INTERVAL_MS);
 
-  // SPA navigation: claude.ai swaps conversations without a document load, and
-  // the composer is re-created when it does. Re-checking on navigation catches
-  // a composer that vanished, rather than waiting up to a full poll interval
-  // holding a detached handle.
+  // The stored preference may switch debug off for a packed install, or on for
+  // a user reporting a broken site. Storage is async, so the first report above
+  // has already used the unpacked-load default; this refines everything after.
+  void loadDebugPreference();
+
   window.addEventListener('pagehide', () => {
     clearInterval(timer);
     witness.stop();

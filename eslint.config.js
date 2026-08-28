@@ -54,6 +54,19 @@ export default tseslint.config(
     },
   },
   {
+    // SPEC non-negotiable: "Never log or console-print a sensitive value, even
+    // in debug builds." The extension handles composer text, so console output
+    // from it is banned by default rather than left to reviewer vigilance.
+    //
+    // src/debug.ts is the single exception, and it is a narrow one: it prints
+    // only what diagnostics.ts produces, which is structural by construction -
+    // lengths, counts, tags, tiers and strategy ids, never page text. The
+    // guarantee lives at the source of the data, not at the print site.
+    files: ['packages/extension/src/**/*.ts'],
+    ignores: ['packages/extension/src/debug.ts'],
+    rules: { 'no-console': 'error' },
+  },
+  {
     // packages/core is an environment-agnostic library: it must run identically
     // in a browser extension, a web worker, and Node. No DOM, no Node built-ins.
     files: ['packages/core/src/**/*.ts'],

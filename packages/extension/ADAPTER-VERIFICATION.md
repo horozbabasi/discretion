@@ -85,7 +85,19 @@ extension" are different claims, and only the second one matters. The check
 reads Chrome's *parsed* manifest rather than the source file, so it tests what
 the browser concluded, not what we wrote.
 
-### 3. The design itself
+### 3. The injection test — the mechanism is real
+
+`scripts/verify-injection.py` loads the BUILT extension into a real browser,
+intercepts `https://claude.ai/**` and serves a committed fixture in its place,
+then instruments the running service worker to record what the content script
+reported. It modifies nothing about the extension: attaching a listener to an
+already-loaded service worker is observation, and the code under test is
+byte-for-byte what a user would run.
+
+It answers a question fixtures cannot: *does Chrome actually inject this content
+script, and does anything observable come out?*
+
+### 4. The design itself
 
 The strongest verification is not a test. It is that a wrong selector cannot
 cause a silent leak, because the submit-time identity binding
@@ -149,54 +161,104 @@ explicit about because a green health badge is easy to over-read.
 6. **Races.** Health is a snapshot. The composer can be replaced a millisecond
    later. Mitigated by re-resolving at submit rather than trusting the snapshot.
 
+## Live verification cannot be automated — a finding, not a missing feature
+
+An automated live-verification harness was built (`verify-live.py`) and has been
+**retired**. The reason is durable and worth more than the script was:
+
+**All three target sites run bot detection, and an automated browser cannot get
+past it.** claude.ai sits behind a Cloudflare interstitial that loops
+indefinitely for a driven browser; Gemini has Google's equivalent. This is not a
+bug in the harness and not something a better harness fixes — the sites are
+working as intended, and an extension-verification tool is indistinguishable to
+them from the automation they are built to stop.
+
+Nor should it be worked around. Defeating a site's bot detection to test an
+extension that reads that site would be a poor thing for a privacy tool to ship,
+and any technique that worked would be fragile in exactly the way the adapters
+already are.
+
+**So live verification is manual, permanently.** The procedure below is the
+supported one. Automating around it will keep looking attractive and will keep
+being wrong, which is why this section exists rather than a deleted file.
+
+**What automation CAN still do**, and does: `scripts/verify-injection.py`
+answers "does the content script inject and produce output" without touching a
+real site, by intercepting the origin and serving a committed fixture in its
+place. Chrome matches content scripts on the URL, so injection behaves
+identically. That covers the mechanism; it cannot cover the site's shape.
+
+## The manual live procedure
+
+This is the only way to establish Claim B. It takes about two minutes per site.
+
+**1. Build.**
+
+```
+npm.cmd run build --workspace @privacyshield/extension
+```
+
+The loadable extension is at **`packages/extension/build`** — *not* `dist/`,
+which holds TypeScript declaration output and is not loadable.
+
+**2. Load it unpacked.** In Edge or Chrome: `chrome://extensions` → enable
+Developer mode → *Load unpacked* → select `packages/extension/build`.
+
+**3. Open the site, signed in**, and get to a page with the composer visible.
+Use a throwaway account if you have one.
+
+**4. Open the console** (F12 → Console) and look for a line beginning
+`PrivacyShield [<site>]`. It is emitted when the content script runs and again
+on every change of state. Expand it.
+
+Debug output is **on by default for an unpacked load** and off for a store
+install — see `src/debug.ts`. Nothing it prints contains page text.
+
+**5. Read the verdict.** The collapsed line says one of:
+
+| Line | Means |
+| --- | --- |
+| `WORKING` | Composer resolved at the strongest tier. |
+| `WORKING, but only at the 'structural'/'class' tier` | Resolving, but the strong markers are gone. **The site changed; the adapter is one redesign from failing.** |
+| `DEGRADED — sends will be blocked` | Resolution failed. The expanded output names the failure kind and every strategy tried. |
+
+Expanded, it reports which strategy resolved each element, a table of every
+strategy with how many nodes it matched and how many were admitted (**the
+ambiguity count**), which invariant rejected the rest, and `healthCheck`'s
+`failures[]` in full.
+
+**6. Type synthetic text into the composer** — never anything real, and do not
+send it. This is what exercises the read path.
+
+**7. Record the result** in the status table below, with the date and the tier.
+
 ## Current verification status — what is and is not established
 
-Kept in the repository rather than in a commit message, because "has this
-adapter ever been checked against the live site?" is a question every future
-change needs the answer to.
+| | Claim A (logic correct) | Claim B (site still has that shape) | Last live check |
+| --- | --- | --- | --- |
+| Claude | **verified** — 20 fixture tests | **NOT VERIFIED** | — |
+| ChatGPT | **verified** — 18 fixture tests | **NOT VERIFIED** | — |
+| Gemini | **verified** — 15 fixture tests | **NOT VERIFIED** | — |
 
-| | Claim A (logic correct) | Claim B (site still has that shape) |
-| --- | --- | --- |
-| Claude | **verified** — 20 fixture tests | **NOT VERIFIED** |
-| ChatGPT | **verified** — 15 fixture tests | **NOT VERIFIED** |
-| Gemini | **verified** — 15 fixture tests | **NOT VERIFIED** |
+**What IS verified about the mechanism.** `scripts/verify-injection.py`, run
+against the built extension with the claude.ai origin intercepted, established
+by measurement:
 
-**The live harness itself is verified.** `verify-live.py` was run against live
-claude.ai and completed end to end: the probe bundled from the real adapter
-sources, injected at document-start, executed every strategy against the live
-DOM, and reported `composer: not-found`, `health: DEGRADED`, with per-strategy
-match counts of zero.
+- the content script injects on a matched origin;
+- the adapter resolves the composer and response root on a page of the expected
+  shape, and reports `health: ok` with no failures;
+- on a page with no composer it reports `not-found` for all three targets, sets
+  the toolbar badge to `!`, and changes the action title;
+- the console diagnostic is emitted in both states.
 
-That is the CORRECT result for the page it saw — a logged-out landing page has
-no composer — and it establishes that the injection, the init script, the
-strategy execution and the failure reporting all work against a real site. It
-establishes **nothing whatsoever about Claim B**, which needs a signed-in
-session, and the script says so itself rather than exiting 0:
-
-```
-VERIFICATION INCOMPLETE: nothing was typed into the composer, so the
-input witness and the read path were not exercised.
-```
-
-**To complete Claim B**, with a throwaway account and only synthetic text:
-
-```
-python packages/extension/scripts/verify-live.py claude
-python packages/extension/scripts/verify-live.py chatgpt
-python packages/extension/scripts/verify-live.py gemini
-```
-
-A browser opens; sign in, type something synthetic into the composer, and the
-script proceeds on its own. It exits 0 only when the composer resolved, health
-was clean, AND something had been typed — so a run that nobody attended cannot
-be mistaken for a pass.
-
-What each run establishes that fixtures cannot: that the site still exposes the
-markers the strategies key on, at which TIER they now match (a drop to the
-structural or class tier is the early warning that a redesign is coming), that
-exactly one candidate matches rather than two, and that the composer the
-adapter resolves is the same node the input witness observed — the one check
-that ties the selector layer to the binding layer on a real page.
+That measurement is also what prompted the diagnostic to exist. The first run
+of it found the content script injecting, resolving and degrading **correctly
+and completely silently** — 0 console lines at any level. The only observable
+was a badge, and on a healthy page the badge is empty, which is
+indistinguishable from the extension not running. An adapter nobody can
+interrogate is silent by construction, which is the thing SPEC forbids most
+strongly, so the diagnostic is part of meeting that requirement rather than a
+convenience.
 
 ## What fixtures CANNOT catch — stated plainly
 
@@ -221,27 +283,32 @@ that ties the selector layer to the binding layer on a real page.
 5. **Timing.** SPA navigation, streaming, and composer re-creation are races.
    Fixtures are static and cannot exercise them.
 
-## The irreducible manual step
+## The pre-release checklist
 
-Points 1–5 do not have an offline answer, so they get an honest manual one.
-Before any release, and after any adapter change, on each supported site:
+"The manual live procedure" above establishes that the adapter resolves. This
+is the fuller check, run before any release and after any adapter change, on
+each supported site. Steps 3-5 require the detection pipeline, which lands with
+the content-script batch; until then only 1, 2 and 6 are runnable.
 
-1. Load the unpacked build and open the site.
-2. Confirm the badge shows healthy.
-3. Type a known synthetic value — a test card number, never anything real —
+1. Load the unpacked build (`packages/extension/build`) and open the site.
+2. Read the console diagnostic. Confirm `WORKING`, at the `attribute` tier,
+   with an ambiguity count of 1.
+3. Type a known synthetic value - a test card number, never anything real -
    and confirm it is detected and masked.
 4. Send it. Confirm what arrives in the conversation is the masked text.
 5. Confirm the response restores correctly as it streams.
-6. Break it deliberately: in devtools, add a second `contenteditable`
-   `role="textbox"` element to the page. Confirm the extension goes to a
-   degraded state and **blocks the send** rather than picking one.
+6. **Break it deliberately.** In devtools, add a second `contenteditable`
+   `role="textbox"` element to the page. Confirm the diagnostic flips to
+   `DEGRADED`, reports `ambiguous`, and the send is **blocked** rather than a
+   candidate being picked.
 
 Step 6 is the important one and the one that will be skipped under time
-pressure. It is the only step that tests the actual guarantee.
+pressure. It is the only step that tests the actual guarantee, and it is now
+cheap: the console says what happened.
 
-This checklist is a stopgap, not a solution: it verifies the sites on the day
-someone runs it. The README's LIMITATIONS section says so to users directly —
-SPEC already requires the statement *"These sites change their interfaces;
+This checklist is a stopgap, not a solution - it verifies the sites on the day
+someone runs it. The README's LIMITATIONS section says so to users directly,
+and SPEC already requires the statement *"These sites change their interfaces;
 adapters will break until updated."*
 
 ## Capturing a real fixture, if one is ever needed

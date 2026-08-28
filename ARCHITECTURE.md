@@ -1645,6 +1645,143 @@ WASM is the single runtime. Revisit only if onnxruntime-web ships real
 int8 GPU matmul coverage, and re-measure before believing it.
 
 
+### D30a - The ChatGPT adapter received one third of its intended adversarial review (M9)
+
+Recorded against that adapter rather than left in a commit message,
+because it is a standing reason to weight live verification and future
+review more heavily there than for the other two.
+
+Both new adapters were designed with three independent critique lenses -
+localisation, ambiguity, and read/write. For Gemini all three completed.
+**For ChatGPT, the ambiguity and read/write lenses both failed** with API
+errors, so that design was revised against the localisation critique
+alone.
+
+I covered the two missing lenses by hand during implementation, and the
+read/write pass found something real the design had not accounted for:
+React's value tracker reverting a naive `element.value` assignment, now
+handled by writing through the prototype setter (see D32). That one
+finding is evidence the missing reviews were not ceremonial.
+
+**The asymmetry stands as a known weakness of that adapter**, not a
+closed item. ChatGPT has had less adversarial attention than the other
+two, and the ambiguity lens - the one covering exactly the decoy and
+false-block cases this subsystem exists for - is the one whose absence is
+least comfortable.
+
+### D31 - The extension was silent by construction, which made SPEC's central requirement unverifiable (M9)
+
+Found from a real unpacked load: the extension was active on a live
+signed-in claude.ai chat, no errors, and the console showed NOTHING from
+it at any log level. Two explanations fit - not injecting, or injecting
+and producing no output - and they need opposite fixes.
+
+**Measured rather than guessed** (`scripts/verify-injection.py`). The
+built extension was loaded into a real browser with the claude.ai origin
+intercepted and a committed fixture served in its place; Chrome matches
+content scripts on the URL, so injection behaves identically. The running
+service worker was instrumented to record what it received - observation
+only, the artifact unmodified.
+
+Result: **injecting, and completely silent.** Two health messages
+arrived: `ok: true` with no failures on a page with a composer, and
+`ok: false` with `composer/response-root/send-button: not-found` on a
+page without one. The badge went to `!` on the failing tab. Console
+output: **zero lines**.
+
+**Why that is a defect and not a preference.** SPEC's strongest sentence
+is that silent failure must be impossible by construction, and it
+requires healthCheck failure to produce a VISIBLE degraded state. The
+only observable was a toolbar badge, and on a HEALTHY page that badge is
+empty - indistinguishable from the extension not running at all. So no
+human could establish whether the adapter had resolved the composer,
+which strategy won, or what healthCheck returned. **An unverifiable
+requirement is not a requirement**, and ADAPTER-VERIFICATION.md's status
+table said NOT VERIFIED for all three adapters with no way for anyone to
+change that.
+
+**The fix**: `diagnostics.ts` builds a structural report - which strategy
+resolved each element, every strategy tried with its match and admitted
+counts, which invariant rejected the rest, the ambiguity count, and
+healthCheck's failures in full - and `debug.ts` renders it to the page
+console.
+
+**It ships rather than being a dev-only script**, deliberately. The sites
+change, and when a user reports "it stopped working on Gemini" the only
+useful thing they can send back is this report from their own browser. A
+diagnostic that exists only on a developer's machine is no help on the
+day it is needed. Default-on for an unpacked load (detected via the
+absence of `update_url`, which Chrome injects only for store installs),
+default-off for a store install, user-overridable.
+
+It reports lengths, counts, tags, tiers and strategy ids, never page text
+- it is designed to be pasted into a bug report by someone with no way to
+audit it first, so it must be safe by construction rather than by their
+judgement.
+
+Measured after: 0 console lines became 22, naming the winning strategy,
+the tier, the ambiguity count and every failure, in both the healthy and
+the degraded state.
+
+### D32 - Construction #4 could silently pass: the write verifier is synchronous, and frameworks revert asynchronously (M9)
+
+Raised as a review question and confirmed. It is the worst shape a defect
+can take here - a mechanism built to make silent failure impossible,
+failing silently itself.
+
+`writeAndVerify` writes and reads back IN THE SAME TASK. That catches a
+framework that rejects or ignores the write. It does not catch one that
+ACCEPTS the write and reverts it on a later render tick, which is exactly
+what React does to a controlled input whose value tracker was not
+updated. The read-back would pass, and microseconds later the composer
+would hold the user's ORIGINAL unmasked text, with every check having
+reported success.
+
+Two things now stand between that and a leak:
+
+1. `text.ts` writes through the PROTOTYPE value setter, so React's
+   tracker sees a value it did not write and accepts the following input
+   event as a genuine edit. This makes the revert not happen.
+2. `reverifyBeforeSend()` re-reads at the gate and blocks on any
+   difference. This catches it if it happens anyway.
+
+The second is the load-bearing one, because the first depends on a
+correct model of a third party's internals. **It must be called in the
+same task as the decision to allow the send** - any await between the
+check and the send reopens the hole, and that constraint is written at
+the function.
+
+REQUIREMENT ON THE CONTENT-SCRIPT BATCH: the send path must call
+`reverifyBeforeSend` immediately before permitting the send. Implemented
+and tested now so it cannot be forgotten later and rediscovered as a
+leak.
+
+### D33 - Live adapter verification cannot be automated, and the harness is retired (M9)
+
+`verify-live.py` was built to verify adapters against the live sites and
+has been removed. All three targets run bot detection: claude.ai sits
+behind a Cloudflare interstitial that loops indefinitely for a driven
+browser, and Gemini has Google's equivalent.
+
+This is not a harness bug and a better harness does not fix it. The sites
+are working as intended, and an extension-verification tool is
+indistinguishable to them from the automation they exist to stop.
+
+**Nor should it be worked around.** Defeating a site's bot detection in
+order to test an extension that reads that site would be a poor thing for
+a privacy tool to ship, and any technique that worked would be fragile in
+exactly the way the adapters already are.
+
+Recorded as a finding rather than left as a deleted file, because
+automating it will keep looking attractive. Live verification is manual,
+permanently; the procedure is in ADAPTER-VERIFICATION.md.
+
+What automation still covers, and does: whether the content script
+injects and produces output (D31), via origin interception and a
+committed fixture. That verifies the MECHANISM. Only a person signed in
+can verify the SITE'S SHAPE.
+
+
 ## Status after M2
 
 Stage 1 is complete: 113 registered detectors — 57 NATIONAL_ID and 19

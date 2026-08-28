@@ -107,6 +107,10 @@ export type {
 export { lookupGazetteer, gazetteerSizes, isGazetteerType } from './gazetteer/index.js';
 export type { GazetteerHit, GazetteerType } from './gazetteer/index.js';
 
+// ── Stage 4: overlap resolution (M8) ──
+export { resolveOverlaps, coverageHoles } from './fuse/resolve.js';
+export type { ScoredForResolution, ResolutionResult } from './fuse/resolve.js';
+
 // ── The composed pipeline (M7) ──
 // Stages 0–3 in one call. This is what consumers should use; the individual
 // stage functions remain exported for tooling that wants one stage.

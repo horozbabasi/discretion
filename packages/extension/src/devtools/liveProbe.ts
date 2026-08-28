@@ -32,6 +32,7 @@ import { CLAUDE_COMPOSER_STRATEGIES, CLAUDE_RESPONSE_STRATEGIES } from '../adapt
 import { CHATGPT_COMPOSER_STRATEGIES, CHATGPT_RESPONSE_STRATEGIES } from '../adapters/chatgpt.js';
 import { GEMINI_COMPOSER_STRATEGIES, GEMINI_RESPONSE_STRATEGIES } from '../adapters/gemini.js';
 import { InputWitness, pickAdapter } from '../adapters/index.js';
+import { safeAttributeValue } from '../diagnostics.js';
 import type { ElementStrategy, Invariant, SiteAdapter } from '../adapters/types.js';
 
 /**
@@ -97,13 +98,6 @@ export interface LiveProbeReport {
   readonly witnessWorks: boolean | null;
   /** Whether a round-trip read of the composer preserved its length. */
   readonly readBackLength: number | null;
-}
-
-/** Same conservative test the fixture scrubber uses. */
-function safeAttributeValue(value: string | null): string | null {
-  if (value === null) return null;
-  if (value.length > 60 || /[@]/u.test(value) || /\d{4,}/u.test(value)) return '<withheld>';
-  return value;
 }
 
 function observe(

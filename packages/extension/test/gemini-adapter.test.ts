@@ -13,7 +13,11 @@
 
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { GEMINI_COMPOSER_STRATEGIES, GeminiAdapter } from '../src/adapters/gemini.js';
+import {
+  GEMINI_COMPOSER_STRATEGIES,
+  GeminiAdapter,
+  describeSendSearch,
+} from '../src/adapters/gemini.js';
 import { InputWitness, verifyBinding } from '../src/adapters/binding.js';
 import { deepQueryAll } from '../src/adapters/deep.js';
 import type { SubmitIntent } from '../src/adapters/types.js';
@@ -381,5 +385,79 @@ describe('adapter identity', () => {
     expect(adapter.matches('https://chatgpt.com/')).toBe(false);
     expect(adapter.matches('https://gemini.google.com.evil.example/')).toBe(false);
     expect(adapter.matches('not a url')).toBe(false);
+  });
+});
+
+describe('the region walk is traced, so its two failure modes are distinguishable', () => {
+  it('reports ZERO CONTROLS when the composer has no toolbar beside it', () => {
+    // One of the two ways the composer-anchored path returns nothing. Without
+    // the trace this is indistinguishable from the other, and they need
+    // opposite fixes.
+    loadFixture('gemini/composer');
+    document.querySelector('button.send-button')?.remove();
+    giveEverythingLayout();
+
+    const trace = describeSendSearch(document);
+    expect(trace.composerResolved).toBe(true);
+    expect(trace.outcome).toBe('no-region');
+    expect(trace.regionControls).toBe(0);
+    // The hop table names every element it climbed through, so "the bound was
+    // too tight" is visible rather than inferred.
+    expect(trace.steps.length).toBeGreaterThan(0);
+  });
+
+  it('reports AMBIGUOUS when the region genuinely holds several controls', () => {
+    // The other way. This one needs a discriminator, never a wider walk -
+    // widening only adds more controls.
+    loadFixture('gemini/composer');
+    const area = document.querySelector('.input-area');
+    for (const label of ['attach', 'mic']) {
+      const extra = document.createElement('button');
+      extra.className = `tool-${label}`;
+      area?.append(extra);
+    }
+    giveEverythingLayout();
+
+    const trace = describeSendSearch(document);
+    expect(trace.outcome).toBe('ambiguous');
+    expect(trace.regionControls).toBeGreaterThan(1);
+    expect(trace.stoppedBecause).toBe('found-region');
+  });
+
+  it('climbs past several wrapper levels to reach the real toolbar container', () => {
+    // The regression the previous bound caused: an Angular composer sits five
+    // or six levels below its toolbar, and a hop limit of 4 terminated before
+    // reaching it - returning nothing, indistinguishable from "no controls".
+    loadFixture('gemini/composer');
+    const richTextarea = document.querySelector('rich-textarea');
+    let wrapper = richTextarea as Element;
+    for (let depth = 0; depth < 5; depth += 1) {
+      const layer = document.createElement('div');
+      layer.className = `layer-${depth}`;
+      wrapper.replaceWith(layer);
+      layer.append(wrapper);
+      wrapper = layer;
+    }
+    giveEverythingLayout();
+
+    const trace = describeSendSearch(document);
+    expect(trace.outcome).toBe('unique');
+    expect(trace.steps.length).toBeGreaterThan(4);
+  });
+
+  it('still refuses to climb into <body>', () => {
+    // The bound that DOES safety work. Raising the hop limit must not
+    // reintroduce the sidebar-button binding the review found.
+    resetDocument();
+    document.body.innerHTML =
+      '<button class="sidebar-new-chat">new</button>' +
+      '<main><chat-window></chat-window></main>' +
+      '<div><div><rich-textarea><div class="ql-editor" contenteditable="true" ' +
+      'role="textbox" aria-multiline="true" aria-label="x"></div></rich-textarea></div></div>';
+    giveEverythingLayout();
+
+    const trace = describeSendSearch(document);
+    expect(trace.stoppedBecause).toBe('reached-body');
+    expect(trace.outcome).toBe('no-region');
   });
 });

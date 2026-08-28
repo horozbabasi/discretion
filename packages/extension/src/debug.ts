@@ -218,6 +218,39 @@ function renderForensics(f: EnvironmentForensics, diagnostic: AdapterDiagnostic)
     console.log(`custom elements present: ${f.customElements.join(', ')}`);
   }
 
+  if (f.sendSearch !== null) {
+    const search = f.sendSearch;
+    console.log(
+      `composer-anchored send search: ${search.outcome} ` +
+        `(stopped because ${search.stoppedBecause}; ` +
+        `${search.regionControls} control(s) in the chosen region)`,
+    );
+    if (search.steps.length > 0) {
+      console.table(
+        search.steps.map((step) => ({
+          hop: step.hop,
+          element: step.marker,
+          controlsFound: step.controlsFound,
+        })),
+      );
+    }
+    if (search.outcome === 'no-region' && search.stoppedBecause !== 'no-composer') {
+      console.warn(
+        'The walk found NO region containing a control beside the composer. Either it ' +
+          'terminated before reaching the composer toolbar (a bound too tight), or the toolbar ' +
+          'genuinely holds no control. The hop table above says which: compare the last element ' +
+          'reached against the composer\'s real container.',
+      );
+    }
+    if (search.outcome === 'ambiguous') {
+      console.warn(
+        `The composer's region holds ${search.regionControls} controls, so the uniqueness rule ` +
+          'refused rather than choosing. This needs a DISCRIMINATOR among them, not a wider ' +
+          'walk - widening only adds more controls.',
+      );
+    }
+  }
+
   // Every editable surface on the page, described structurally. This is what
   // answers "is that lone textarea the composer, or a hidden form field?" —
   // both count as 1 in the probe table.
@@ -353,14 +386,44 @@ function renderReading(f: EnvironmentForensics, diagnostic: AdapterDiagnostic): 
         'Nothing here is evidence about the composer selectors.',
     );
     if (failedTargets.includes('send-button') || failedTargets.includes('submit-control')) {
-      console.warn(
-        controls === 0
-          ? 'The send control failed and NO control of any kind was found. Suspect the page ' +
-              'state, not the selectors.'
-          : `The send control failed while ${controls} control(s) exist on the page. Compare the ` +
-              'control-candidate table above against this adapter\'s send selectors: this is ' +
-              'most likely ordinary selector rot on that one element.',
-      );
+      // SCOPED BY STRATEGY FAMILY. "Most likely ordinary selector rot" was
+      // asserted here before, and it explained only the MARKER clauses. A
+      // composer-anchored search failing means something else entirely, and
+      // saying "rot" over the top of it is a cause asserted for a failure the
+      // line did not examine.
+      const search = f.sendSearch;
+      if (controls === 0) {
+        console.warn(
+          'The send control failed and NO control of any kind was found on the page. Suspect ' +
+            'page state, not selectors.',
+        );
+      } else {
+        console.warn(
+          `The send control failed while ${controls} control(s) exist. What that implies differs ` +
+            'by strategy family:',
+        );
+        console.warn(
+          `  MARKER/ICON clauses failed -> the declared markers no longer describe the control. ` +
+            'Ordinary rot. Write a clause against the control-candidate attributes above.',
+        );
+        if (search === null) {
+          console.warn('  (this adapter has no composer-anchored search)');
+        } else if (search.outcome === 'ambiguous') {
+          console.warn(
+            `  COMPOSER-ANCHORED search found ${search.regionControls} controls in the region and ` +
+              'refused. NOT rot - the region needs a discriminator, and rewriting markers will ' +
+              'not help it.',
+          );
+        } else if (search.outcome === 'no-region') {
+          console.warn(
+            `  COMPOSER-ANCHORED search found no region at all (${search.stoppedBecause}). NOT ` +
+              'rot - it never got far enough to look. Check the hop table before touching any ' +
+              'selector.',
+          );
+        } else {
+          console.warn('  COMPOSER-ANCHORED search resolved, so the failure is elsewhere.');
+        }
+      }
     }
     return;
   }

@@ -33,6 +33,8 @@
 
 import type { ElementStrategy, HealthReport, Invariant, SiteAdapter } from './adapters/index.js';
 import { deepQueryAll } from './adapters/deep.js';
+import { describeSendSearch } from './adapters/gemini.js';
+import type { SendSearchTrace } from './adapters/gemini.js';
 import {
   isEditableSurface,
   CHATGPT_COMPOSER_STRATEGIES,
@@ -136,6 +138,13 @@ export interface EnvironmentForensics {
   readonly probes: Readonly<Record<string, { light: number; deep: number }>>;
   /** Custom element tag names present, which is how an Angular app is shaped. */
   readonly customElements: readonly string[];
+  /**
+   * The composer-anchored send search, when the adapter has one.
+   *
+   * Without it that path fails INDISTINGUISHABLY from a marker clause - both
+   * report `send-button: not-found` - and the two need opposite fixes.
+   */
+  readonly sendSearch: SendSearchTrace | null;
   /** Every editable surface found, described structurally. Never text. */
   readonly editableCandidates: readonly EditableCandidate[];
   /**
@@ -157,7 +166,16 @@ export interface ControlCandidate {
   readonly tag: string;
   readonly role: string | null;
   readonly visible: boolean;
-  /** Attribute NAMES present, never their values. */
+  /**
+   * Attributes as `name="value"`, with values withheld when they could carry
+   * user content (the same conservative test the fixture scrubber uses).
+   *
+   * NAMES ALONE ARE NOT ENOUGH HERE, which is why this changed. A clause is
+   * written against the VALUE - `data-test-id="send-button"` is the thing you
+   * need, and `data-test-id` on its own says only that some test id exists.
+   * Every reading so far elided exactly the information required to write the
+   * fix.
+   */
   readonly attributes: readonly string[];
   /** Why this element was considered a control at all. */
   readonly matchedBy: readonly string[];
@@ -296,10 +314,36 @@ function collectShadowStats(doc: Document): {
   };
 }
 
+/**
+ * The conservative content test, defined ONCE and exported.
+ *
+ * It existed in two places - here and in devtools/liveProbe.ts - which is the
+ * drift pattern that has now produced two defects in this codebase. One
+ * definition, imported.
+ */
+export function safeAttributeValue(value: string | null): string | null {
+  if (value === null) return null;
+  if (value.length > 60 || /[@]/u.test(value) || /\d{4,}/u.test(value)) return '<withheld>';
+  return value;
+}
+
 /** Attribute names only - values can contain user content. */
 function attributeNames(element: Element): string[] {
   return Array.from(element.attributes)
     .map((a) => a.name)
+    .sort()
+    .slice(0, 24);
+}
+
+/**
+ * Attributes as `name="value"`, withholding values that could carry content.
+ *
+ * Used for CONTROLS only, never for editable surfaces: a button's attributes
+ * are page chrome, whereas a composer's could contain anything the user typed.
+ */
+function attributePairs(element: Element): string[] {
+  return Array.from(element.attributes)
+    .map((a) => `${a.name}="${safeAttributeValue(a.value) ?? ''}"`)
     .sort()
     .slice(0, 24);
 }
@@ -400,7 +444,7 @@ function collectControlCandidates(doc: Document): ControlCandidate[] {
       tag: element.tagName.toLowerCase(),
       role: element.getAttribute('role'),
       visible: rect.width > 0 && rect.height > 0,
-      attributes: attributeNames(element),
+      attributes: attributePairs(element),
       matchedBy,
       ancestors: ancestorChain(element),
     };
@@ -440,7 +484,7 @@ export function markScriptStart(): void {
   scriptStart = Date.now();
 }
 
-function buildForensics(doc: Document): EnvironmentForensics {
+function buildForensics(doc: Document, site: string): EnvironmentForensics {
   const shadow = collectShadowStats(doc);
   const probes: Record<string, { light: number; deep: number }> = {};
   for (const selector of PROBE_SELECTORS) {
@@ -469,6 +513,7 @@ function buildForensics(doc: Document): EnvironmentForensics {
     customElements: shadow.customElements,
     editableCandidates: collectEditableCandidates(doc),
     controlCandidates: collectControlCandidates(doc),
+    sendSearch: site === 'gemini' ? describeSendSearch(doc) : null,
   };
 }
 
@@ -515,6 +560,6 @@ export function buildDiagnostic(adapter: SiteAdapter, doc: Document): AdapterDia
     // CONTROL failed emitted no forensics at all - the instrument went quiet
     // on exactly the failure that remained, and the reading that followed had
     // no probe table to diagnose from.
-    forensics: health.ok ? null : buildForensics(doc),
+    forensics: health.ok ? null : buildForensics(doc, adapter.id),
   };
 }

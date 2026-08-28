@@ -188,18 +188,152 @@ function ancestorsAcrossShadow(node: Element): Set<Element> {
  * meaningless, and it is how a sidebar button becomes "the single control
  * beside the composer".
  */
-function regionAroundComposer(composer: Element): Element | null {
+/** One level of the region walk, for the diagnostic. */
+export interface RegionWalkStep {
+  readonly hop: number;
+  readonly tag: string;
+  readonly marker: string;
+  readonly controlsFound: number;
+}
+
+export interface SendSearchTrace {
+  readonly composerResolved: boolean;
+  readonly steps: readonly RegionWalkStep[];
+  readonly stoppedBecause:
+    | 'found-region'
+    | 'reached-body'
+    | 'ran-out-of-ancestors'
+    | 'hop-limit'
+    | 'no-composer';
+  readonly regionControls: number;
+  readonly outcome: 'unique' | 'ambiguous' | 'none' | 'no-region';
+}
+
+/**
+ * A short identifier for an element, for the diagnostic only.
+ *
+ * Attribute VALUES, not names, because writing a selector needs the value -
+ * but only for the class/id/testid family, and only when they pass the same
+ * conservative content test the fixture scrubber uses.
+ */
+function describeElement(element: Element): string {
+  const bits = [element.tagName.toLowerCase()];
+  for (const attribute of ['id', 'class', 'data-test-id', 'data-testid']) {
+    const value = element.getAttribute(attribute);
+    if (value === null || value.length === 0) continue;
+    const safe = value.length > 60 || /[@]/u.test(value) || /\d{4,}/u.test(value);
+    bits.push(`${attribute}="${safe ? '<withheld>' : value}"`);
+  }
+  return bits.join(' ');
+}
+
+/**
+ * How far the walk may climb before giving up.
+ *
+ * ─────────────────────────────────────────────────────────────────────────
+ * THIS NUMBER DOES NO SAFETY WORK, and treating it as though it did caused
+ * the opposite failure to the one it was meant to fix.
+ *
+ * The adversarial review found the walk reaching `<body>` and binding a
+ * sidebar button as the send control. Two things were changed in response:
+ * an explicit stop at `body`/`documentElement`, and a reduction of this
+ * bound from 6 to 4. **Only the first of those was the fix.** The body stop
+ * is what prevents the dangerous case; this number only stops a pathological
+ * loop.
+ *
+ * At 4 it then failed the other way: an Angular composer sits five or six
+ * levels below its toolbar container, so the walk terminated before reaching
+ * it and returned nothing - indistinguishable from "no controls exist".
+ * A bound that is too tight and one that is too loose look identical from
+ * outside, which is exactly why the walk is now TRACED rather than trusted.
+ *
+ * Raised to a loop guard rather than a semantic limit. The semantic limits
+ * are the body stop above and the ambiguity rule below: a region large enough
+ * to contain several controls refuses rather than choosing, so climbing too
+ * far cannot bind the wrong thing - it can only fail loudly.
+ * ─────────────────────────────────────────────────────────────────────────
+ */
+const REGION_WALK_LIMIT = 20;
+
+function walkRegion(composer: Element): { region: Element | null; trace: SendSearchTrace } {
   const doc = composer.ownerDocument;
+  const steps: RegionWalkStep[] = [];
   let region: Element | null = parentAcrossShadow(composer);
   let hops = 0;
-  while (region !== null && hops < 4) {
-    if (region === doc.body || region === doc.documentElement) return null;
+
+  while (region !== null && hops < REGION_WALK_LIMIT) {
+    if (region === doc.body || region === doc.documentElement) {
+      return {
+        region: null,
+        trace: {
+          composerResolved: true,
+          steps,
+          stoppedBecause: 'reached-body',
+          regionControls: 0,
+          outcome: 'no-region',
+        },
+      };
+    }
     const controls = controlsBeside(region, composer);
-    if (controls.length > 0) return region;
+    steps.push({
+      hop: hops,
+      tag: region.tagName.toLowerCase(),
+      marker: describeElement(region),
+      controlsFound: controls.length,
+    });
+    if (controls.length > 0) {
+      return {
+        region,
+        trace: {
+          composerResolved: true,
+          steps,
+          stoppedBecause: 'found-region',
+          regionControls: controls.length,
+          outcome: controls.length === 1 ? 'unique' : 'ambiguous',
+        },
+      };
+    }
     region = parentAcrossShadow(region);
     hops += 1;
   }
-  return null;
+
+  return {
+    region: null,
+    trace: {
+      composerResolved: true,
+      steps,
+      stoppedBecause: region === null ? 'ran-out-of-ancestors' : 'hop-limit',
+      regionControls: 0,
+      outcome: 'no-region',
+    },
+  };
+}
+
+function regionAroundComposer(composer: Element): Element | null {
+  return walkRegion(composer).region;
+}
+
+/**
+ * The region walk, described for the diagnostic.
+ *
+ * Without this, the composer-anchored path fails INDISTINGUISHABLY from a
+ * marker clause: both report "send-button: not-found". They need opposite
+ * fixes - a walk that terminates too early versus a region that legitimately
+ * holds several controls and needs a discriminator - so the diagnostic has to
+ * say which happened.
+ */
+export function describeSendSearch(doc: Document): SendSearchTrace {
+  const composer = resolveComposerIndependently(doc);
+  if (composer === null) {
+    return {
+      composerResolved: false,
+      steps: [],
+      stoppedBecause: 'no-composer',
+      regionControls: 0,
+      outcome: 'no-region',
+    };
+  }
+  return walkRegion(composer).trace;
 }
 
 /** Rendered controls inside `region` that are neither the composer, nor inside it, nor around it. */

@@ -2651,6 +2651,66 @@ one would undo fail-closed entirely, and that is the whole risk in this
 change.
 
 
+### D34l - The bound that did no safety work: a too-tight limit and a too-loose one look identical from outside (M9)
+
+The Gemini send fix still did not resolve, and the cause was the repair
+to the previous cause.
+
+**What happened.** The adversarial review found the region walk reaching
+`<body>` and binding a sidebar button as the send control. Two things
+changed in response: an explicit stop at `body`/`documentElement`, and a
+reduction of the hop bound from 6 to 4.
+
+**Only the first was the fix.** The body stop is what prevents the
+dangerous case. The hop count only prevents a pathological loop - it was
+doing no safety work at all, and lowering it was a change made because
+"tighten the bound" sounded like the lesson.
+
+At 4 it failed the other way. An Angular composer sits five or six levels
+below its toolbar container, so the walk terminated before reaching it
+and returned nothing. **A bound that is too tight and one that is too
+loose produce the same observable: the path returns nothing useful.** The
+previous version failed loose, this one failed tight, and neither was
+distinguishable from "there is no send control here".
+
+**The bound is now a loop guard (20), not a semantic limit**, and the
+semantic limits are named as what they are: the body stop above, and the
+ambiguity rule below. A region large enough to hold several controls
+refuses rather than choosing, so climbing further cannot bind the wrong
+thing - it can only fail loudly. That is why raising the number is not
+the widening D26 warns against: nothing about what may be MATCHED changed.
+
+**The real fix is that the walk is now TRACED rather than trusted.** The
+diagnostic reports every level it climbed, what each contained, why it
+stopped, and which outcome the uniqueness rule produced. Without that,
+the composer-anchored path failed indistinguishably from a marker clause
+- both print `send-button: not-found` - while needing opposite repairs:
+
+| outcome | means | fix |
+| --- | --- | --- |
+| `no-region`, stopped early | the walk never reached the toolbar | a bound or a traversal problem |
+| `ambiguous` | the toolbar holds several controls | a DISCRIMINATOR, never a wider walk |
+| `reached-body` | no toolbar between composer and body | the composer is not where we think |
+
+**And the READING is now scoped by strategy family.** It previously said
+"most likely ordinary selector rot" over a failure that included a
+composer-anchored search which does not depend on markers at all. Rot
+explains the marker clauses; it explains nothing about that one. Saying
+it over the top of both is rule 7's second form - a cause asserted for a
+failure the line did not examine - so the reading now states what each
+family's failure does and does not imply.
+
+**Full attribute VALUES are now reported for control candidates**, with
+the same conservative content guard. Names alone were useless for the one
+job the table exists for: a clause is written against
+`data-test-id="send-button"`, and `data-test-id` on its own says only
+that some test id exists. Every reading so far had elided exactly the
+information needed to write the fix.
+
+That guard existed in two files, which is the drift pattern that has
+already produced two defects here. It is now defined once and imported.
+
+
 ## Status after M2
 
 Stage 1 is complete: 113 registered detectors — 57 NATIONAL_ID and 19

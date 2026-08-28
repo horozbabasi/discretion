@@ -140,6 +140,66 @@ describe('failure forensics', () => {
     expect(diagnostic.forensics?.iframes).toBe(2);
   });
 
+  it('stamps every reading with timing and paint state', () => {
+    // Without these, a "matched 0" from an un-painted SPA shell is
+    // indistinguishable from a stale selector - which is exactly the ambiguity
+    // that made the first live Gemini reading untrustworthy.
+    resetDocument();
+    document.body.innerHTML = '<main><div>lorem</div></main>';
+    giveEverythingLayout();
+
+    const f = buildDiagnostic(new GeminiAdapter(document, witness()), document).forensics;
+    if (f === null) throw new Error('expected forensics');
+
+    expect(typeof f.readyState).toBe('string');
+    expect(f.domElementCount).toBeGreaterThan(0);
+    expect(f.attempt).toBeGreaterThan(0);
+  });
+
+  it('describes each editable surface so a hidden field is not mistaken for the composer', () => {
+    // A hidden form field and a real composer both count as 1 in the probe
+    // table. This is what tells them apart.
+    resetDocument();
+    document.body.innerHTML =
+      '<main><div>lorem</div></main>' +
+      '<textarea id="real" aria-label="prompt"></textarea>' +
+      '<div hidden><textarea id="hidden-field"></textarea></div>' +
+      '<textarea id="disabled-field" disabled></textarea>';
+    giveEverythingLayout();
+
+    const f = buildDiagnostic(new GeminiAdapter(document, witness()), document).forensics;
+    if (f === null) throw new Error('expected forensics');
+
+    expect(f.editableCandidates).toHaveLength(3);
+    const usable = f.editableCandidates.filter((c) => c.visible && c.editable);
+    expect(usable).toHaveLength(1);
+
+    const disabled = f.editableCandidates.find((c) => c.disabled);
+    expect(disabled).toBeDefined();
+    expect(disabled?.editable).toBe(false);
+
+    // Attribute NAMES only - a value could carry user content.
+    const real = f.editableCandidates.find((c) => c.attributes.includes('aria-label'));
+    expect(real).toBeDefined();
+    expect(real?.attributes).toContain('id');
+    expect(JSON.stringify(f.editableCandidates)).not.toContain('prompt');
+  });
+
+  it('counts role="button" controls, not only <button> elements', () => {
+    // "0 buttons on a page with a visible send control" must distinguish
+    // "not painted" from "the controls are not <button>".
+    resetDocument();
+    document.body.innerHTML =
+      '<main><div>lorem</div></main><div role="button">send</div><textarea></textarea>';
+    giveEverythingLayout();
+
+    const f = buildDiagnostic(new GeminiAdapter(document, witness()), document).forensics;
+    if (f === null) throw new Error('expected forensics');
+
+    expect(f.probes['button']?.deep).toBe(0);
+    expect(f.probes['[role="button"]']?.deep).toBe(1);
+  });
+
   it('never includes page text', () => {
     // The report is designed to be pasted into a bug report by someone with no
     // way to audit it first, so this is a safety property, not tidiness.

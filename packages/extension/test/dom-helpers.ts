@@ -35,8 +35,12 @@ export function giveEverythingLayout(root: ParentNode = document): void {
     }
   }
   for (const element of elements) {
+    // Both checks walk ANCESTORS. `hidden` on a container hides everything
+    // inside it in a real browser, so checking only the element itself would
+    // report a hidden form field as visible - and the whole point of the
+    // 'rendered' invariant is to reject exactly that.
     const inert =
-      element.closest('[aria-hidden="true"]') !== null || element.hasAttribute('hidden');
+      element.closest('[aria-hidden="true"]') !== null || element.closest('[hidden]') !== null;
     Object.defineProperty(element, 'getBoundingClientRect', {
       configurable: true,
       value: () =>

@@ -1928,6 +1928,64 @@ translation is a smaller failure than a missing message.
 Recorded as open so it is not mistaken for done once the badge exists.
 
 
+### D34a - Gemini: reachability ruled out, model wrong, and the instrument had a timing defect (M9)
+
+Follow-up to D34, recording what the forensics returned and one defect
+they exposed in themselves.
+
+**Reading: 0 open shadow roots, 0 iframes, likely-closed hosts `mat-icon`
+only.** The composer is reachable and no strategy matched it. **The
+closed-shadow-root branch is closed** - Gemini is supportable, SPEC's
+limitations and the README are not edited, and the three-site claim
+stands.
+
+**The failure is a wrong MODEL, not five stale selectors.** Every
+editable probe returned 0 - `rich-textarea`, `div.ql-editor`,
+`[contenteditable]`, `[role="textbox"]` - while bare `textarea` returned
+1. All five strategies assume a contenteditable rich-text editor. A
+uniform miss across five independent strategies is explained far better
+by a wrong model of the site than by five selectors going stale at once.
+
+If confirmed, the consequence is wider than selectors: `setComposerText`
+must take the value-property branch rather than the `execCommand`
+branch, the input witness must be confirmed against a textarea rather
+than an editing host, and the `editable` invariant - which already admits
+textareas - must actually be presented with one. That is closer to
+ChatGPT's React case than to the current Gemini code.
+
+**A DEFECT IN THE INSTRUMENT, which makes the specific counts
+provisional.** `button` matched 0 in the light DOM on a page with a
+visible send control. Not credible, and not yet explained: either the
+probe ran before the Angular app painted, or the controls are not
+`<button>` elements.
+
+The cause of the ambiguity is mine. `run_at` is `document_idle`, which
+for a single-page app is BEFORE bootstrap - and the diagnostic was
+emitted only when `health.ok` CHANGED. So a page that failed at
+`document_idle` and stayed failing was reported once, from the shell, and
+never again. Whoever read that console saw a snapshot of a page that no
+longer existed, with nothing on it saying so.
+
+This is D27's lesson in a new place: a reading whose conditions are not
+recorded is not a reading of the thing you think it is. Fixed the same
+way - by recording the conditions:
+
+- every forensics block now carries `readyState`, milliseconds since
+  script start, an attempt number, and TOTAL DOM ELEMENT COUNT (an
+  un-painted shell has hundreds, a painted app thousands);
+- below 400 elements the block refuses to draw a conclusion and says the
+  page had not painted, rather than reporting a selector verdict;
+- re-checks run at 400ms, 1.2s, 3s, 6s and 12s;
+- the console re-emits on a change of VERDICT, not only of `health.ok`,
+  so a shell reading is superseded rather than standing forever;
+- the probe list gained `[role="button"]` and `mat-icon`, which separates
+  "the controls are not buttons" from "nothing had painted".
+
+The "stale selectors" conclusion is accepted. The counts behind it are
+provisional until one reading on a confirmed-painted page, and selector
+work waits for that.
+
+
 ## Status after M2
 
 Stage 1 is complete: 113 registered detectors — 57 NATIONAL_ID and 19

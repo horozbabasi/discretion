@@ -34,6 +34,7 @@
 import type { ElementStrategy, HealthReport, Invariant, SiteAdapter } from './adapters/index.js';
 import { deepQueryAll } from './adapters/deep.js';
 import {
+  isEditableSurface,
   CHATGPT_COMPOSER_STRATEGIES,
   CHATGPT_RESPONSE_STRATEGIES,
   CLAUDE_COMPOSER_STRATEGIES,
@@ -80,7 +81,40 @@ export interface ElementDiagnostic {
  *
  * Counts and tag names only. Never text.
  */
+/** One editable surface found anywhere, described structurally. */
+export interface EditableCandidate {
+  readonly tag: string;
+  readonly type: string | null;
+  readonly visible: boolean;
+  readonly editable: boolean;
+  readonly disabled: boolean;
+  readonly readOnly: boolean;
+  readonly textLength: number;
+  /** Attribute NAMES present, never their values. */
+  readonly attributes: readonly string[];
+  /** Ancestor tag chain, nearest first, bounded. */
+  readonly ancestors: readonly string[];
+  /** Composer invariants this candidate fails, if any. */
+  readonly failsInvariants: readonly string[];
+}
+
 export interface EnvironmentForensics {
+  /**
+   * WHEN this reading was taken. Recorded because the first version of these
+   * forensics had no timing information and was emitted once, at
+   * document_idle - which for a single-page app is BEFORE the app paints. A
+   * "matched 0" reading from an unpainted shell is indistinguishable from a
+   * stale selector, and there was no way to tell which you were looking at.
+   */
+  readonly readyState: string;
+  readonly msSinceScriptStart: number;
+  readonly attempt: number;
+  /**
+   * Total elements in the document. The cheapest paint signal there is: an
+   * unbootstrapped SPA shell has hundreds, a painted application has
+   * thousands. If this is small, every other count here means nothing.
+   */
+  readonly domElementCount: number;
   /** Open shadow roots reachable from the document, and the deepest nesting. */
   readonly openShadowRoots: number;
   readonly maxShadowDepth: number;
@@ -102,6 +136,8 @@ export interface EnvironmentForensics {
   readonly probes: Readonly<Record<string, { light: number; deep: number }>>;
   /** Custom element tag names present, which is how an Angular app is shaped. */
   readonly customElements: readonly string[];
+  /** Every editable surface found, described structurally. Never text. */
+  readonly editableCandidates: readonly EditableCandidate[];
 }
 
 export interface AdapterDiagnostic {
@@ -181,7 +217,12 @@ const PROBE_SELECTORS = [
   '[contenteditable]',
   'textarea',
   'input[type="text"]',
+  // Controls. `button` alone is not enough: an app can build controls from
+  // div[role=button], and "0 buttons on a page with a visible send control"
+  // needs to distinguish that from a page that has not painted.
   'button',
+  '[role="button"]',
+  'mat-icon',
   'main, [role="main"]',
 ] as const;
 
@@ -226,6 +267,65 @@ function collectShadowStats(doc: Document): {
   };
 }
 
+/** Attribute names only - values can contain user content. */
+function attributeNames(element: Element): string[] {
+  return Array.from(element.attributes)
+    .map((a) => a.name)
+    .sort()
+    .slice(0, 24);
+}
+
+function ancestorChain(element: Element): string[] {
+  const chain: string[] = [];
+  let node: Element | null = element.parentElement;
+  let hops = 0;
+  while (node !== null && hops < 8) {
+    chain.push(node.tagName.toLowerCase());
+    node = node.parentElement;
+    hops += 1;
+  }
+  return chain;
+}
+
+/**
+ * Describes every editable surface on the page.
+ *
+ * This is what answers "is that lone textarea actually the composer, or a
+ * hidden form field?" - a hidden field and a real composer both count as 1.
+ */
+function collectEditableCandidates(doc: Document): EditableCandidate[] {
+  const found = deepQueryAll<HTMLElement>(doc, 'textarea, input, [contenteditable]');
+  return found.slice(0, 12).map((element) => {
+    const rect = element.getBoundingClientRect();
+    const asInput = element as HTMLInputElement & HTMLTextAreaElement;
+    return {
+      tag: element.tagName.toLowerCase(),
+      type: element.getAttribute('type'),
+      visible: rect.width > 0 && rect.height > 0,
+      editable: isEditableSurface(element),
+      disabled: asInput.disabled === true,
+      readOnly: asInput.readOnly === true,
+      textLength: (element instanceof HTMLTextAreaElement || element instanceof HTMLInputElement
+        ? element.value
+        : (element.textContent ?? '')
+      ).length,
+      attributes: attributeNames(element),
+      ancestors: ancestorChain(element),
+      failsInvariants: (COMPOSER_INVARIANTS as readonly Invariant<Element>[])
+        .filter((inv) => !inv.holds(element))
+        .map((inv) => inv.id),
+    };
+  });
+}
+
+let scriptStart = 0;
+let attemptCounter = 0;
+
+/** Called once when the content script starts, so timings are meaningful. */
+export function markScriptStart(): void {
+  scriptStart = Date.now();
+}
+
 function buildForensics(doc: Document): EnvironmentForensics {
   const shadow = collectShadowStats(doc);
   const probes: Record<string, { light: number; deep: number }> = {};
@@ -241,13 +341,19 @@ function buildForensics(doc: Document): EnvironmentForensics {
     }
     probes[selector] = { light, deep };
   }
+  attemptCounter += 1;
   return {
+    readyState: doc.readyState,
+    msSinceScriptStart: scriptStart === 0 ? -1 : Date.now() - scriptStart,
+    attempt: attemptCounter,
+    domElementCount: doc.querySelectorAll('*').length,
     openShadowRoots: shadow.roots,
     maxShadowDepth: shadow.maxDepth,
     likelyClosedShadowHosts: shadow.likelyClosed,
     iframes: doc.querySelectorAll('iframe').length,
     probes,
     customElements: shadow.customElements,
+    editableCandidates: collectEditableCandidates(doc),
   };
 }
 

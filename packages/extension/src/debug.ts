@@ -139,6 +139,19 @@ export function renderDiagnostic(diagnostic: AdapterDiagnostic): void {
  */
 function renderForensics(f: EnvironmentForensics): void {
   console.warn('environment forensics (emitted because something did not resolve):');
+  // TIMING FIRST, because it decides whether anything below can be believed.
+  const shellSuspect = f.domElementCount < 400;
+  console.log(
+    `reading #${f.attempt} at ${f.msSinceScriptStart}ms, readyState=${f.readyState}, ` +
+      `${f.domElementCount} elements in the DOM`,
+  );
+  if (shellSuspect) {
+    console.warn(
+      `ONLY ${f.domElementCount} ELEMENTS — this looks like an un-painted app shell, not a ` +
+        'rendered page. Every "matched 0" below is probably meaningless. Wait for a later ' +
+        'reading with a higher element count before drawing any conclusion.',
+    );
+  }
   console.log(
     `open shadow roots: ${f.openShadowRoots} (max depth ${f.maxShadowDepth}) | iframes: ${f.iframes}`,
   );
@@ -161,14 +174,58 @@ function renderForensics(f: EnvironmentForensics): void {
     console.log(`custom elements present: ${f.customElements.join(', ')}`);
   }
 
-  const anyEditable =
-    (f.probes['[contenteditable]']?.deep ?? 0) + (f.probes['textarea']?.deep ?? 0);
-  if (anyEditable === 0 && f.likelyClosedShadowHosts.length > 0) {
+  // Every editable surface on the page, described structurally. This is what
+  // answers "is that lone textarea the composer, or a hidden form field?" —
+  // both count as 1 in the probe table.
+  if (f.editableCandidates.length > 0) {
+    console.log('editable surfaces found:');
+    console.table(
+      f.editableCandidates.map((c) => ({
+        tag: c.tag,
+        type: c.type ?? '',
+        visible: c.visible,
+        editable: c.editable,
+        disabled: c.disabled,
+        readOnly: c.readOnly,
+        chars: c.textLength,
+        ancestors: c.ancestors.slice(0, 4).join(' < '),
+        attributes: c.attributes.join(' '),
+        failsInvariants: c.failsInvariants.join(', '),
+      })),
+    );
+  } else {
+    console.warn('NO editable surface anywhere, light DOM or shadow.');
+  }
+
+  const anyEditable = f.editableCandidates.length;
+  const usableEditable = f.editableCandidates.filter((c) => c.visible && c.editable).length;
+  const controls =
+    (f.probes['button']?.deep ?? 0) + (f.probes['[role="button"]']?.deep ?? 0);
+
+  if (shellSuspect) {
+    console.warn('READING: withheld — the page had not painted. Not a selector conclusion.');
+  } else if (controls === 0) {
+    console.warn(
+      'READING: no button and no [role="button"] anywhere on a painted page. That is not ' +
+        'credible for a chat UI, so treat this whole block as suspect rather than as evidence ' +
+        'about selectors.',
+    );
+  } else if (anyEditable === 0 && f.likelyClosedShadowHosts.length > 0) {
     console.warn('READING: no editable surface is reachable, and closed shadow roots are present. The composer is probably UNREACHABLE, not moved.');
   } else if (anyEditable === 0 && f.iframes > 0) {
     console.warn('READING: no editable surface is reachable and frames are present. The composer may be in a frame; the manifest sets all_frames:false.');
+  } else if (usableEditable > 0) {
+    console.warn(
+      `READING: ${usableEditable} visible, editable surface(s) ARE reachable but no strategy ` +
+        'matched one. THE SELECTORS ARE STALE, not the query mechanism. The table above says ' +
+        'what to write them against.',
+    );
   } else if (anyEditable > 0) {
-    console.warn('READING: editable surfaces ARE reachable but no strategy matched one. The selectors are stale, not the query mechanism.');
+    console.warn(
+      `READING: ${anyEditable} editable surface(s) exist but none is both visible and editable — ` +
+        'they may be hidden form fields rather than the composer. Check the table before ' +
+        'treating any of them as the composer.',
+    );
   } else {
     console.warn('READING: no editable surface reachable and no closed-root or frame signal. Inconclusive; capture a fixture.');
   }

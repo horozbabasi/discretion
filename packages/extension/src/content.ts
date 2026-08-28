@@ -17,11 +17,33 @@
 
 import type { HealthReport } from './adapters/index.js';
 import { InputWitness, pickAdapter } from './adapters/index.js';
+import type { SiteAdapter } from './adapters/index.js';
 import type { ExtensionMessage, HealthMessage } from './messages.js';
-import { buildDiagnostic } from './diagnostics.js';
+import { buildDiagnostic, markScriptStart } from './diagnostics.js';
 import { loadDebugPreference, renderDiagnostic, renderUnsupported } from './debug.js';
 
 const HEALTH_INTERVAL_MS = 15_000;
+
+/**
+ * Early re-checks, in milliseconds after the content script starts.
+ *
+ * ─────────────────────────────────────────────────────────────────────────
+ * WHY THESE EXIST: run_at is `document_idle`, and for a single-page app that
+ * is BEFORE the application bootstraps and paints. The first check therefore
+ * runs against an empty shell, finds nothing, and reports `not-found` —
+ * which is indistinguishable from a stale selector.
+ *
+ * The first version of this reported ONLY on a change of `health.ok`, so a
+ * page that failed at document_idle and stayed failing was reported once, from
+ * the shell, and never again. Whoever read that console was looking at a
+ * snapshot of a page that no longer existed, with nothing saying so.
+ *
+ * These re-checks let the app paint before the reading is believed, and the
+ * forensics stamp every reading with readyState, elapsed time and DOM element
+ * count so a shell reading is recognisable as one.
+ * ─────────────────────────────────────────────────────────────────────────
+ */
+const SETTLE_CHECKS_MS = [400, 1_200, 3_000, 6_000, 12_000];
 
 function report(message: ExtensionMessage): void {
   // The service worker may be asleep or the extension context invalidated by a
@@ -43,7 +65,27 @@ function summarise(report_: HealthReport): HealthMessage {
   };
 }
 
+/**
+ * What the console has already been told.
+ *
+ * Re-emitting on a change of VERDICT rather than only of `ok` is what lets a
+ * shell reading be superseded by a real one: "not-found with 312 elements" and
+ * "not-found with 4,180 elements" are different verdicts about different
+ * pages, and the second is the one worth reading.
+ */
+function verdictOf(adapter: SiteAdapter, doc: Document): string {
+  const composer = adapter.getComposer();
+  const painted = doc.querySelectorAll('*').length;
+  // Bucketed, so ordinary DOM churn does not re-emit on every poll.
+  const paintBucket = Math.floor(Math.log2(Math.max(1, painted)));
+  return composer.ok
+    ? `ok:${composer.value.strategyId}:${composer.value.tier}`
+    : `fail:${composer.failure.kind}:${paintBucket}`;
+}
+
 function start(): void {
+  markScriptStart();
+
   const witness = new InputWitness(document);
   witness.start();
 
@@ -55,29 +97,35 @@ function start(): void {
   }
 
   let lastOk: boolean | null = null;
+  let lastVerdict: string | null = null;
   let lastUrl = location.href;
 
   const check = (): void => {
     if (location.href !== lastUrl) {
       lastUrl = location.href;
       lastOk = null; // Force a report: the composer is re-created on navigation.
+      lastVerdict = null;
     }
     const health = adapter.healthCheck();
-    // Report every transition, plus the first result. Reporting every poll
-    // would be 4 messages a minute per tab for no added information.
+
+    // The service worker only needs state transitions: it drives a badge.
     if (health.ok !== lastOk) {
       lastOk = health.ok;
       report(summarise(health));
-      // The console diagnostic follows the same rule: it is emitted on the
-      // first check and on every change of state, never on every poll. A
-      // content script that floods the console gets muted by whoever is
-      // debugging their own page, which would restore the silence this exists
-      // to remove.
+    }
+
+    // The console needs more than that. A verdict change includes "still
+    // failing, but the page has painted since I last looked", which is the
+    // difference between a shell reading and a real one.
+    const verdict = verdictOf(adapter, document);
+    if (verdict !== lastVerdict) {
+      lastVerdict = verdict;
       renderDiagnostic(buildDiagnostic(adapter, document));
     }
   };
 
   check();
+  for (const delay of SETTLE_CHECKS_MS) setTimeout(check, delay);
   const timer = setInterval(check, HEALTH_INTERVAL_MS);
 
   // The stored preference may switch debug off for a packed install, or on for

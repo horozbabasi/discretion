@@ -240,7 +240,7 @@ send it. This is what exercises the read path.
 | ChatGPT | verified — 21 fixture tests | **VERIFIED-FAILING** | reported failing; diagnostic not yet captured |
 | Gemini | verified — 15 fixture tests | **VERIFIED-FAILING** | composer `not-found`, all 5 strategies matched 0 |
 
-### Gemini — VERIFIED-FAILING
+### Gemini — VERIFIED-FAILING: stale selectors (reachability ruled out)
 
 Observed live in an open conversation at `gemini.google.com/app/<id>`, composer
 visible, extension loaded unpacked:
@@ -248,41 +248,82 @@ visible, extension loaded unpacked:
 - **composer: NOT RESOLVED, `not-found`.** All five strategies matched **0**, at
   every tier. **No invariant rejections** — nothing was found to reject.
 - **send-button: `not-found`**, matched 0.
-- response-root: **RESOLVED** by `gemini/response-main` (attribute tier), 1 admitted.
+- response-root: RESOLVED by `gemini/response-main` (attribute tier).
 - `healthCheck` FAILED.
 
-**Diagnosis so far, and one inference corrected.** Every composer strategy uses
-`deepQueryAll` — and so does `gemini/response-main`. So response-root resolving
-while the composer does not is **not** evidence that the query mechanism is at
-fault: both go through the same helper. What it establishes is narrower —
-`deepQueryAll` runs and returns light-DOM matches. Shadow piercing is verified
-against open roots by fixture test, but nothing yet says whether it reached
-anything on the live page.
+**Forensics: 0 open shadow roots, 0 iframes, likely-closed hosts `mat-icon`
+only.** The composer is reachable and no strategy matched it.
 
-Three failures print identically as "matched 0" and need opposite fixes:
+**The closed-shadow-root branch is CLOSED.** Gemini is not permanently
+unsupportable, so SPEC's limitations and the README are **not** edited and the
+three-site claim stands unchanged.
 
-1. the composer moved (stale selectors);
-2. the composer is behind a **closed** shadow root (permanently unreachable);
-3. the composer is in a frame (`all_frames: false`, so invisible to us).
+One inference from the original report needs correcting for the record: every
+composer strategy uses `deepQueryAll`, and so does `gemini/response-main`. All
+six go through the same helper, so response-root resolving while the composer
+did not was never evidence about the query mechanism. The forensics, not that
+contrast, are what ruled reachability out.
 
-**This cannot be determined remotely**, so the diagnostic now emits
-**environment forensics** whenever something fails to resolve: open shadow-root
-count and depth, likely-closed shadow hosts (custom elements that render but
-expose neither children nor a `shadowRoot`), iframe count, and light-vs-deep
-match counts for probes from `rich-textarea` down to bare `textarea`. It prints
-a stated READING rather than only numbers.
+#### The adapter's MODEL of the site is wrong, not its selectors
 
-**Next step is one more live run on Gemini** to capture that block. Selector
-work must not start before it: *a stale-selector fix applied to a reachability
-failure will look like progress and resolve nothing.*
+Every editable probe returned 0 — `rich-textarea`, `div.ql-editor`,
+`[contenteditable]`, `[role="textbox"]` — while bare `textarea` returned 1. All
+five strategies assume a contenteditable rich-text editor. **A uniform miss
+across five independent strategies is explained far better by a wrong model
+than by five selectors going stale at once.**
 
-**If the forensics report a closed shadow root**, this stops being a bug and
-becomes a permanent limitation — the adapter reports `not-found` and blocks,
-which is the correct behaviour by design, but Gemini could never be supported.
-That would make SPEC's three-site claim *two working sites and one blocked*,
-which is a product fact the README and SPEC's limitations must state rather
-than leaving a fixable-looking row in this table. That edit is deliberately
-**not** made yet, because the condition is not yet established.
+If Gemini now uses a native `<textarea>`, this is not a selector patch. Three
+things assume a contenteditable and each needs rechecking:
+
+- **`setComposerText`** — a native textarea needs a value-property write
+  through the prototype setter, not `execCommand('insertText')` on a
+  contenteditable. That is closer to ChatGPT's React case than to the current
+  Gemini code, and `text.ts` already branches correctly; what changes is which
+  branch Gemini takes.
+- **the input witness** — `beforeinput`/`input` target a textarea directly
+  rather than an editing host with an inner paragraph, which is the simpler
+  case, but it must be confirmed rather than assumed.
+- **the `editable` invariant** — already admits textareas, but the strategies
+  never present one to it.
+
+**Not yet confirmed, and must be before anything is built on it:** a hidden
+form field and a real composer both count as 1 in a probe table. The next
+reading reports, for every editable surface: tag, type, visibility, editability,
+disabled/readonly state, character count, attribute NAMES, ancestor chain, and
+which composer invariants it fails.
+
+#### An unresolved anomaly that makes the whole reading provisional
+
+`button` matched **0** in the light DOM, on a page with a visible send control
+and a sidebar. That is not credible, and it is not yet explained. Two
+candidates:
+
+- **(a) the probe ran before the Angular app painted.** The content script runs
+  at `document_idle`, which for a single-page app is *before* bootstrap. Worse,
+  the diagnostic was emitted only on a change of `health.ok` — so a page that
+  failed at `document_idle` and stayed failing was reported **once, from the
+  shell, and never again**. Whoever read that console was looking at a snapshot
+  of a page that no longer existed, with nothing saying so.
+- **(b) the controls are not `<button>` elements**, which would explain
+  `gemini/send-button` failing for the same reason as the composer.
+
+`mat-icon` appearing as a likely-closed host requires a non-zero bounding box,
+so *something* Material had rendered — which cuts slightly against a bare shell,
+but is not conclusive.
+
+**This is a defect in the instrument either way, and it is fixed.** The
+forensics now stamp every reading with `readyState`, milliseconds since the
+content script started, an attempt number, and **total DOM element count** — an
+un-painted shell has hundreds of elements, a painted app thousands. Below 400
+elements the block refuses to draw a conclusion and says so. Re-checks now run
+at 400 ms, 1.2 s, 3 s, 6 s and 12 s, and the console re-emits whenever the
+*verdict* changes rather than only when `health.ok` flips, so a shell reading is
+superseded by a real one instead of standing forever. The probe list gained
+`[role="button"]` and `mat-icon` to separate (b) from (a) directly.
+
+**So the "stale selectors" conclusion is accepted, and the specific counts
+behind it are provisional until one more reading confirms them on a painted
+page.** Selector work waits for that reading.
 
 ### ChatGPT — VERIFIED-FAILING
 

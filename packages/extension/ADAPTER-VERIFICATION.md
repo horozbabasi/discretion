@@ -264,8 +264,18 @@ from an un-painted reading; it is marked withdrawn in ARCHITECTURE.md D34a
 rather than deleted, because it was specific and actionable and would otherwise
 have cost a future session real work.
 
-**Fixed (2026-08-29):** the send control no longer requires a `<button>` tag.
-Awaiting a live re-run to confirm.
+**Send-control cause: STILL UNFOUND.** The tag-assumption widening shipped on
+2026-08-29 and stays — tag-anchoring across every tier is a real fragility. But
+it is **not** established as the cause of this failure. The reading it was drawn
+from had its verdict withheld by a broken paint gate, and the warning it leaned
+on described an *invisible* `<a role="button">` while a **visible `<button>`**
+sat in the same candidate list under the composer's own container. If that
+button is the send control, the cause is ordinary selector rot and the tag
+assumption is irrelevant here.
+
+The paint gate is fixed (ARCHITECTURE.md D34e). **The next reading is what
+identifies the cause**, and it will name which clause resolves the control, or
+print the visible button's attributes to write a clause against.
 
 ### Earlier Gemini readings — PRE-FIX, INVALID, kept deliberately
 
@@ -276,6 +286,7 @@ Two readings preceded the one above. Both are wrong, and both are kept because
 | --- | --- | --- |
 | 1st (2026-08-28) | composer `not-found`, all 5 strategies 0, send-button 0 | Taken at `document_idle`, before the Angular app painted. The diagnostic emitted only on a change of `health.ok`, so this shell snapshot then stood forever. |
 | 2nd (2026-08-28) | 0 shadow roots, 0 iframes, `mat-icon` likely-closed, every editable probe 0 except `textarea`=1, **`button`=0** | Same un-painted page. `button: 0` on a chat UI was the tell, and it was what exposed the defect. |
+| 3rd (2026-08-29) | composer resolves; `READING: withheld — page had not painted` printed **alongside** 6 buttons, a rich-textarea, 34 custom elements | The paint gate used an invented 400-element floor as a proxy and contradicted its own probe data. The composer/strategy rows are valid; **the READING line and everything downstream of it are not**. |
 
 The second reading produced a confident, specific and completely wrong
 conclusion — that Gemini had migrated to a native textarea. It is the clearest

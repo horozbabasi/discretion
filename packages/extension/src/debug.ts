@@ -137,19 +137,63 @@ export function renderDiagnostic(diagnostic: AdapterDiagnostic): void {
  * so it states an interpretation rather than only numbers: a table nobody can
  * read is barely better than the silence this replaced.
  */
+/**
+ * Whether the page has painted, derived FROM THE PROBE DATA ITSELF.
+ *
+ * ─────────────────────────────────────────────────────────────────────────
+ * WHY THIS IS NOT AN ELEMENT COUNT ANY MORE.
+ *
+ * The first version gated on `domElementCount < 400`. That number was
+ * invented, never measured, and wrong: `querySelectorAll('*')` counts LIGHT
+ * DOM only, and a componentised Angular application with a short conversation
+ * sits comfortably under 400 nodes while fully painted. It withheld the
+ * reading on a page showing 6 buttons, a rich-textarea, 34 custom elements and
+ * 2 editable surfaces.
+ *
+ * That is the mirror of the defect the gate was built to fix. The previous
+ * instrument concluded when it should not have; this one refused when it
+ * should have concluded. Both produce unusable readings, and both came from
+ * the same mistake: A GATE THAT CAN CONTRADICT THE DATA IT GATES.
+ *
+ * So the gate is now DERIVED from that data. If the probes found controls,
+ * editable surfaces or custom elements, the page has rendered — no proxy can
+ * disagree with that, because there is no longer a separate proxy to disagree.
+ * The element count is still reported, as context; it decides nothing.
+ * ─────────────────────────────────────────────────────────────────────────
+ */
+export function paintEvidence(f: EnvironmentForensics): {
+  controls: number;
+  editables: number;
+  customElements: number;
+  painted: boolean;
+} {
+  const controls =
+    (f.probes['button']?.deep ?? 0) + (f.probes['[role="button"]']?.deep ?? 0);
+  const editables = f.editableCandidates.length;
+  const customElements = f.customElements.length;
+  return {
+    controls,
+    editables,
+    customElements,
+    // ANY positive evidence of rendering is enough. A page cannot be
+    // simultaneously un-painted and showing six buttons.
+    painted: controls > 0 || editables > 0 || customElements > 0,
+  };
+}
+
 function renderForensics(f: EnvironmentForensics): void {
-  console.warn('environment forensics (emitted because something did not resolve):');
-  // TIMING FIRST, because it decides whether anything below can be believed.
-  const shellSuspect = f.domElementCount < 400;
+  console.warn('environment forensics (emitted because health was not ok):');
+  const evidence = paintEvidence(f);
   console.log(
     `reading #${f.attempt} at ${f.msSinceScriptStart}ms, readyState=${f.readyState}, ` +
-      `${f.domElementCount} elements in the DOM`,
+      `${f.domElementCount} elements | paint evidence: ${evidence.controls} controls, ` +
+      `${evidence.editables} editable surfaces, ${evidence.customElements} custom elements ` +
+      `-> ${evidence.painted ? 'PAINTED' : 'NOT PAINTED'}`,
   );
-  if (shellSuspect) {
+  if (!evidence.painted) {
     console.warn(
-      `ONLY ${f.domElementCount} ELEMENTS — this looks like an un-painted app shell, not a ` +
-        'rendered page. Every "matched 0" below is probably meaningless. Wait for a later ' +
-        'reading with a higher element count before drawing any conclusion.',
+      'NOTHING HAS RENDERED — no controls, no editable surfaces, no custom elements. ' +
+        'Every "matched 0" below is meaningless. Wait for a later reading.',
     );
   }
   console.log(
@@ -209,12 +253,32 @@ function renderForensics(f: EnvironmentForensics): void {
         attributes: c.attributes.join(' '),
       })),
     );
-    const nonButton = f.controlCandidates.filter((c) => c.tag !== 'button');
-    if (nonButton.length > 0) {
+    // VISIBILITY MATTERS HERE, and leaving it out produced a misleading
+    // warning once already: an invisible <a role="button"> was reported as
+    // evidence that the send control is not a button, while a VISIBLE <button>
+    // sat in the same list. A hidden candidate is not the send control.
+    const visible = f.controlCandidates.filter((c) => c.visible);
+    const visibleButtons = visible.filter((c) => c.tag === 'button');
+    const visibleNonButtons = visible.filter((c) => c.tag !== 'button');
+
+    if (visibleButtons.length > 0) {
+      console.log(
+        `${visibleButtons.length} VISIBLE <button> candidate(s) present. If one of these is the ` +
+          'send control, the failure is ordinary selector rot — write the selector against the ' +
+          'attributes listed above, and do NOT conclude anything about element tags.',
+      );
+    }
+    if (visibleNonButtons.length > 0) {
       console.warn(
-        `${nonButton.length} plausible send control(s) are NOT <button> elements ` +
-          `(${nonButton.map((c) => c.tag).join(', ')}). Every send-control selector in this ` +
-          'adapter requires a literal <button>, so none of them can match these.',
+        `${visibleNonButtons.length} VISIBLE plausible send control(s) are not <button> ` +
+          `(${visibleNonButtons.map((c) => c.tag).join(', ')}).`,
+      );
+    }
+    const hiddenOnly = f.controlCandidates.length - visible.length;
+    if (hiddenOnly > 0) {
+      console.log(
+        `${hiddenOnly} candidate(s) above are NOT VISIBLE and are almost certainly not the send ` +
+          'control. Ignore them.',
       );
     }
   }
@@ -224,8 +288,8 @@ function renderForensics(f: EnvironmentForensics): void {
   const controls =
     (f.probes['button']?.deep ?? 0) + (f.probes['[role="button"]']?.deep ?? 0);
 
-  if (shellSuspect) {
-    console.warn('READING: withheld — the page had not painted. Not a selector conclusion.');
+  if (!evidence.painted) {
+    console.warn('READING: withheld — nothing had rendered. Not a selector conclusion.');
   } else if (controls === 0) {
     console.warn(
       'READING: no button and no [role="button"] anywhere on a painted page. That is not ' +

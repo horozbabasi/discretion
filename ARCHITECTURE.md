@@ -2003,12 +2003,36 @@ provisional until one reading on a confirmed-painted page, and selector
 work waits for that.
 
 
-### D34b - Gemini is composer-healthy; the send control failed on an assumption shared by all three adapters (M9)
+### D34b - A tag assumption shared by all three adapters (a fragility finding, NOT yet the diagnosis of Gemini's failure) (M9)
 
 The painted reading withdraws most of D34a. Composer RESOLVED by
 `gemini/composer-role-textbox` (attribute tier); four of five strategies
 match, including `composer-ql-editor`. Response root resolves on both
 strategies. **Only the send control fails.**
+
+**SCOPE OF THIS ENTRY, corrected.** It was first written as the diagnosis
+of that send-control failure. **It is not, and there is no valid reading
+that supports it as one.** The block it was drawn from had its READING
+withheld by a broken paint gate (D34e), and a withheld block is not data.
+Worse, the specific warning it leaned on - "1 plausible send control is
+NOT a button" - referred to an `<a role="button">` marked NOT VISIBLE,
+while a VISIBLE `<button>` sat in the same candidate list under the
+composer's own container. If that visible button is the send control,
+then the tag assumption is not what broke Gemini and the real cause is
+still unfound.
+
+**What stands, and what does not:**
+
+- STANDS: tag-anchoring across every tier is a genuine fragility, on its
+  own terms, arrived at by reading the eleven clauses rather than from
+  any live reading. The widening stays.
+- DOES NOT STAND: that this fragility is why Gemini's send control
+  failed. That claim is withdrawn pending a valid reading.
+
+The distinction matters because a fragility finding and a diagnosis have
+different consequences. The first says "this could break"; the second
+says "this is what broke, stop looking". Recording the second without
+evidence would have ended the search at the wrong place.
 
 **THE SHARED ASSUMPTION, which is the finding.** Every send-control
 clause in every adapter began with the literal `button` tag:
@@ -2097,6 +2121,101 @@ assumption, reporting tag, role, visibility, attribute names, ancestors,
 and why each was considered a control - and warning explicitly when a
 plausible send control is not a `<button>`, which is the exact shape that
 defeated the selectors.
+
+
+### D34e - The paint gate withheld a reading from a painted page: a proxy that could contradict its own data (M9)
+
+Third gate defect in the diagnostic, and the mirror of the first.
+
+**Observed:** the block printed `READING: withheld - the page had not
+painted` while its own probe data showed 6 buttons, a `rich-textarea`, 34
+custom elements and 2 editable surfaces. The gate and the probes
+disagreed, in the same emission.
+
+**Cause, after checking the three candidates:**
+
+- Sampled at the same moment as the probes? YES - `domElementCount` is
+  computed inside the same synchronous `buildForensics(doc)` call. Not a
+  staleness bug.
+- Read from an earlier attempt? NO - every call recomputes.
+- **The floor of 400 was simply wrong.** I invented the number and never
+  measured it. `querySelectorAll('*')` counts LIGHT DOM ONLY, and a
+  componentised Angular application with a short conversation sits
+  comfortably under 400 nodes while fully painted.
+
+**The structural error is worse than the number.** The gate used a PROXY
+(element count) to decide whether to believe the DIRECT EVIDENCE (the
+probes). A proxy that can contradict the data it gates will eventually
+contradict it, and when it does the instrument reports a confident
+falsehood about its own reading.
+
+**Fixed by construction, not by retuning.** Raising the floor would have
+been the obvious repair and the wrong one - it would leave a proxy in
+place and merely move the point at which it disagrees. The gate is now
+DERIVED from the probe data: if the probes found controls, editable
+surfaces or custom elements, the page has rendered. There is no separate
+proxy left to disagree, so the contradiction is impossible rather than
+unlikely. Element count is still reported as context and decides nothing.
+
+**A second, smaller defect in the same block.** The "plausible send
+control is NOT a button" warning did not consider VISIBILITY, so an
+invisible `<a role="button">` was reported as evidence about the send
+control while a visible `<button>` sat in the same list. Hidden
+candidates are now separated out and explicitly discounted, and a visible
+`<button>` candidate is called out as pointing at ordinary selector rot
+rather than at anything about tags.
+
+### D34f - Eight defects in checking code, and the last three share a shape (M9)
+
+Recorded together because the pattern is more useful than any of them
+individually, and because the count is now large enough that it is a
+property of how this code is written rather than a run of bad luck.
+
+The eight, in order:
+
+1. Bloom-filter probe used an LCG that lost precision above 2^53, drew
+   1,731 distinct tokens from 20,000, and reported a false 0.000% false
+   positive rate (M7).
+2. False-positive-fate probe counted candidates the scorer excludes,
+   over-reporting residual FPs by 96 (M8).
+3. Calibration test compared against a constant-0.5 model while claiming
+   to compare against raw scores (M8).
+4. Latency benchmark's incremental path timed the trailing chunk, whose
+   length depends on the window - it compared chunk sizes, not windows
+   (M9).
+5. A 4-6x latency swing was attributed to mains-versus-battery from a
+   single co-occurrence, and refuted by a direct test (D27).
+6. The jsdom layout helper checked `hidden` on the element but
+   `aria-hidden` on ancestors, so a hidden form field simulated as
+   visible (M9).
+7. The diagnostic emitted only on a change of `health.ok`, so a shell
+   snapshot taken at `document_idle` stood forever (D34a).
+8. Forensics were gated on composer-and-response resolution, so a
+   send-control-only failure emitted nothing at all (D34d).
+9. The paint gate withheld on a painted page (D34e).
+
+**THE LAST THREE ARE THE SAME DEFECT.** Each is a GATE - a rule deciding
+when to emit, when to believe, when to conclude - and in each case the
+measuring code was correct while the gate around it was not:
+
+  D34a  assumed the FIRST reading would be from a painted page
+  D34d  assumed a failure would always involve composer or response
+  D34e  assumed a painted page implies >400 light-DOM elements
+
+Every one encoded an unmeasured assumption about which condition would
+hold, and every one was wrong in a DIFFERENT direction: 7 concluded when
+it should not have, 8 stayed silent when it should have spoken, 9 refused
+when it should have concluded.
+
+**The generalisable rule, which is standing rule 7:** a gate needs the
+same scrutiny as a measurement, and specifically - **a gate must be
+derived from the data it gates, never from a parallel proxy that can
+disagree with it.** Where a proxy is unavoidable, the instrument must
+detect and report its own contradiction rather than letting the proxy
+win silently.
+
+This is why D34e was fixed by removing the proxy rather than by raising
+the floor. Retuning a proxy only moves the point at which it lies.
 
 
 ## Status after M2

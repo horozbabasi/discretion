@@ -78,16 +78,38 @@ eval corpus, with 30 warmup iterations discarded:
 | path | p50 | p95 | p99 | budget |
 | --- | ---: | ---: | ---: | --- |
 | Stages 0–3 (pattern, gazetteer, context) | **10.6 ms** | **13.1 ms** | 15.1 ms | within, by ~20× |
-| Stages 0–3 + Stage 2 NER | **255.8 ms** | **354.9 ms** | 601.6 ms | **p50 missed by 5.8 ms** |
+| Stages 0–3 + Stage 2 NER | **255.8 ms** | **354.9 ms** | 601.6 ms | **p50 missed — see below** |
 
 Reproduce with `node packages/eval/dist/bench/latency.js --samples 200
 --ner jiting/xlm-roberta-base-ner-hrl_onnx --dtype q8`.
 
-### The p50 miss, stated rather than smoothed over
+### The p50 miss, and which way the error runs
 
-The combined path misses the p50 budget by 5.8 ms — 2.3%. p95 clears it
-comfortably. The cost is the NER model, not the rest of the pipeline: Stages
-0–3 alone finish in about a twentieth of the budget.
+The combined path misses the p50 budget by 5.8 ms as measured — but 2.3% is
+the *floor* on the miss, not its size. **Two known factors both push the
+production number higher than this**, and neither is speculative:
+
+1. **The hardware is above the reference point.** SPEC says "mid-range
+   laptop". This was measured on an Intel Core Ultra 7 258V — Lunar Lake,
+   2024, the second-highest tier in Intel's mobile Core Ultra line, the part
+   used in premium thin-and-lights. A genuinely mid-range machine (a Core
+   Ultra 5, or any older generation) is slower. By how much is not measured
+   here and is not guessed at.
+2. **The runtime is the faster one.** These numbers are onnxruntime-node on
+   native CPU. The extension runs onnxruntime-web on WASM, which is typically
+   slower for transformer inference. M9 measures the real target.
+
+So the honest statement is: **the p50 budget is missed under conditions
+favourable on both axes.** The measured 5.8 ms gap is a lower bound, and the
+production gap is larger by an amount this project has not yet measured.
+Reporting it as "a 2.3% miss" would understate it.
+
+p95 clears comfortably at 354.9 ms against 600 ms, and has the same two
+factors working against it, so that margin should not be treated as
+comfortable either until M9 measures the browser.
+
+The cost is the NER model, not the rest of the pipeline: Stages 0–3 alone
+finish in about a twentieth of the budget.
 
 The mechanism is chunking. Stage 2 windows input at 400 characters, a bound
 set at M6 by the model's 512-token limit under the worst case of one token per

@@ -636,7 +636,7 @@ states both its principle and its risk. A suppression rule whose author
 cannot name what it might wrongly suppress has not been thought
 through.
 
-**Four standing measurement rules now sit together, each earned the
+**Five standing measurement rules now sit together, each earned the
 hard way.** They are stated as one block because they fail in the same
 direction — a check that looks like it passed when it never ran:
 
@@ -656,7 +656,17 @@ direction — a check that looks like it passed when it never ran:
    the report artifacts that job rewrote were left uncommitted while the
    tree was reported clean. Verify tree state after the last job exits,
    not after the commit lands.
-4. **An exemption must be scoped to the CHECK it excuses, not to the
+4. **Verification code gets the same scrutiny as production code**
+   (M8). Every measurement defect found so far has lived in code that
+   checks other code: the Bloom probe's LCG that lost precision above
+   2^53, the scratch audit's per-detector else-if chain, a test that
+   compared against a constant-0.5 model while claiming to compare
+   against raw scores, and a false-positive probe that counted
+   non-sensitive candidates the scorer excludes. A test that cannot fail
+   is worse than no test, because it reports success. The practical form
+   of this rule: a probe must reproduce a number some independent path
+   already produces before its novel numbers are believed.
+5. **An exemption must be scoped to the CHECK it excuses, not to the
    DETECTOR that earned it** (M8, span hygiene). A PEM block and an MRZ
    are legitimately multi-line, so both were exempted from the
    line-crossing check — but a scratch audit written as an else-if chain

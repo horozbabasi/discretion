@@ -699,12 +699,48 @@ resolution. The overlap census predicted this and the measurement confirms it:
 | EMAIL | 99.0% → 100.0% | 6 → 0 | 100% held |
 | **all types** | — | **2,991 → 246 (−92%)** | — |
 
+#### These are REASSIGNMENTS, not eliminations
+
+The distinction matters and the table above does not make it, so it is stated
+here. Every removed false positive was traced to its fate:
+
+| | GENERIC_SECRET | POSTAL_CODE |
+| --- | ---: | ---: |
+| reassigned, winner correct | **2,075** | **224** |
+| reassigned, winner wrong | 0 | 0 |
+| eliminated — nothing emitted | **0** | **0** |
+| survived as the same type | 0 | 0 |
+
+**Not one span stopped being emitted.** Every one is still reported and still
+masked — under the validated type that owns those characters. What changed is
+the label, not the coverage. "2,075 false positives removed" is true of
+GENERIC_SECRET's ledger and would be false as a claim about the document: the
+characters are still detected, still sensitive, and still redacted.
+
+That is also why precision reads exactly 100% for both types, which is the
+shape this project's own measurement-too-good rule exists to catch. It was
+asserted rather than accepted: a probe walking every candidate independently
+reproduces the eval's residual count of **246 false positives exactly**, from
+a separate code path. The rate is real, and it means something narrower than
+it looks — the survivors are exactly those candidates that had no losing
+overlap, because every false positive of these two types had a correct winner
+covering it. The detectors did not become accurate; the arbitration did.
+
 D19's deferral was the right call and is now discharged. GENERIC_SECRET's
-false positives were never a context problem — 2,047 of 2,053 of them had a
-validated type covering the same characters, which is precisely why Stage 3's
-binary suppress-or-allow could not fix it and why the M7 attempt made
-precision *worse*. Resolution removes all 2,075 by deciding which type owns
-the span, and it costs 1.4 points of recall to do it.
+false positives were never a context problem — **all 2,075 of them had another
+type covering the same characters, and none had no overlap at all** — which is
+precisely why Stage 3's binary suppress-or-allow could not fix it and why the
+M7 attempt made precision *worse*. It costs 1.4 points of recall.
+
+**A stale figure withdrawn.** An earlier note here said "2,047 of 2,053". That
+came from the overlap census, which ran on Stage 1 alone before the digit fold
+and summed only the six largest `X over GENERIC_SECRET` rows of a truncated
+top-22 listing. It is not the same quantity as GENERIC_SECRET's false-positive
+count and should not have been written as though it were. The correct figures
+for the current pipeline are **2,075 false positives, 2,075 of them
+overlapping another type, 0 overlapping nothing** — so the "six unexplained"
+that the older pair implied do not exist here. There are no wrong
+reassignments for either type.
 
 **The recall cost is real and is not hidden.** TAX_ID gives up the most,
 100% → 91.2%, and that is the cross-scheme ambiguity the specificity table

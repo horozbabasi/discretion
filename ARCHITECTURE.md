@@ -921,6 +921,65 @@ purpose. Everything downstream calibrates against this corpus, and
 fitting thresholds and weights while an entire input class was invisible
 would have meant refitting all of them afterwards.
 
+### D22 — Overlap resolution orders by COVERAGE first, not specificity (M8)
+
+**What SPEC says, and why it is not implemented literally.** SPEC.md:
+"Resolve overlapping candidates: prefer the more specific type, then
+higher calibrated confidence, then longer span." Applied in that order
+it is unsafe, and the reason is specific to what resolution does.
+
+Resolution DROPS candidates, so D18's discipline applies to it as to any
+suppression rule. But it has a failure mode a suppression rule does not:
+dropping a WIDE candidate in favour of a narrow one it contains does not
+merely relabel a span, it UNMASKS every character outside the narrow one.
+Preferring "the more specific type" would take CONNECTION_STRING over the
+credentialled URL containing it and leave the scheme, host and port of a
+live database URI in the outgoing text.
+
+**The order implemented is therefore: widest span, then specificity,
+then confidence.** Coverage is promoted above specificity because it is
+the property that cannot be recovered downstream — a mislabelled span is
+a cosmetic defect in the review UI, an unmasked one is a leak. Where
+spans are equal the two orderings agree, and equal spans are the case
+SPEC's wording is really about.
+
+**The specificity table is measured, not intuited.** A census over the
+2,600-document corpus found 66.8% of Stage 1 candidates in at least one
+cross-type overlap and recorded, for every pair, which type ground truth
+agreed with. Three results decided the table:
+
+- CONNECTION_STRING over URL_WITH_CREDENTIALS on equal spans: ground
+  truth agreed with the connection string in **140 of 140**. The
+  database scheme is the more specific reading of the same characters.
+- Any validated type over GENERIC_SECRET: the specific type was right in
+  **2,047 of 2,053**. This is the bulk of GENERIC_SECRET's false-positive
+  mass, and resolving it here rather than suppressing it in Stage 3 is
+  exactly what D19 deferred to this stage.
+- NATIONAL_ID and TAX_ID **tie deliberately**. The census found ground
+  truth split between them on equal spans (28/10/10 one way, 19/11/11
+  the other). No static ordering is honest about a genuine cross-scheme
+  ambiguity, so they fall through to calibrated confidence, which is the
+  machinery that can actually weigh it.
+
+**A leak the invariant caught, and the lesson in it.** The first
+implementation — greedy, widest-span-first — still opened 8 coverage
+holes across 6 documents. Every one was a PARTIAL overlap in which the
+loser extended past the winner, and every one was a Korean street address
+abutting another entity. Widest-wins preserves coverage under
+containment and NOT under partial overlap, which is the kind of gap that
+looks closed until it is measured. The winner now absorbs the union of
+the two spans instead of the loser being dropped.
+
+Widening in both coordinate spaces at once is sound without
+re-consulting the offset map: the map is monotonic, so the union of two
+mapped spans contains the mapping of the union, and erring wider only
+ever masks more. That is the safe direction by construction.
+
+`coverageHoles()` is exported alongside the resolver so the property can
+be ASSERTED by callers and tests rather than trusted to follow from the
+ordering. Current state: 9,474 candidates resolve to 5,688 with zero
+holes.
+
 ## Status after M2
 
 Stage 1 is complete: 113 registered detectors — 57 NATIONAL_ID and 19

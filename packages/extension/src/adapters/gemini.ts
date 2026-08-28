@@ -55,6 +55,8 @@ import { closestAcrossShadow, deepQueryAll, parentAcrossShadow } from './deep.js
 import type { InputWitness } from './binding.js';
 import { originComposerOfButtonEvent, originComposerOfKeyEvent } from './binding.js';
 import { collectChangedTextNodes } from './stream.js';
+import { discriminateSendControl } from './sendControl.js';
+import type { DiscriminatorOutcome } from './sendControl.js';
 
 /**
  * Conversation id.
@@ -148,6 +150,19 @@ function normaliseIconName(text: string): string {
  * is to mark icons `translate="no"`. So this form is treated as
  * locale-FRAGILE and reported as such, ranked below the attribute forms.
  */
+/**
+ * Whether a control carries a send icon, in either form.
+ *
+ * Exported and passed INTO the shared discriminator rather than duplicated
+ * there: each site names its icons differently, and a copy of a site's rule
+ * living in shared code is the drift that has already produced two defects
+ * here.
+ */
+export function hasSendIcon(control: Element): boolean {
+  if (deepQueryAll(control, SEND_ICON_ATTRIBUTE_SELECTOR).length > 0) return true;
+  return findSendIconsByLigature(control).length > 0;
+}
+
 function findSendIconsByLigature(root: ParentNode): HTMLElement[] {
   return deepQueryAll<HTMLElement>(root, 'mat-icon').filter(
     (icon) => normaliseIconName(icon.textContent ?? '') === 'send',
@@ -196,9 +211,24 @@ export interface RegionWalkStep {
   readonly controlsFound: number;
 }
 
+/** A control in the composer's region, described for the diagnostic. */
+export interface RegionControl {
+  readonly tag: string;
+  readonly role: string | null;
+  readonly accessibleName: string | null;
+  readonly attributes: readonly string[];
+  readonly ancestors: readonly string[];
+  readonly visible: boolean;
+  readonly hasSendIcon: boolean;
+}
+
 export interface SendSearchTrace {
   readonly composerResolved: boolean;
   readonly steps: readonly RegionWalkStep[];
+  /** Every control in the chosen region, in full. This is what a
+   *  discriminator gets designed against. */
+  readonly regionControlDetail: readonly RegionControl[];
+  readonly discriminator: DiscriminatorOutcome | null;
   readonly stoppedBecause:
     | 'found-region'
     | 'reached-body'
@@ -206,7 +236,7 @@ export interface SendSearchTrace {
     | 'hop-limit'
     | 'no-composer';
   readonly regionControls: number;
-  readonly outcome: 'unique' | 'ambiguous' | 'none' | 'no-region';
+  readonly outcome: 'unique' | 'discriminated' | 'ambiguous' | 'none' | 'no-region';
 }
 
 /**
@@ -225,6 +255,65 @@ function describeElement(element: Element): string {
     bits.push(`${attribute}="${safe ? '<withheld>' : value}"`);
   }
   return bits.join(' ');
+}
+
+/**
+ * A control's accessible name, as far as a content script can compute it.
+ *
+ * Reported so the two controls in an ambiguous region can be told apart by a
+ * reader. Guarded like every other value the diagnostic emits: an aria-label
+ * is normally chrome, but a site can interpolate anything into one.
+ */
+function accessibleNameOf(element: Element): string | null {
+  const direct = element.getAttribute('aria-label');
+  if (direct !== null && direct.length > 0) return guardValue(direct);
+
+  const labelledBy = element.getAttribute('aria-labelledby');
+  if (labelledBy !== null) {
+    const parts = labelledBy
+      .split(/\s+/u)
+      .map((id) => element.ownerDocument.getElementById(id)?.textContent ?? '')
+      .join(' ')
+      .trim();
+    if (parts.length > 0) return guardValue(parts);
+  }
+
+  const title = element.getAttribute('title');
+  if (title !== null && title.length > 0) return guardValue(title);
+
+  const text = (element.textContent ?? '').trim();
+  return text.length > 0 ? guardValue(text) : null;
+}
+
+/** The same conservative content test the rest of the diagnostic uses. */
+function guardValue(value: string): string {
+  return value.length > 60 || /[@]/u.test(value) || /\d{4,}/u.test(value) ? '<withheld>' : value;
+}
+
+function describeRegionControl(control: HTMLElement): RegionControl {
+  const rect = control.getBoundingClientRect();
+  return {
+    tag: control.tagName.toLowerCase(),
+    role: control.getAttribute('role'),
+    accessibleName: accessibleNameOf(control),
+    attributes: Array.from(control.attributes)
+      .map((a) => `${a.name}="${guardValue(a.value)}"`)
+      .sort()
+      .slice(0, 24),
+    ancestors: (() => {
+      const chain: string[] = [];
+      let node: Element | null = parentAcrossShadow(control);
+      let hops = 0;
+      while (node !== null && hops < 6) {
+        chain.push(describeElement(node));
+        node = parentAcrossShadow(node);
+        hops += 1;
+      }
+      return chain;
+    })(),
+    visible: rect.width > 0 && rect.height > 0,
+    hasSendIcon: hasSendIcon(control),
+  };
 }
 
 /**
@@ -268,6 +357,8 @@ function walkRegion(composer: Element): { region: Element | null; trace: SendSea
         trace: {
           composerResolved: true,
           steps,
+          regionControlDetail: [],
+          discriminator: null,
           stoppedBecause: 'reached-body',
           regionControls: 0,
           outcome: 'no-region',
@@ -282,14 +373,35 @@ function walkRegion(composer: Element): { region: Element | null; trace: SendSea
       controlsFound: controls.length,
     });
     if (controls.length > 0) {
+      const detail = controls.slice(0, 8).map(describeRegionControl);
+      if (controls.length === 1) {
+        return {
+          region,
+          trace: {
+            composerResolved: true,
+            steps,
+            regionControlDetail: detail,
+            discriminator: null,
+            stoppedBecause: 'found-region',
+            regionControls: 1,
+            outcome: 'unique',
+          },
+        };
+      }
+      // Several controls: ask which one IS the send control, by positive
+      // properties only. Refusal remains the default if none identifies
+      // exactly one.
+      const outcome = discriminateSendControl(controls, composer, hasSendIcon);
       return {
         region,
         trace: {
           composerResolved: true,
           steps,
+          regionControlDetail: detail,
+          discriminator: outcome,
           stoppedBecause: 'found-region',
           regionControls: controls.length,
-          outcome: controls.length === 1 ? 'unique' : 'ambiguous',
+          outcome: outcome.control !== null ? 'discriminated' : 'ambiguous',
         },
       };
     }
@@ -302,6 +414,8 @@ function walkRegion(composer: Element): { region: Element | null; trace: SendSea
     trace: {
       composerResolved: true,
       steps,
+      regionControlDetail: [],
+      discriminator: null,
       stoppedBecause: region === null ? 'ran-out-of-ancestors' : 'hop-limit',
       regionControls: 0,
       outcome: 'no-region',
@@ -311,6 +425,19 @@ function walkRegion(composer: Element): { region: Element | null; trace: SendSea
 
 function regionAroundComposer(composer: Element): Element | null {
   return walkRegion(composer).region;
+}
+
+/** The send control identified by the composer-anchored path, if any. */
+function sendControlFromComposer(root: ParentNode): HTMLElement[] {
+  const composer = resolveComposerIndependently(root);
+  if (composer === null) return [];
+  const { region, trace } = walkRegion(composer);
+  if (region === null) return [];
+  if (trace.outcome === 'unique') return controlsBeside(region, composer);
+  if (trace.outcome === 'discriminated' && trace.discriminator?.control != null) {
+    return [trace.discriminator.control];
+  }
+  return [];
 }
 
 /**
@@ -328,6 +455,8 @@ export function describeSendSearch(doc: Document): SendSearchTrace {
     return {
       composerResolved: false,
       steps: [],
+      regionControlDetail: [],
+      discriminator: null,
       stoppedBecause: 'no-composer',
       regionControls: 0,
       outcome: 'no-region',
@@ -450,10 +579,8 @@ function findSendButtons(root: ParentNode): SendControlResult {
   // and the guessiest path in the file - it has NO send evidence at all, only
   // position. Bounded to the composer's own region, excludes anything inside
   // or around the composer, and refuses when the region holds more than one.
-  if (composer !== null && region !== null) {
-    const near = decide(controlsBeside(region, composer), 'near-composer');
-    if (near !== null) return near;
-  }
+  const near = decide(sendControlFromComposer(root), 'near-composer');
+  if (near !== null) return near;
 
   return { buttons: [], provenance: null, ambiguous: false };
 }

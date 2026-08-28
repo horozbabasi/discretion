@@ -242,11 +242,39 @@ function renderForensics(f: EnvironmentForensics, diagnostic: AdapterDiagnostic)
           'reached against the composer\'s real container.',
       );
     }
+    if (search.regionControlDetail.length > 0) {
+      console.log("controls in the composer's region (this is what a discriminator is designed against):");
+      console.table(
+        search.regionControlDetail.map((c) => ({
+          tag: c.tag,
+          role: c.role ?? '',
+          accessibleName: c.accessibleName ?? '',
+          sendIcon: c.hasSendIcon,
+          visible: c.visible,
+          attributes: c.attributes.join(' '),
+          ancestors: c.ancestors.slice(0, 3).join(' < '),
+        })),
+      );
+    }
+    if (search.discriminator !== null) {
+      const d = search.discriminator;
+      console.log(
+        `discriminator: ${d.rule ?? 'NONE FIRED'} — ` +
+          d.attempts.map((a) => `${a.rule}:${a.matched}`).join('  '),
+      );
+    }
     if (search.outcome === 'ambiguous') {
       console.warn(
-        `The composer's region holds ${search.regionControls} controls, so the uniqueness rule ` +
-          'refused rather than choosing. This needs a DISCRIMINATOR among them, not a wider ' +
-          'walk - widening only adds more controls.',
+        `The composer's region holds ${search.regionControls} controls and NO rule identified ` +
+          'which one sends. Refusing is correct - a wrong send binding has the same consequence ' +
+          'as a wrong composer. What is needed is a POSITIVE property of the send control (see ' +
+          'the table above), never a wider walk and never a rule that excludes the others.',
+      );
+    }
+    if (search.outcome === 'discriminated') {
+      console.log(
+        `The region held ${search.regionControls} controls and the '${search.discriminator?.rule}' ` +
+          'rule identified one of them as the send control.',
       );
     }
   }

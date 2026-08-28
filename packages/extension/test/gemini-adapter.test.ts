@@ -406,9 +406,10 @@ describe('the region walk is traced, so its two failure modes are distinguishabl
     expect(trace.steps.length).toBeGreaterThan(0);
   });
 
-  it('reports AMBIGUOUS when the region genuinely holds several controls', () => {
-    // The other way. This one needs a discriminator, never a wider walk -
-    // widening only adds more controls.
+  it('DISCRIMINATES when the region holds several controls and one is identifiably send', () => {
+    // A real toolbar holds send AND microphone AND attach, so several controls
+    // is the normal case. Refusing every time would make the whole
+    // composer-anchored path useless; the discriminator is what makes it work.
     loadFixture('gemini/composer');
     const area = document.querySelector('.input-area');
     for (const label of ['attach', 'mic']) {
@@ -419,9 +420,36 @@ describe('the region walk is traced, so its two failure modes are distinguishabl
     giveEverythingLayout();
 
     const trace = describeSendSearch(document);
-    expect(trace.outcome).toBe('ambiguous');
     expect(trace.regionControls).toBeGreaterThan(1);
     expect(trace.stoppedBecause).toBe('found-region');
+    expect(trace.outcome).toBe('discriminated');
+    // Identified by a POSITIVE property of sending, not by excluding the mic.
+    expect(trace.discriminator?.rule).toBe('send-icon');
+    // And the full detail a reader needs to check that judgement.
+    expect(trace.regionControlDetail.length).toBeGreaterThan(1);
+    expect(trace.regionControlDetail.some((c) => c.hasSendIcon)).toBe(true);
+  });
+
+  it('still reports AMBIGUOUS when nothing identifies the send control', () => {
+    // Refusal remains the default. A discriminator that guesses converts a
+    // visible failure into a wrong binding, and a wrong send binding has the
+    // same consequence as a wrong composer.
+    loadFixture('gemini/composer');
+    const area = document.querySelector('.input-area');
+    // Remove the send icon, so no rule can fire.
+    document.querySelector('mat-icon')?.remove();
+    const extra = document.createElement('button');
+    extra.className = 'tool-mic';
+    area?.append(extra);
+    giveEverythingLayout();
+
+    const trace = describeSendSearch(document);
+    expect(trace.regionControls).toBeGreaterThan(1);
+    expect(trace.outcome).toBe('ambiguous');
+    expect(trace.discriminator?.control ?? null).toBeNull();
+    // Every rule reported as tried, so "no rule fired" is distinguishable from
+    // "the discriminator never ran".
+    expect(trace.discriminator?.attempts.length).toBe(3);
   });
 
   it('climbs past several wrapper levels to reach the real toolbar container', () => {

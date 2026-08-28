@@ -2711,6 +2711,86 @@ That guard existed in two files, which is the drift pattern that has
 already produced two defects here. It is now defined once and imported.
 
 
+### D34m - Discriminating the send control by what it IS, in shared code (M9)
+
+The traversal fix worked and produced the correct failure: the
+composer-anchored search found TWO controls in the region and refused. A
+real composer toolbar holds send AND microphone AND attach, so several
+controls is the NORMAL case - which means refusing every time makes the
+whole fallback useless. What was missing is not a wider search but a way
+to say which control IS the send control.
+
+**Every rule is a positive property of sending.** None works by excluding
+the microphone, and the constraint does real work: "not the mic" requires
+knowing every control a toolbar might ever hold, and silently binds
+whatever is added next. "Submits the form the composer is in" does not
+degrade that way.
+
+Ranked in the contract's own order of durability:
+
+| Rule | Property | Why it ranks here |
+| --- | --- | --- |
+| `form-submit` | the control natively submits the form containing the composer | a PLATFORM relationship, not a naming convention - survives every rename, restyle and class-hash change, and `HTMLButtonElement.form` works even when the control sits outside the form in the DOM |
+| `aria-controls` | the control declares that it acts on the composer | an explicit, locale-independent relationship that assistive technology already relies on; rare, but unambiguous when present |
+| `send-icon` | the control is decorated as the send action | a convention rather than a relationship, and the ligature form lives in a text node machine translation can rewrite |
+
+**REFUSAL REMAINS THE DEFAULT**, and it is pinned as hard as the
+successes. A rule matching TWO candidates is passed over rather than
+tie-broken - that is the same problem one level down, and choosing would
+reintroduce exactly the tie-break the ambiguity rule forbids. If no rule
+identifies exactly one, the adapter still fails loudly.
+
+**It lives in shared code, not in gemini.ts**, and the reason is a
+finding rather than a preference. Only Gemini has a composer-anchored
+path, so only Gemini can currently REACH this ambiguity. But Claude
+(`claude.ts:294`) and ChatGPT (`chatgpt.ts:342`) resolve their send
+controls by MARKERS ALONE - which is not safety, it is the absence of a
+fallback. Gemini's failure mode (markers rot, fall back, refuse) is
+strictly better than theirs (markers rot, nothing). Both sites have
+attach and microphone controls beside the composer, so the day either
+gains a composer-anchored path it meets the identical two-control region
+on day one.
+
+The site-specific part - what a send icon looks like - is INJECTED rather
+than reimplemented in shared code, because a copy of a site's rule living
+in shared code is the drift that has already produced two defects here.
+
+### D34n - An adjacent tightening is an unreviewed change carrying the review's authority (M9)
+
+Recorded separately from the bug it caused, because the bug was cheap and
+the pattern is not.
+
+The adversarial review found the region walk reaching `<body>`. The fix
+was a stop at `body`/`documentElement`. **I also reduced the hop bound
+from 6 to 4** - a change nobody asked for, that did no safety work, and
+that broke the very path the real fix existed to enable. The walk then
+terminated before reaching the composer's toolbar, and the failure was
+indistinguishable from the one it replaced.
+
+**Why this shape is hard to catch.** It looks like diligence. It arrives
+inside a change whose other half is genuinely required, in the same
+commit, under the same justification, at a moment when the reviewer's
+finding has just been vindicated and everything in its vicinity feels
+endorsed. It inherits the authority of a review that never examined it.
+
+The distinguishing question is narrow and worth asking every time:
+**which specific defect does this line close?** For the body stop, the
+answer names the finding. For the hop reduction, the honest answer was
+"none - it felt like the same kind of thing", and that is the signal.
+
+**The rule.** When review finds a defect, the fix is the specific change
+that closes it. Adjacent tightenings adopted in the same spirit are
+unreviewed changes, and they should be made separately, justified on
+their own, and reviewed on their own - or not made.
+
+A corollary worth stating, because it is what made the consequence
+severe: **a bound tightened past correctness fails identically to one
+left too loose.** Both return nothing useful. The previous version bound
+the wrong control; this one bound none; neither was distinguishable from
+"there is no send control here" without a trace. Where a bound cannot be
+derived from the data, the instrument must report where it stopped.
+
+
 ## Status after M2
 
 Stage 1 is complete: 113 registered detectors — 57 NATIONAL_ID and 19

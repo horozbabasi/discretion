@@ -64,6 +64,8 @@ Standing decisions a session must know before touching these areas:
 
 ## Working rules
 
+**Standing rule (8): when review finds a defect, the fix is the specific change that closes it.** Adjacent tightenings adopted in the same spirit are UNREVIEWED changes carrying the review's authority, and they are hard to catch because they look like diligence — they arrive in the same commit, under the same justification, at the moment the reviewer's finding has just been vindicated. Ask of every line: **which specific defect does this close?** If the honest answer is "none, it felt like the same kind of thing", make it separately or not at all. The instance: a review found a region walk reaching `<body>`; the fix was a stop at `body`, and the hop bound was ALSO cut 6→4, which did no safety work and broke the path the real fix existed to enable (ARCHITECTURE.md D34n).
+
 **Standing rule (7): a claim must assert only what it actually tested — in a gate, in a summary, and in a comment.** Three forms of the same defect, found three times:
 
 - **A GATE** must be DERIVED from the data it gates, never from a parallel proxy that can disagree with it. Fix a bad gate by removing the proxy, not by retuning it — retuning only moves the point at which it lies.

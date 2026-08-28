@@ -238,7 +238,7 @@ send it. This is what exercises the read path.
 | --- | --- | --- | --- |
 | Claude | verified — 20 fixture tests | **VERIFIED-WORKING** | 2026-08-29 |
 | ChatGPT | verified — 23 fixture tests | **VERIFIED-WORKING (idle)** — fails while the composer is disabled, D34i | 2026-08-29 |
-| Gemini | verified — 27 fixture tests | composer **healthy**; send control **open** | 2026-08-29 |
+| Gemini | verified — 33 fixture tests | composer **healthy**; send control **discriminator added, unverified** | 2026-08-29 |
 
 Dated per D35: a Claim B result is evidence about the day it was taken, and
 "verified" decays.
@@ -262,9 +262,26 @@ adapter defect.
 Composer resolved by 4 of 5 strategies; response-root by both; send-control the
 sole failure; 13 controls on the page. Unchanged by the ChatGPT work.
 
-The send-control fix has been through adversarial review, which found four
-blocking defects in it (ARCHITECTURE.md D34k) — all now fixed. **It is
-unverified live and needs a re-run.**
+**Progress across three live readings, each one correcting the last:**
+
+| Reading | Send-control outcome | What it established |
+| --- | --- | --- |
+| 1 | `not-found`, all clauses 0 | tag assumption suspected; unverified |
+| 2 | `not-found`, walk returned nothing | walk terminated before the toolbar (D34l) — a bound tightened past correctness |
+| 3 | **2 controls found in the region, refused** | the traversal is correct and the ambiguity rule is working; what was missing is a discriminator |
+
+Reading 3 is the correct failure. A composer toolbar holds send *and*
+microphone *and* attach, so several controls is normal — refusing every time
+would make the fallback useless.
+
+**A discriminator has been added** (ARCHITECTURE.md D34m): three rules, each a
+*positive* property of sending — native form submission, a declared
+`aria-controls` relationship, then send-icon identity — with **refusal still the
+default** when none identifies exactly one.
+
+**Unverified live; needs a re-run.** The reading will now print the region's
+controls in full — attributes, ancestors, accessible names — and say which rule
+fired, or that none did.
 
 ### Earlier Gemini readings — PRE-FIX, INVALID, kept deliberately
 

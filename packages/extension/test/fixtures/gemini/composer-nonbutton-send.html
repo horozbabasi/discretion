@@ -1,0 +1,35 @@
+<!doctype html>
+<!--
+  SYNTHETIC fixture: the send control is NOT a <button>.
+
+  This is the shape that defeated every send-control selector in every adapter
+  at once. Eleven clauses across three adapters all began with the literal
+  `button` tag, so the tiered ladder was an illusion for this element: the
+  attribute and class tiers varied while the TAG stayed constant, and one
+  markup change took all of them out together.
+
+  Here the control is a div[role="button"] wrapping a send icon - which is a
+  perfectly ordinary way to build an accessible control, and what assistive
+  technology reads. Pins that the adapter finds it, and that the composer's
+  send-region strategy recovers with it.
+-->
+<html lang="en">
+  <body>
+    <div id="app">
+      <main>
+        <chat-window>
+          <model-response><message-content><p>lorem ipsum</p></message-content></model-response>
+        </chat-window>
+      </main>
+      <div class="input-area">
+        <rich-textarea>
+          <div class="ql-editor" contenteditable="true" role="textbox" aria-multiline="true"
+               aria-label="Enter a prompt here"><p>lorem ipsum</p></div>
+        </rich-textarea>
+        <div role="button" class="send-button" tabindex="0">
+          <mat-icon fonticon="send">lorem</mat-icon>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

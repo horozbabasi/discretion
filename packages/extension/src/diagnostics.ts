@@ -138,6 +138,30 @@ export interface EnvironmentForensics {
   readonly customElements: readonly string[];
   /** Every editable surface found, described structurally. Never text. */
   readonly editableCandidates: readonly EditableCandidate[];
+  /**
+   * Plausible submit controls, found WITHOUT assuming a tag.
+   *
+   * Every send-control selector in every adapter requires a literal <button>
+   * element. That is one assumption shared by eleven clauses across three
+   * adapters, and the tier ladder hides it: the tiers vary attribute/class
+   * while the TAG is constant at every tier, so what looks like independent
+   * fallback coverage is not. This probe deliberately does not make that
+   * assumption, so a control built from div[role=button] is visible here even
+   * when no strategy can match it.
+   */
+  readonly controlCandidates: readonly ControlCandidate[];
+}
+
+/** A plausible submit control, described without assuming its tag. */
+export interface ControlCandidate {
+  readonly tag: string;
+  readonly role: string | null;
+  readonly visible: boolean;
+  /** Attribute NAMES present, never their values. */
+  readonly attributes: readonly string[];
+  /** Why this element was considered a control at all. */
+  readonly matchedBy: readonly string[];
+  readonly ancestors: readonly string[];
 }
 
 export interface AdapterDiagnostic {
@@ -222,7 +246,9 @@ const PROBE_SELECTORS = [
   // needs to distinguish that from a page that has not painted.
   'button',
   '[role="button"]',
+  'input[type="submit"]',
   'mat-icon',
+  'mat-icon[fonticon="send"], mat-icon[data-mat-icon-name="send"]',
   'main, [role="main"]',
 ] as const;
 
@@ -318,6 +344,74 @@ function collectEditableCandidates(doc: Document): EditableCandidate[] {
   });
 }
 
+/** Anything that acts as a control, regardless of tag. */
+const CONTROL_SELECTOR = 'button, [role="button"], input[type="submit"], input[type="image"]';
+
+/** Locale-independent hints that a control is the SEND control. */
+function sendHints(element: Element): string[] {
+  const hints: string[] = [];
+  for (const attribute of ['data-test-id', 'data-testid', 'id', 'class']) {
+    const value = element.getAttribute(attribute);
+    if (value !== null && /send|submit/iu.test(value)) hints.push(`${attribute}~send`);
+  }
+  if (element.querySelector('mat-icon[fonticon="send"], mat-icon[data-mat-icon-name="send"]') !== null) {
+    hints.push('contains-send-icon');
+  }
+  if (element.getAttribute('type') === 'submit') hints.push('type=submit');
+  if (element.hasAttribute('aria-label')) hints.push('has-aria-label');
+  return hints;
+}
+
+/**
+ * Controls that plausibly submit, found without a tag assumption.
+ *
+ * Reports the ones carrying a send hint first, then a bounded sample of the
+ * rest, so "there are 40 controls and none of them looks like send" and "there
+ * are no controls at all" are distinguishable.
+ */
+function collectControlCandidates(doc: Document): ControlCandidate[] {
+  const all = deepQueryAll<HTMLElement>(doc, CONTROL_SELECTOR);
+  const describe = (element: HTMLElement, matchedBy: string[]): ControlCandidate => {
+    const rect = element.getBoundingClientRect();
+    return {
+      tag: element.tagName.toLowerCase(),
+      role: element.getAttribute('role'),
+      visible: rect.width > 0 && rect.height > 0,
+      attributes: attributeNames(element),
+      matchedBy,
+      ancestors: ancestorChain(element),
+    };
+  };
+
+  const withHints = all
+    .map((element) => ({ element, hints: sendHints(element) }))
+    .filter((c) => c.hints.length > 0)
+    .slice(0, 8)
+    .map((c) => describe(c.element, c.hints));
+
+  // Any element containing a send icon, even if it is not a recognised control
+  // - this is the case that would explain the icon clause failing at its
+  // closest('button') step while the icon itself is plainly present.
+  const iconHosts = deepQueryAll<HTMLElement>(
+    doc,
+    'mat-icon[fonticon="send"], mat-icon[data-mat-icon-name="send"]',
+  )
+    .map((icon) => icon.parentElement)
+    .filter((el): el is HTMLElement => el !== null)
+    .slice(0, 4)
+    .map((el) => describe(el, ['parent-of-send-icon']));
+
+  const seen = new Set<string>();
+  const out: ControlCandidate[] = [];
+  for (const candidate of [...withHints, ...iconHosts]) {
+    const key = `${candidate.tag}:${candidate.attributes.join()}:${candidate.matchedBy.join()}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(candidate);
+  }
+  return out;
+}
+
 let scriptStart = 0;
 let attemptCounter = 0;
 
@@ -354,6 +448,7 @@ function buildForensics(doc: Document): EnvironmentForensics {
     probes,
     customElements: shadow.customElements,
     editableCandidates: collectEditableCandidates(doc),
+    controlCandidates: collectControlCandidates(doc),
   };
 }
 
@@ -368,6 +463,7 @@ export function buildDiagnostic(adapter: SiteAdapter, doc: Document): AdapterDia
   );
   const responseResolution = adapter.getResponseRoot();
   const responseStrategies = describeStrategies(lists.response, RESPONSE_ROOT_INVARIANTS, doc);
+  const health = adapter.healthCheck();
 
   return {
     site: adapter.id,
@@ -393,8 +489,12 @@ export function buildDiagnostic(adapter: SiteAdapter, doc: Document): AdapterDia
       ambiguityCount: responseStrategies.admittedAtDecidingTier,
       strategies: responseStrategies.diagnostics,
     },
-    health: adapter.healthCheck(),
-    forensics:
-      composerResolution.ok && responseResolution.ok ? null : buildForensics(doc),
+    health,
+    // Gated on HEALTH, not on composer resolution. The first version gated on
+    // composer-and-response, so a run where both resolved and only the SEND
+    // CONTROL failed emitted no forensics at all - the instrument went quiet
+    // on exactly the failure that remained, and the reading that followed had
+    // no probe table to diagnose from.
+    forensics: health.ok ? null : buildForensics(doc),
   };
 }

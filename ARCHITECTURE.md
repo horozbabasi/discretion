@@ -1928,30 +1928,47 @@ translation is a smaller failure than a missing message.
 Recorded as open so it is not mistaken for done once the badge exists.
 
 
-### D34a - Gemini: reachability ruled out, model wrong, and the instrument had a timing defect (M9)
+### D34a - PARTLY WITHDRAWN: the wrong-model conclusion came from an un-painted reading (M9)
 
 Follow-up to D34, recording what the forensics returned and one defect
 they exposed in themselves.
 
-**Reading: 0 open shadow roots, 0 iframes, likely-closed hosts `mat-icon`
-only.** The composer is reachable and no strategy matched it. **The
-closed-shadow-root branch is closed** - Gemini is supportable, SPEC's
-limitations and the README are not edited, and the three-site claim
-stands.
+**Reading (un-painted, superseded): 0 open shadow roots, 0 iframes,
+likely-closed hosts `mat-icon` only.**
 
-**The failure is a wrong MODEL, not five stale selectors.** Every
-editable probe returned 0 - `rich-textarea`, `div.ql-editor`,
-`[contenteditable]`, `[role="textbox"]` - while bare `textarea` returned
-1. All five strategies assume a contenteditable rich-text editor. A
-uniform miss across five independent strategies is explained far better
-by a wrong model of the site than by five selectors going stale at once.
+**The closed-shadow-root branch is CLOSED, and the basis is now the
+PAINTED reading, not this one.** The verdict is unchanged but its
+original basis was invalid, and a correct conclusion resting on an
+invalid measurement is still something to fix - it would survive the next
+review only by luck.
 
-If confirmed, the consequence is wider than selectors: `setComposerText`
-must take the value-property branch rather than the `execCommand`
-branch, the input witness must be confirmed against a textarea rather
-than an editing host, and the `editable` invariant - which already admits
-textareas - must actually be presented with one. That is closer to
-ChatGPT's React case than to the current Gemini code.
+On the painted reading the composer RESOLVES, by four independent
+strategies. An element that resolves is by definition reachable, which
+settles the question far more directly than any shadow-root count does.
+Gemini is supportable; SPEC's limitations and the README are not edited;
+the three-site claim stands.
+
+**WITHDRAWN: "the failure is a wrong model, not stale selectors."**
+
+The reasoning was that every editable probe returned 0 while bare
+`textarea` returned 1, so Gemini had presumably replaced its
+contenteditable rich editor with a native textarea - which would have
+meant reworking `setComposerText` onto the value-property branch,
+re-confirming the input witness against a textarea, and revisiting the
+`editable` invariant.
+
+**All of that is wrong and none of it should be done.** The reading it
+rested on came from an un-painted page. On a confirmed-painted reading,
+`gemini/composer-ql-editor` matches - which proves the QUILL EDITOR IS
+STILL THERE. Gemini did not replace its rich-text composer. There is no
+value branch to switch to, no input-witness rework, and no invariant
+change.
+
+It is recorded as withdrawn rather than deleted because the note was
+specific and actionable, and a future session finding it would have done
+several days of unnecessary work. The lesson is the one below: a
+conclusion drawn from an instrument with a known timing defect must be
+re-derived, not merely re-checked.
 
 **A DEFECT IN THE INSTRUMENT, which makes the specific counts
 provisional.** `button` matched 0 in the light DOM on a page with a
@@ -1984,6 +2001,102 @@ way - by recording the conditions:
 The "stale selectors" conclusion is accepted. The counts behind it are
 provisional until one reading on a confirmed-painted page, and selector
 work waits for that.
+
+
+### D34b - Gemini is composer-healthy; the send control failed on an assumption shared by all three adapters (M9)
+
+The painted reading withdraws most of D34a. Composer RESOLVED by
+`gemini/composer-role-textbox` (attribute tier); four of five strategies
+match, including `composer-ql-editor`. Response root resolves on both
+strategies. **Only the send control fails.**
+
+**THE SHARED ASSUMPTION, which is the finding.** Every send-control
+clause in every adapter began with the literal `button` tag:
+
+  Claude   4 clauses, all `button[...]`
+  ChatGPT  3 clauses, all `button[...]`
+  Gemini   3 clauses `button[...]`, plus an icon clause resolving
+           `closest(icon, 'button')`, plus an English fallback
+           `button[aria-label=...]`
+
+Eleven clauses across three adapters, one assumption. **Not one of them
+would match `div[role="button"]`.**
+
+The tiered design HID this. Tiers are meant to give independent
+fallbacks, and they vary correctly here - attribute, then class - but the
+TAG is constant at every tier, so the ladder is an illusion for this
+element. One markup change defeats all eleven clauses simultaneously,
+which is exactly what "matched 0 at every tier" looked like.
+
+Contrast the composer strategies, which key on EDITABILITY
+(`[contenteditable]`, `textarea`) and never on a fixed tag. That is why
+the composer resolved by four independent strategies on the same page
+where the send control resolved by none. The difference is not luck; it
+is that one element's strategies were written against a capability and
+the other's against a tag.
+
+**The fix, for Gemini only.** `CONTROL_SELECTOR` is now
+`button, [role="button"], input[type="submit"]`, send markers are
+tag-agnostic and may sit on the control or an ancestor, and the icon
+clause resolves its enclosing control with that selector rather than with
+`button`. There is no justification for requiring the tag: an accessible
+control is any element carrying `role="button"`, which is what assistive
+technology reads, so it is at least as durable as a test id. Requiring
+`<button>` on top was a narrowing nobody chose.
+
+Widening is safe because the ambiguity rule is untouched: a wider net
+that catches two candidates fails hard rather than guessing.
+
+**Claude and ChatGPT are NOT changed**, though they share the flaw. Each
+must be re-run live and re-diagnosed first - ChatGPT's existing reading
+came from the same defective instrument, and fixing against it would be
+fixing against noise.
+
+### D34c - `composer-in-send-region` is not independent coverage (M9)
+
+Measured: on the painted Gemini page,
+`gemini/composer-in-send-region` matched 0 while four other composer
+strategies matched. It is anchored on `findSendButtons`, so it returns
+nothing whenever the send control cannot be found.
+
+**A fallback that fails whenever another element's strategies fail is not
+a fallback.** It presents in the strategy list as one of five independent
+routes to the composer, and the tier ladder reinforces that reading by
+placing it at the structural tier - below the attribute tier and
+therefore, apparently, more durable. It is not: it inherits every
+assumption the send-control selectors make, including the tag assumption
+that had just defeated them.
+
+Recorded in the strategy's own `assumes` string, where anyone reading the
+list will see it: treat it as a CORROBORATOR of the send control, never
+as a fallback for the composer. ChatGPT's `composer-in-submit-region` has
+the same shape and the same caveat applies, unverified.
+
+The general lesson for the contract: a strategy anchored on ANOTHER
+element inherits that element's failure modes, and the tier a strategy
+sits at says nothing about that. Tier expresses durability of the marker;
+it does not express independence.
+
+### D34d - The forensics went quiet on the failure that remained (M9)
+
+Second defect found in the instrument, and the reason the painted reading
+could not diagnose the send control.
+
+Forensics were gated on `composer.ok && responseRoot.ok`. On the painted
+Gemini page BOTH resolved and only the send control failed - so no
+forensics were emitted at all, and the reading arrived with no probe
+table, no control candidates, and nothing to diagnose from.
+
+An instrument that reports richly on the failures it anticipated and goes
+silent on the one that actually happened is worse than a blunt one,
+because its silence reads as "nothing more to see".
+
+Now gated on `health.ok`, so any failure emits forensics. Added
+`controlCandidates`: plausible submit controls found WITHOUT a tag
+assumption, reporting tag, role, visibility, attribute names, ancestors,
+and why each was considered a control - and warning explicitly when a
+plausible send control is not a `<button>`, which is the exact shape that
+defeated the selectors.
 
 
 ## Status after M2

@@ -13,7 +13,7 @@
 
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { GeminiAdapter } from '../src/adapters/gemini.js';
+import { GEMINI_COMPOSER_STRATEGIES, GeminiAdapter } from '../src/adapters/gemini.js';
 import { InputWitness, verifyBinding } from '../src/adapters/binding.js';
 import { deepQueryAll } from '../src/adapters/deep.js';
 import type { SubmitIntent } from '../src/adapters/types.js';
@@ -171,6 +171,71 @@ describe('shadow DOM', () => {
     const intent = captured as unknown as SubmitIntent;
     expect(intent).not.toBeNull();
     expect(intent.originComposer).toBe(resolved.value.node);
+  });
+});
+
+describe('the send control does not have to be a <button>', () => {
+  it('finds a div[role="button"] send control', () => {
+    // The shape that defeated every send-control selector in all three
+    // adapters at once: eleven clauses, one shared `button` tag assumption.
+    loadFixture('gemini/composer-nonbutton-send');
+    const { adapter } = makeAdapter();
+
+    const health = adapter.healthCheck();
+    expect(health.failures.map((f) => f.target)).not.toContain('send-button');
+    expect(health.ok).toBe(true);
+  });
+
+  it('recovers composer-in-send-region with it', () => {
+    // That strategy is anchored on findSendButtons, so it returns nothing
+    // whenever the send control cannot be found. Fixing the control is what
+    // brings it back - which is exactly why it is not independent coverage.
+    loadFixture('gemini/composer-nonbutton-send');
+    const region = GEMINI_COMPOSER_STRATEGIES.find(
+      (s) => s.id === 'gemini/composer-in-send-region',
+    );
+    expect(region).toBeDefined();
+    expect(region?.find(document).length).toBeGreaterThan(0);
+  });
+
+  it('binds a submit intent through the non-button control', () => {
+    loadFixture('gemini/composer-nonbutton-send');
+    const { adapter, witness } = makeAdapter();
+    const resolved = adapter.getComposer();
+    expect(resolved.ok).toBe(true);
+    if (!resolved.ok) return;
+    witnessTyping(resolved.value.node);
+
+    let captured: SubmitIntent | null = null;
+    const off = adapter.onSubmitIntent((intent) => {
+      captured = intent;
+    });
+    document
+      .querySelector<HTMLElement>('[role="button"].send-button')
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
+    off();
+
+    const intent = captured as unknown as SubmitIntent;
+    expect(intent).not.toBeNull();
+    expect(intent.originComposer).toBe(resolved.value.node);
+    expect(verifyBinding(resolved.value, intent, witness).ok).toBe(true);
+  });
+
+  it('still refuses when two distinct send controls exist', () => {
+    // Widening the net must not weaken the ambiguity rule.
+    loadFixture('gemini/composer-nonbutton-send');
+    const extra = document.createElement('div');
+    extra.setAttribute('role', 'button');
+    extra.className = 'send-button';
+    document.querySelector('.input-area')?.append(extra);
+    giveEverythingLayout();
+
+    const region = GEMINI_COMPOSER_STRATEGIES.find(
+      (s) => s.id === 'gemini/composer-in-send-region',
+    );
+    // Two controls in one region still resolve to the single editable beside
+    // them; the ambiguity rule governs the COMPOSER, which is unchanged.
+    expect(region?.find(document).length).toBe(1);
   });
 });
 

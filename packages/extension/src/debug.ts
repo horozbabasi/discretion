@@ -197,6 +197,28 @@ function renderForensics(f: EnvironmentForensics): void {
     console.warn('NO editable surface anywhere, light DOM or shadow.');
   }
 
+  if (f.controlCandidates.length > 0) {
+    console.log('plausible submit controls (found WITHOUT assuming a <button> tag):');
+    console.table(
+      f.controlCandidates.map((c) => ({
+        tag: c.tag,
+        role: c.role ?? '',
+        visible: c.visible,
+        matchedBy: c.matchedBy.join(', '),
+        ancestors: c.ancestors.slice(0, 4).join(' < '),
+        attributes: c.attributes.join(' '),
+      })),
+    );
+    const nonButton = f.controlCandidates.filter((c) => c.tag !== 'button');
+    if (nonButton.length > 0) {
+      console.warn(
+        `${nonButton.length} plausible send control(s) are NOT <button> elements ` +
+          `(${nonButton.map((c) => c.tag).join(', ')}). Every send-control selector in this ` +
+          'adapter requires a literal <button>, so none of them can match these.',
+      );
+    }
+  }
+
   const anyEditable = f.editableCandidates.length;
   const usableEditable = f.editableCandidates.filter((c) => c.visible && c.editable).length;
   const controls =

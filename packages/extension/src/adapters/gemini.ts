@@ -67,21 +67,54 @@ const CONVERSATION_PATH = /^(?:\/u\/\d+)?\/app\/((?:c_)?[0-9a-fA-F]{12,})\/?$/u;
 
 const EDITABLE_SELECTOR = 'textarea, input, [contenteditable]';
 
-/** Locale-independent send markers, strongest first. */
-const SEND_BUTTON_SELECTOR = [
-  'button[data-test-id="send-button"]',
-  'button[data-testid="send-button"]',
-  'button.send-button',
+/**
+ * What counts as a CONTROL, regardless of tag.
+ *
+ * ─────────────────────────────────────────────────────────────────────────
+ * THE TAG ASSUMPTION, REMOVED — this is the fix.
+ *
+ * Every send-control clause previously began with the literal `button` tag.
+ * That single assumption was shared by every clause at every tier, so the
+ * tiered fallback ladder was an illusion for this element: attribute and class
+ * tiers varied while the TAG stayed constant, and one markup change defeated
+ * all of them at once. Measured live on Gemini: the composer resolved by four
+ * independent strategies while the send control matched zero.
+ *
+ * There is no justification for requiring the tag. An accessible control is
+ * any element carrying `role="button"` — that is what assistive technology
+ * uses, so it is at least as durable as a test id and far more durable than a
+ * class. Requiring `<button>` on top of it was a narrowing nobody chose.
+ *
+ * Narrowing it back is still safe, because the ambiguity rule is unchanged: a
+ * wider net that catches two candidates fails hard rather than guessing.
+ * ─────────────────────────────────────────────────────────────────────────
+ */
+const CONTROL_SELECTOR = 'button, [role="button"], input[type="submit"]';
+
+/** Locale-independent send markers, strongest first. Tag-agnostic. */
+const SEND_MARKER_SELECTOR = [
+  '[data-test-id="send-button"]',
+  '[data-testid="send-button"]',
+  '.send-button',
 ].join(', ');
 
 /**
- * A Material icon named "send" inside a button. Locale-independent, and the
- * marker that survives when the test id is dropped.
+ * A Material icon named "send". Locale-independent, and the marker that
+ * survives when the test id is dropped.
+ *
+ * Its enclosing CONTROL is resolved with CONTROL_SELECTOR rather than
+ * `button`: the icon being present while the clause matched nothing is exactly
+ * the signature of an icon inside a non-button control.
  */
 const SEND_ICON_SELECTOR = 'mat-icon[fonticon="send"], mat-icon[data-mat-icon-name="send"]';
 
+/** Whether an element acts as a control, regardless of its tag. */
+function isControl(element: Element): boolean {
+  return element.matches(CONTROL_SELECTOR);
+}
+
 /**
- * Whether a control submits the composer.
+ * The controls that submit the composer.
  *
  * Ordered: locale-independent markers first, and the English aria-label only
  * when nothing else matched anywhere on the page. Matching an English label
@@ -90,9 +123,15 @@ const SEND_ICON_SELECTOR = 'mat-icon[fonticon="send"], mat-icon[data-mat-icon-na
  * is the only thing working.
  */
 function findSendButtons(root: ParentNode): { buttons: HTMLElement[]; usedEnglishFallback: boolean } {
-  const byMarker = deepQueryAll<HTMLElement>(root, SEND_BUTTON_SELECTOR);
+  // A send marker on the control itself, or on an ancestor of it: sites put
+  // the test id on either the control or its wrapper, and requiring one
+  // placement is the same narrowing as requiring a tag.
+  const byMarker = deepQueryAll<HTMLElement>(root, SEND_MARKER_SELECTOR)
+    .map((element) => (isControl(element) ? element : closestAcrossShadow(element, CONTROL_SELECTOR)))
+    .filter((el): el is HTMLElement => el instanceof HTMLElement);
+
   const byIcon = deepQueryAll<HTMLElement>(root, SEND_ICON_SELECTOR)
-    .map((icon) => closestAcrossShadow(icon, 'button'))
+    .map((icon) => closestAcrossShadow(icon, CONTROL_SELECTOR))
     .filter((el): el is HTMLElement => el instanceof HTMLElement);
 
   const found: HTMLElement[] = [];
@@ -101,7 +140,9 @@ function findSendButtons(root: ParentNode): { buttons: HTMLElement[]; usedEnglis
   }
   if (found.length > 0) return { buttons: found, usedEnglishFallback: false };
 
-  const english = deepQueryAll<HTMLElement>(root, 'button[aria-label="Send message" i]');
+  const english = deepQueryAll<HTMLElement>(root, '[aria-label="Send message" i]')
+    .map((element) => (isControl(element) ? element : closestAcrossShadow(element, CONTROL_SELECTOR)))
+    .filter((el): el is HTMLElement => el instanceof HTMLElement);
   return { buttons: english, usedEnglishFallback: english.length > 0 };
 }
 
@@ -145,7 +186,7 @@ export const GEMINI_COMPOSER_STRATEGIES: readonly ElementStrategy<HTMLElement>[]
     id: 'gemini/composer-in-send-region',
     tier: 'structural',
     assumes:
-      'The composer and its send control share a bounded container. Anchors on the locale-independent send markers, walks up across shadow boundaries, then takes the editables inside.',
+      'The composer and its send control share a bounded container. Anchors on the locale-independent send markers, walks up across shadow boundaries, then takes the editables inside. NOT INDEPENDENT COVERAGE: it is anchored on findSendButtons, so it returns nothing whenever the send control cannot be found - measured live, it matched 0 while four other strategies matched the composer. Treat it as a corroborator of the send control, never as a fallback for the composer.',
     find: (root) => {
       const found: HTMLElement[] = [];
       for (const button of findSendButtons(root).buttons) {
@@ -197,7 +238,7 @@ export function composerRegionOf(from: Element): Element | null {
   let hops = 0;
   while (node !== null && hops < 10) {
     if (
-      deepQueryAll(node, SEND_BUTTON_SELECTOR).length + deepQueryAll(node, SEND_ICON_SELECTOR).length > 0 &&
+      deepQueryAll(node, SEND_MARKER_SELECTOR).length + deepQueryAll(node, SEND_ICON_SELECTOR).length > 0 &&
       deepQueryAll(node, EDITABLE_SELECTOR).length > 0
     ) {
       return node;

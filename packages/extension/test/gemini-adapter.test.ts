@@ -491,3 +491,65 @@ describe('the region walk is traced, so its two failure modes are distinguishabl
     expect(trace.outcome).toBe('no-region');
   });
 });
+
+describe('the walk reports its filter chain, not just the survivors', () => {
+  it('distinguishes "never matched" from "matched and discarded"', () => {
+    // A single survivor count cannot say which stage removed a control, and
+    // the two have opposite fixes: a selector that does not recognise the
+    // control, versus a visibility test that discarded it.
+    loadFixture('gemini/composer');
+    const area = document.querySelector('.input-area');
+
+    // Matched by CONTROL_SELECTOR but not rendered.
+    const hidden = document.createElement('button');
+    hidden.className = 'hidden-tool';
+    hidden.setAttribute('hidden', '');
+    area?.append(hidden);
+
+    // Rendered, but NOT matched by CONTROL_SELECTOR at all.
+    const unrecognised = document.createElement('mat-fab');
+    unrecognised.className = 'unrecognised';
+    area?.append(unrecognised);
+
+    giveEverythingLayout();
+
+    const trace = describeSendSearch(document);
+    const step = trace.steps.find((s) => s.rawMatched > 0);
+    expect(step).toBeDefined();
+    // The hidden button was matched and then discarded...
+    expect(step?.rawMatched).toBeGreaterThan(step?.afterRenderedFilter ?? 0);
+    // ...while the unrecognised element never entered the chain at all, so it
+    // is invisible in every column. That is what the icon-host table is for.
+    expect(trace.documentControls.raw).toBeGreaterThan(0);
+  });
+
+  it('reports the running total so accumulation is visible', () => {
+    loadFixture('gemini/composer');
+    const trace = describeSendSearch(document);
+    const totals = trace.steps.map((s) => s.runningTotal);
+    // Monotonic: the collection accumulates and never resets.
+    for (let i = 1; i < totals.length; i += 1) {
+      expect(totals[i] as number).toBeGreaterThanOrEqual(totals[i - 1] as number);
+    }
+  });
+
+  it('reports which control encloses each icon, and whether it is recognised', () => {
+    // The finding this exists for: an icon inside an element CONTROL_SELECTOR
+    // does not match is invisible to every clause, however well the walk works.
+    loadFixture('gemini/composer-ligature-send');
+    const orphan = document.createElement('div');
+    orphan.className = 'not-a-control';
+    orphan.innerHTML = '<mat-icon>arrow_upward</mat-icon>';
+    document.querySelector('.input-area')?.append(orphan);
+    giveEverythingLayout();
+
+    const trace = describeSendSearch(document);
+    const arrow = trace.iconHosts.find((h) => h.iconName === 'arrow_upward');
+    expect(arrow).toBeDefined();
+    expect(arrow?.matchedByControlSelector).toBe(false);
+    expect(arrow?.enclosingControlTag).toBeNull();
+
+    const send = trace.iconHosts.find((h) => h.iconName === 'send');
+    expect(send?.matchedByControlSelector).toBe(true);
+  });
+});

@@ -2878,6 +2878,64 @@ block, and the author sees a conclusion that appears unsupported by
 evidence that was in fact produced.
 
 
+### D34q - The send icon is named `arrow_upward`, and the collection still cannot see its control (M9)
+
+Two findings from one full capture, and the order they are fixed in
+matters.
+
+**The send icon is `arrow_upward`, not `send`.** The capture reported
+`mat-icon ligature names present: arrow_upward, mic, plus` - three icons
+for three controls, where `plus` is Upload & tools, `mic` is Dictate, and
+`arrow_upward` is send. **Every marker clause and the ligature clause
+search for the token `send`, which does not exist on this page.** That is
+the entire marker-clause failure and it is a one-line change.
+
+**It is deliberately NOT fixed yet.** Fixing the icon name first would
+leave the marker clause matching while the composer-anchored path still
+cannot see the control - which looks like success and leaves the fallback
+broken. The fallback is the thing that exists for the day the markers rot
+again, so verifying it against a control that is actually present is the
+whole point.
+
+**When it is fixed, the locality bound matters MORE, not less.**
+`arrow_upward` is a GENERIC glyph: a scroll-to-top, a collapse, an expand
+control can all carry it, whereas `send` was at least send-shaped. The
+input-area test - the nearest common ancestor of control and composer
+must not contain the transcript - is what keeps that from binding, and it
+was introduced when the icon was believed to be `send`. It is now doing
+more work than it was designed for, which is worth re-checking rather
+than assuming.
+
+**Second finding: collect-across-all-hops landed, and changed nothing.**
+The hop table climbs all 20 levels and `controlsFound` is 2 at every hop
+from 5 onward, with a control table listing only Upload & tools and
+Dictate - while the probe table in the same reading counts 12 buttons.
+
+Read from the code: `controlsFound` per step is that hop's SUBTREE count,
+not carried and not accumulated; `collected` accumulates across hops with
+dedup; and `discriminateSendControl` receives the accumulated set. **Both
+halves work.** The defect is upstream of both - `controlsBeside` returns
+2 even at the top of the tree, so the union is also 2, and the
+discriminators reporting 0/0/0 is consistent with never having seen the
+send button.
+
+**Which stage loses the other ten cannot be determined from the code**,
+and the candidates need opposite fixes: a selector that never matched the
+control, versus a visibility test that discarded it. So the reading now
+carries the whole chain - `rawMatched -> afterComposerExclusions ->
+afterRenderedFilter -> newlyCollected -> runningTotal` per hop, a
+document-wide census of what matches `CONTROL_SELECTOR` and how much of
+it is rendered, and an explicit warning when the walk's total is below
+the page's rendered count.
+
+**A live hypothesis the reading will settle.** For every distinct icon
+name, the diagnostic now reports the enclosing control and whether
+`CONTROL_SELECTOR` matches it at all. If `arrow_upward` sits inside
+something that is neither a `<button>` nor `[role="button"]`, it is
+invisible to every clause however well the walk works - and that would
+explain both findings at once.
+
+
 ## Status after M2
 
 Stage 1 is complete: 113 registered detectors — 57 NATIONAL_ID and 19

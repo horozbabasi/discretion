@@ -208,7 +208,31 @@ export interface RegionWalkStep {
   readonly hop: number;
   readonly tag: string;
   readonly marker: string;
+  /**
+   * The FILTER CHAIN, stage by stage.
+   *
+   * `controlsFound` alone could not explain a reading where 12 buttons exist
+   * on the page and the walk collected 2 at every level. A single number says
+   * how many survived; it cannot say which stage removed the rest, and those
+   * have opposite fixes: a selector that never matched the control, versus a
+   * visibility test that discarded it.
+   */
+  readonly rawMatched: number;
+  readonly afterComposerExclusions: number;
+  readonly afterRenderedFilter: number;
   readonly controlsFound: number;
+  /** How many of these were not already collected at a lower hop. */
+  readonly newlyCollected: number;
+  readonly runningTotal: number;
+}
+
+/** Where a named icon actually sits, and whether a control encloses it. */
+export interface IconHostReport {
+  readonly iconName: string;
+  readonly enclosingControlTag: string | null;
+  readonly enclosingControlRole: string | null;
+  readonly matchedByControlSelector: boolean;
+  readonly parentTag: string;
 }
 
 /** A control in the composer's region, described for the diagnostic. */
@@ -228,6 +252,18 @@ export interface SendSearchTrace {
   /** Every control in the chosen region, in full. This is what a
    *  discriminator gets designed against. */
   readonly regionControlDetail: readonly RegionControl[];
+  /**
+   * Document-wide control census, so "12 buttons but 2 collected" is
+   * explainable without another round-trip.
+   */
+  readonly documentControls: { readonly raw: number; readonly rendered: number };
+  /**
+   * For every distinct icon name on the page, the control that encloses it -
+   * and whether CONTROL_SELECTOR matches that control at all. A send icon
+   * inside something the selector does not recognise is invisible to every
+   * clause, however well the walk works.
+   */
+  readonly iconHosts: readonly IconHostReport[];
   readonly discriminator: DiscriminatorOutcome | null;
   /**
    * Why the climb ended. NOT a verdict: the walk now always climbs to the
@@ -422,14 +458,25 @@ function walkRegion(composer: Element): { controls: HTMLElement[]; trace: SendSe
       stoppedBecause = 'reached-body';
       break;
     }
-    const controls = controlsBeside(region, composer);
+    const staged = controlsBesideStaged(region, composer);
+    let newly = 0;
+    for (const control of staged.controls) {
+      if (!collected.includes(control)) {
+        collected.push(control);
+        newly += 1;
+      }
+    }
     steps.push({
       hop: hops,
       tag: region.tagName.toLowerCase(),
       marker: describeElement(region),
-      controlsFound: controls.length,
+      rawMatched: staged.raw,
+      afterComposerExclusions: staged.afterComposerExclusions,
+      afterRenderedFilter: staged.afterRendered,
+      controlsFound: staged.controls.length,
+      newlyCollected: newly,
+      runningTotal: collected.length,
     });
-    for (const control of controls) if (!collected.includes(control)) collected.push(control);
     region = parentAcrossShadow(region);
     hops += 1;
   }
@@ -444,6 +491,11 @@ function walkRegion(composer: Element): { controls: HTMLElement[]; trace: SendSe
         composerResolved: true,
         steps,
         regionControlDetail: detail,
+      documentControls: {
+        raw: deepQueryAll(doc, CONTROL_SELECTOR).length,
+        rendered: deepQueryAll<HTMLElement>(doc, CONTROL_SELECTOR).filter(isRenderedControl).length,
+      },
+      iconHosts: collectIconHosts(doc),
         discriminator: null,
         stoppedBecause,
         regionControls: 0,
@@ -459,6 +511,11 @@ function walkRegion(composer: Element): { controls: HTMLElement[]; trace: SendSe
         composerResolved: true,
         steps,
         regionControlDetail: detail,
+      documentControls: {
+        raw: deepQueryAll(doc, CONTROL_SELECTOR).length,
+        rendered: deepQueryAll<HTMLElement>(doc, CONTROL_SELECTOR).filter(isRenderedControl).length,
+      },
+      iconHosts: collectIconHosts(doc),
         discriminator: null,
         stoppedBecause,
         regionControls: 1,
@@ -479,6 +536,11 @@ function walkRegion(composer: Element): { controls: HTMLElement[]; trace: SendSe
       composerResolved: true,
       steps,
       regionControlDetail: detail,
+      documentControls: {
+        raw: deepQueryAll(doc, CONTROL_SELECTOR).length,
+        rendered: deepQueryAll<HTMLElement>(doc, CONTROL_SELECTOR).filter(isRenderedControl).length,
+      },
+      iconHosts: collectIconHosts(doc),
       discriminator: outcome,
       stoppedBecause,
       regionControls: collected.length,
@@ -488,16 +550,49 @@ function walkRegion(composer: Element): { controls: HTMLElement[]; trace: SendSe
 }
 
 /** Rendered controls inside `region` that are neither the composer, nor inside it, nor around it. */
-function controlsBeside(region: ParentNode, composer: Element): HTMLElement[] {
+interface ControlFilterStages {
+  readonly raw: number;
+  readonly afterComposerExclusions: number;
+  readonly afterRendered: number;
+  readonly controls: HTMLElement[];
+}
+
+function controlsBesideStaged(region: ParentNode, composer: Element): ControlFilterStages {
   const composerAncestors = ancestorsAcrossShadow(composer);
   const inComposer = new Set(deepQueryAll<Element>(composer, CONTROL_SELECTOR));
-  return deepQueryAll<HTMLElement>(region, CONTROL_SELECTOR).filter(
+  const raw = deepQueryAll<HTMLElement>(region, CONTROL_SELECTOR);
+  const notComposer = raw.filter(
     (control) =>
-      control !== composer &&
-      !inComposer.has(control) &&
-      !composerAncestors.has(control) &&
-      isRenderedControl(control),
+      control !== composer && !inComposer.has(control) && !composerAncestors.has(control),
   );
+  const rendered = notComposer.filter(isRenderedControl);
+  return {
+    raw: raw.length,
+    afterComposerExclusions: notComposer.length,
+    afterRendered: rendered.length,
+    controls: rendered,
+  };
+}
+
+/** Every distinct icon name, and the control (if any) that encloses it. */
+function collectIconHosts(root: ParentNode): IconHostReport[] {
+  const seen = new Set<string>();
+  const out: IconHostReport[] = [];
+  for (const icon of deepQueryAll<HTMLElement>(root, 'mat-icon')) {
+    const name = (icon.textContent ?? '').replace(/[\p{Cf}\s]/gu, '');
+    if (name.length === 0 || name.length > 24 || seen.has(name)) continue;
+    seen.add(name);
+    const control = closestAcrossShadow(icon, CONTROL_SELECTOR);
+    out.push({
+      iconName: name,
+      enclosingControlTag: control === null ? null : control.tagName.toLowerCase(),
+      enclosingControlRole: control === null ? null : control.getAttribute('role'),
+      matchedByControlSelector: control !== null,
+      parentTag: (parentAcrossShadow(icon)?.tagName ?? '').toLowerCase(),
+    });
+    if (out.length >= 20) break;
+  }
+  return out;
 }
 
 /** The composer, resolved WITHOUT the strategy that depends on the send control. */
@@ -526,6 +621,8 @@ export function describeSendSearch(doc: Document): SendSearchTrace {
       composerResolved: false,
       steps: [],
       regionControlDetail: [],
+      documentControls: { raw: 0, rendered: 0 },
+      iconHosts: collectIconHosts(doc),
       discriminator: null,
       stoppedBecause: 'no-composer',
       regionControls: 0,

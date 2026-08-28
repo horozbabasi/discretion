@@ -228,14 +228,57 @@ function renderForensics(f: EnvironmentForensics, diagnostic: AdapterDiagnostic)
         `(stopped because ${search.stoppedBecause}; ` +
         `${search.regionControls} control(s) in the chosen region)`,
     );
+    console.log(
+      `document-wide controls: ${search.documentControls.raw} matched CONTROL_SELECTOR, ` +
+        `${search.documentControls.rendered} of them rendered`,
+    );
     if (search.steps.length > 0) {
+      // THE WHOLE FILTER CHAIN, not just the survivors. A single count cannot
+      // say whether a control was never matched or was matched and discarded,
+      // and those have opposite fixes.
       console.table(
         search.steps.map((step) => ({
           hop: step.hop,
           element: step.marker,
-          controlsFound: step.controlsFound,
+          raw: step.rawMatched,
+          'not composer': step.afterComposerExclusions,
+          rendered: step.afterRenderedFilter,
+          new: step.newlyCollected,
+          total: step.runningTotal,
         })),
       );
+      const last = search.steps[search.steps.length - 1];
+      if (last !== undefined && last.runningTotal < search.documentControls.rendered) {
+        console.warn(
+          `The walk collected ${last.runningTotal} of ${search.documentControls.rendered} ` +
+            'rendered controls on the page. If the send control is among the ones it never ' +
+            'reached, no discriminator can help - compare the raw column against the rendered ' +
+            'column to see which stage removed them.',
+        );
+      }
+    }
+    if (search.iconHosts.length > 0) {
+      // Which control encloses each icon, and whether CONTROL_SELECTOR even
+      // recognises it. An icon inside something the selector does not match is
+      // invisible to every clause, however well the walk works.
+      console.log('icons and their enclosing controls:');
+      console.table(
+        search.iconHosts.map((h) => ({
+          icon: h.iconName,
+          parent: h.parentTag,
+          enclosingControl: h.enclosingControlTag ?? 'NONE',
+          role: h.enclosingControlRole ?? '',
+          matchedBySelector: h.matchedByControlSelector,
+        })),
+      );
+      const unmatched = search.iconHosts.filter((h) => !h.matchedByControlSelector);
+      if (unmatched.length > 0) {
+        console.warn(
+          `${unmatched.length} icon(s) have NO enclosing control that CONTROL_SELECTOR matches ` +
+            `(${unmatched.map((h) => h.iconName).join(', ')}). If the send icon is among these, ` +
+            'the control it sits in is not recognised as a control at all.',
+        );
+      }
     }
     if (search.outcome === 'no-region' && search.stoppedBecause !== 'no-composer') {
       console.warn(

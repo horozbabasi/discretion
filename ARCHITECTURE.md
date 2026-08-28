@@ -1576,6 +1576,12 @@ resolution belongs with the content-script flow batch, where the panel
 exists. It is a blocker on M9's completion, not on the next batch's
 start.
 
+**Shares its surface with D36**, which is also an M9 blocker. The
+injected shadow-DOM host that carries the review panel carries the
+degraded state and this confirmation path too - one surface, three
+contents. Build it first in the content-script batch; both blockers
+depend on it.
+
 **Not redesigned yet, on purpose.** The candidate answers each have a
 cost worth weighing rather than picking:
 (a) treat a programmatic fill as witnessed if the text was present before
@@ -1847,7 +1853,7 @@ the diagnostic makes crossing the boundary cost about two minutes; and
 live results are DATED, because "verified" decays and a Claim B result is
 evidence about the day it was taken.
 
-### D36 - OPEN: SPEC's visible degraded state does not exist yet; the badge is not it (M9)
+### D36 - M9 BLOCKER: SPEC's visible degraded state does not exist yet; the badge is not it
 
 Asked directly: what does a person see when a site changes next week?
 Answered from the code rather than from intent.
@@ -1878,9 +1884,48 @@ navigation and mid-session DOM replacement. What is missing is not more
 frequent detection but a VISIBLE SURFACE for what detection already
 found, and a send gate for it to block.
 
-Belongs to the content-script batch, alongside the review panel that will
-carry it and the D29 resolution that needs the same surface. Recorded as
-open so it is not mistaken for done once the badge exists.
+**SCOPE: M9 OWNS THIS. It closes with M9, together with D29.** Stated
+explicitly because an open decision recording that SPEC's strongest
+requirement is unmet, with no milestone attached, is how a requirement
+quietly becomes optional.
+
+Four reasons it cannot slip to M10:
+
+1. **SPEC assigns it to M9 twice over.** M9 is "Extension: manifest,
+   adapters, content script, REVIEW UI, streaming restoration". The
+   degraded-state sentence itself lives in SPEC's adapters section, which
+   is M9's. Neither clause is in M10's list.
+2. **M10 is a different surface.** M10 is "Popup, options, i18n,
+   accessibility, security hardening" - EXTENSION PAGES. The degraded
+   state, the send gate and D29's confirmation path are all IN-PAGE, in
+   an injected shadow-DOM host (SPEC: "All injected UI inside a shadow
+   DOM"). Filing an in-page requirement under a milestone about extension
+   pages would misfile it, and the misfiling is what would make it
+   invisible.
+3. **The send gate is non-negotiable #2, not decoration.** Fail-closed is
+   the guarantee the product is built on. Shipping M9's content-script
+   flow with detection wired and nothing able to block would mean M9's
+   own acceptance is unmet, whatever the milestone list said.
+4. **All three share ONE surface.** The review panel, the degraded state
+   and D29's "protect and send" confirmation are the same injected host
+   with different contents. M9 builds that host for the review panel
+   regardless. Deferring D36 would mean building the surface in M9 and
+   deliberately not wiring the degraded state into it, which is more work
+   than doing it, not less.
+
+**Ordering consequence.** The injected surface is a PREREQUISITE for both
+D29 and D36, so it is the first thing in the content-script batch rather
+than the last. Building detection first and the surface afterwards would
+leave both blockers open until the end of the milestone, which is where
+scope gets cut.
+
+**One honest caveat, which is not a reason to slip.** Telling the user
+"the site layout changed" is user-facing copy, and SPEC puts message
+catalogues in M10. The interim is English-only strings in M9, with the
+catalogue entry added in M10 alongside every other string. A missing
+translation is a smaller failure than a missing message.
+
+Recorded as open so it is not mistaken for done once the badge exists.
 
 
 ## Status after M2

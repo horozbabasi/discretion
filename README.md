@@ -97,8 +97,8 @@ production number higher than this**, and neither is speculative:
    here and is not guessed at.
 2. **The runtime is the faster one.** These numbers are onnxruntime-node on
    native CPU. The extension runs onnxruntime-web on WASM. M9 has since
-   measured that, and the gap is not marginal: 697 ms against 255.8 ms on the
-   same machine and the same input, on mains power. See below.
+   measured that, and the gap is not marginal: 691 ms against 255.8 ms on the
+   same machine and the same input. See below.
 
 So the honest statement is: **the p50 budget is missed under conditions
 favourable on both axes.** The measured 5.8 ms gap is a lower bound, and the
@@ -133,13 +133,13 @@ Two things this number is **not**:
 ### What actually ships: the browser measurement (M9)
 
 **onnxruntime-node cannot measure the shipped configuration, even in
-principle.** The Node build of Transformers.js offers `dml`, `webgpu` and
-`cpu` execution providers and has no WASM provider at all. Every number in the
-table above is therefore native CPU, which the extension never uses. Measuring
-the real thing needs a real browser, so the benchmark in `bench/wasm-latency/`
-runs the identical workload — same model, same q8 weights, same 2000-character
-inputs, same machine, warmup discarded — under Edge with cross-origin
-isolation enabled so WASM threading is actually available (8 threads).
+principle.** The Node build of Transformers.js offers `dml`, `webgpu` and `cpu`
+execution providers and has no WASM provider at all. Every number in the table
+above is therefore native CPU, which the extension never uses. Measuring the
+real thing needs a real browser, so the benchmark in `bench/wasm-latency/` runs
+the identical workload — same model, same q8 weights, same 2000-character
+inputs, same machine, warmup discarded — under Edge with cross-origin isolation
+enabled so WASM threading is actually available (8 threads).
 
 Two paths are measured, because they pull the window size in opposite
 directions and a single figure hides that:
@@ -147,32 +147,71 @@ directions and a single figure hides that:
 - **Cold** — a full 2000-character document with nothing cached. What a paste
   costs. This is the path SPEC's budget is written against.
 - **Incremental** — one character edited, every unchanged chunk served from
-  the content-hash cache. The interactive steady state while someone types.
+  the content-hash cache. The interactive steady state while typing.
 
-| window | chunks | cold p50 | cold p95 | incremental p50 | incremental p95 |
+Three consecutive sweeps; each cell shows all three runs, so the run-to-run
+spread is visible rather than hidden behind a tilde.
+
+| window | chunks | cold p50 (3 runs) | cold p95 | incremental p50 | incremental p95 |
 | ---: | ---: | ---: | ---: | ---: | ---: |
-| 400 (shipped) | 7 | 3022 ms | 3305 ms | **442 ms** | 997 ms |
-| 600 | 4 | 2425 ms | 2528 ms | 598 ms | 1290 ms |
-| 800 | 3 | 2192 ms | 2481 ms | 763 ms | 1577 ms |
-| 1200 | 2 | **1923 ms** | 2100 ms | 1045 ms | 1849 ms |
+| 400 (shipped) | 7 | 562 / 887 / **691** | 620 / 1053 / 751 | 79 / 124 / **112** | 165 / 299 / 237 |
+| 600 | 4 | 423 / 743 / **549** | 512 / 878 / 611 | 118 / 168 / **156** | 203 / 383 / 335 |
+| 800 | 3 | 401 / 660 / **532** | 442 / 873 / 624 | 142 / 220 / **192** | 272 / 476 / 385 |
+| 1200 | 2 | 385 / 627 / **501** | 434 / 1090 / 607 | 210 / 310 / **286** | 388 / 649 / 601 |
 
-Measured on battery power, Balanced power scheme (see below). 15 samples per
-cell. Across three independent runs the window-400 cold p50 landed at 3022,
-3024 and 3056 ms — a spread of 34 ms, about 1%.
+Bold is the median of the three runs. **Measurement conditions**, recorded by
+the harness on every run: Intel Core Ultra 7 258V, Windows, Edge headless, on
+battery at 76%, `% Processor Performance` 81–85%, CPU otherwise idle. Run-to-run
+spread on the window-400 cold p50 is 325 ms across three runs — this machine's
+performance state drifts, and quoting a single number would misrepresent it.
 
-**Latency depends on power state by more than it depends on anything we
-changed.** The same benchmark, on the same machine, on mains power, measured
-**p50 697 ms / p95 805 ms** at window 400 and **p50 520 ms / p95 566 ms** at
-window 1200 — 4.4x faster than the battery figures above. This was caught by
-chasing a discrepancy rather than averaging it: the older benchmark file,
-byte-identical apart from its sample count, reproduced the battery numbers
-rather than its own earlier result, which ruled out the harness.
+### The measurement conditions are part of the result
 
-Consequently every figure here names its power state, and the tables are not
-directly comparable to any published number that does not. The incremental
-path has so far been measured **only on battery**; the mains column for it is
-outstanding and will be filled before release rather than divided down from
-the battery figure.
+An earlier version of this section published figures roughly 4–6x slower than
+these, and attributed the difference to running on battery rather than mains.
+**That attribution was wrong**, and the correction is worth stating because it
+changes how these numbers should be read.
+
+The slow figures were real and reproducible — three runs, and an A/B against a
+byte-identical older harness confirmed the benchmark code was not the cause. But
+the explanation was an inference from a single co-occurrence: the machine was
+observed on battery and observed to be slow, so battery was named as the cause.
+A later direct test refuted it — on battery at 76%, the same benchmark runs at
+691 ms, matching the earlier "mains" figure of 697 ms almost exactly. The fast
+state is the normal state; the slow runs were an anomaly whose cause was never
+captured and is still not established.
+
+The benchmark now records power line status, battery level, clock speeds, CPU
+load and `% Processor Performance` on every run, and published figures quote
+them. Those proxies are not a complete description of a machine's power state.
+They are enough to notice that two runs happened in different states, which is
+the thing that was missing.
+
+Full account: ARCHITECTURE.md D27.
+
+### WebGPU was measured and rejected
+
+The model could in principle run on the GPU instead of WASM. Measured on this
+machine's real adapter (`intel / xe-2lpg`, an Arc 140V), in a headed browser so
+no software rasteriser is involved, paired back-to-back against WASM in the
+same machine state:
+
+| runtime | cold p50 @ window 400 | incremental p50 | per inference |
+| --- | ---: | ---: | ---: |
+| WASM, 8 threads | 533–691 ms | 80–112 ms | ~85 ms |
+| WebGPU, real GPU | 2931 / 2938 ms | 424–769 ms | ~420 ms |
+
+**WebGPU is 4–5x slower here, not faster.** The model ships q8-quantized, and
+onnxruntime-web's WebGPU backend has limited int8 matmul coverage — operators it
+cannot run on the GPU fall back to CPU per-operator, and each fallback costs a
+tensor round-trip across the GPU/CPU boundary. Paying GPU dispatch overhead plus
+CPU compute plus transfer cost is a straightforward way to be slower than
+well-threaded WASM SIMD.
+
+It would have been rejected even if it had won narrowly: WebGPU availability
+depends on browser, GPU, driver and enterprise policy, so it could only ever be
+an opportunistic accelerator with a WASM fallback beside it — two inference
+runtimes to ship, validate and debug. WASM is the single runtime.
 
 ### Why the window stays at 400
 
@@ -221,11 +260,12 @@ available, but only per script, never as a global bump.
 
 The latency tradeoff is real too, and it points the same way:
 
-- **Cold and incremental want opposite sizes.** 400 -> 1200 buys 1099 ms on a
-  cold paste and costs 603 ms on every debounced keystroke burst. Larger
-  windows are about 1.35x more efficient per character — fewer inferences,
-  overhead amortised — but incremental cost is per *window*, so a bigger window
-  redoes more characters per edit.
+- **Cold and incremental want opposite sizes.** 400 -> 1200 buys 190 ms on a
+  cold paste (691 -> 501) and costs 174 ms on every debounced keystroke burst
+  (112 -> 286). Larger windows are more efficient per character — fewer
+  inferences, overhead amortised — but incremental cost is per *window*, so a
+  bigger window redoes more characters per edit. The cold gain is 1.38x; the
+  incremental loss is 2.55x.
 - **Two window sizes would cost the entire cache.** The content-hash cache is
   keyed on chunk text, so 400-char and 1200-char chunks are disjoint
   populations. A document using both would get *zero* reuse across them: the
@@ -245,30 +285,29 @@ conflate. They are kept apart here because conflating them would let the
 easier one launder the harder one's result.
 
 **The budget (SPEC line 238):** *"p50 under 250ms and p95 under 600ms for a
-2000-character input on a mid-range laptop, excluding model warmup."* This is
-about a 2000-character input, which is the **cold path**: nothing cached, every
-chunk inferred.
+2000-character input on a mid-range laptop, excluding model warmup."* A
+2000-character input is the **cold path**: nothing cached, every chunk
+inferred.
 
-| | measured (mains) | budget | |
+| | measured (median of 3) | budget | |
 | --- | ---: | ---: | --- |
-| cold p50 | 697 ms | 250 ms | **missed, 2.8x over** |
-| cold p95 | 805 ms | 600 ms | **missed, 1.34x over** |
+| cold p50 | 691 ms | 250 ms | **missed, 2.8x over** |
+| cold p95 | 751 ms | 600 ms | **missed, 1.25x over** |
 
 **The interactive requirement (SPEC line 241):** *"Incremental detection as the
 user types, debounced, with results cached by content hash so pressing send is
-instant."* This is a separate requirement about the steady state while typing,
-and the incremental measurement is what speaks to it.
+instant."* A separate requirement about the steady state while typing, which
+the incremental measurement speaks to.
 
-| | measured | note |
+| | measured (median of 3) | |
 | --- | ---: | --- |
-| incremental p50, battery | 442 ms | mains not yet measured |
-| incremental p95, battery | 997 ms | mains not yet measured |
+| incremental p50 | 112 ms | one or two chunks re-inferred per edit |
+| incremental p95 | 237 ms | |
 
-The incremental figures are on battery and the cold figures on mains, so the
-two tables are **not comparable to each other** — see the power-state finding
-above and ARCHITECTURE.md D27. The mains incremental measurement is
-outstanding and will be published rather than derived by scaling the battery
-number.
+At 112 ms median an edit is re-analysed well inside a debounce interval, so
+this requirement is met on the measured machine. SPEC attaches no number to
+"instant", so this is reported as a measurement rather than scored against a
+threshold.
 
 **The interactive number does not convert the budget miss into a pass.** The
 budget is stated against a 2000-character input, and that is the cold path.
@@ -285,7 +324,7 @@ been seen before — produces no cache hits at all. Not fewer hits: none.
 So paste-then-send pays the full cold cost, and paste-then-send is one of the
 most common real flows this extension exists for: someone pastes a log, a
 config file, or an email thread, and presses send. That path is the paste
-guard's path, and it is the one the budget's 697 ms describes.
+guard's path, and it is the one the budget's 691 ms describes.
 
 The incremental figures apply to sustained typing, where each edit invalidates
 one or two chunks out of seven. They do not apply to the first send after a

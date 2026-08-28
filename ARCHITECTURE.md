@@ -1312,39 +1312,81 @@ near the composer will block sends until the adapter is updated. That is
 the intended trade: a false block is visible, complainable, and fixable;
 a false send is none of those.
 
-### D27 — WASM NER latency varies 4.4x with power state, so every published number states its conditions (M9)
+### D27 — CORRECTED: a 4-6x latency swing was misattributed to power state; conditions are now recorded on every run (M9)
 
-Discovered while measuring windowing. Two clean runs of the browser
-benchmark reported cold p50 3022 and 3024 ms at the shipped 400-char
-window — against roughly 697 ms measured for the same configuration in
-an earlier session. A 4.3x discrepancy in a benchmark that had already
-been run three times for stability is a defect report about the
-measurement, so it was chased rather than averaged.
+**This entry previously claimed WASM NER latency varies 4.4x with mains
+versus battery power. That claim was wrong, and the error is recorded
+here rather than quietly edited away.**
 
-The harness was exonerated by A/B: the OLD benchmark file, byte-identical
-apart from its sample count and port, re-run under current conditions,
-reported **p50 3056 ms** — agreeing with the new harness, not with its
-own earlier result. The variable was the machine: **on battery, Balanced
-power scheme** now, versus mains power then. Intel Core Ultra 7 258V.
+**What was observed.** Two clean runs of the browser benchmark reported
+cold p50 3022 and 3024 ms at the shipped 400-char window, against roughly
+697 ms measured in an earlier session. The harness was correctly
+exonerated by A/B: the OLD benchmark file, byte-identical apart from its
+sample count, re-run under the same conditions, reported 3056 ms — it
+agreed with the new harness rather than with its own earlier result. So
+the code was not the variable.
 
-Two consequences, both permanent:
+**What was then claimed, and why it was wrong.** The machine was observed
+to be on battery, and the earlier fast session was assumed to have been
+on mains. Power state was named as the cause and published. That was an
+inference from a single co-occurrence, not a measurement: the battery
+state was observed, the mains state was assumed, and nothing was varied
+deliberately.
 
-- **No latency figure is publishable without its power state.** A single
-  p50 with no stated conditions is not a measurement of the software; it
-  is a measurement of an unrecorded machine state, and it will not
-  reproduce. Everything published in the README now names the condition.
-- **The RATIOS survived and the absolutes did not.** Cold improves
-  1.34x from window 400 to 1200 on mains and 1.57x on battery; the
-  direction and rough magnitude of every windowing conclusion holds in
-  both states. Conclusions about the SHAPE of a tradeoff are more
-  durable than conclusions about whether a threshold is met, and the
-  budget question is exactly the fragile kind.
+**The direct test refutes it.** Measured later the same session, ON
+BATTERY throughout:
 
-The near-miss worth naming: the earlier session's 697 ms figure was
-reported as stable because it was reproduced three times — but three
-times *within one sitting*, which controls for noise and not for machine
-state. Repetition is not replication.
+| mode | power | battery | cold p50 @ w400 |
+| --- | --- | ---: | ---: |
+| headless | battery | 46% | 3022 / 3024 / 3056 ms |
+| headed | battery | 77% | 595 ms |
+| headless | battery | 76% | 533 ms |
+| headless (3-run sweep) | battery | 76% | 562 / 887 / 691 ms |
 
+Battery at 76% is roughly 5x faster than battery at 46%, and today's
+battery median of 691 ms matches the earlier session's "mains" figure of
+697 ms almost exactly. **The fast state is the normal state; the ~3000 ms
+runs were the anomaly, and power source was not the variable.**
+
+**What the variable actually was: not established.** The machine runs
+ASUS power-management services (`ipf_helper`,
+`AsusOptimizationStartupTask`), which switch performance profiles on
+their own. A background scan of the 300 MB model cache, a thermal
+excursion, or an OEM power profile are all plausible and none is
+confirmed. The honest statement is that an unidentified machine
+power/performance mode produced a 4-6x slowdown, and it was not captured
+at the time, so it cannot be reproduced or explained after the fact.
+
+**The durable fix.** `bench/wasm-latency/run.py` now records observable
+machine conditions on EVERY run, before and after: power line status,
+battery percent and charge status, current and max clock, CPU load, and
+`% Processor Performance`. Published figures quote them. These proxies
+are not a complete description of a machine's power state and the report
+says so rather than implying otherwise — but a run that records nothing
+cannot be interrogated at all, which is exactly the position this
+benchmark was in.
+
+**What survived, and it is the useful part.** The SHAPE of every
+conclusion held across a 5x change in machine speed:
+
+- cold improves and incremental degrades as the window grows, in both
+  states (cold 400->1200: 1.57x faster in the slow state, 1.38x in the
+  fast state; incremental: 2.36x and 2.55x slower);
+- the cold-path budget is missed in both states (691 ms against 250 ms in
+  the fast state, which is the state to publish).
+
+Conclusions about the shape of a tradeoff proved far more durable than
+conclusions about whether a threshold is met.
+
+**The lesson, which is standing rule 6 turned on its author.** The rule
+says repetition is not replication: reproducing a measurement within one
+sitting controls for noise, not machine state, so vary the state or name
+it as a condition. The failure here was subtler and worse — a state was
+NAMED as a condition without being varied. Observing "on battery" beside
+"slow" and publishing "battery causes slow" is the same error as
+publishing an unconditioned number, with a false explanation attached
+that makes it look rigorous. **Naming a condition you did not vary is
+worse than naming none, because it stops the next person looking.**
 
 ### D28 — The Stage 2 window stays at 400 because a larger one is a CORRECTNESS violation, not a slower tradeoff (M9)
 
@@ -1486,6 +1528,55 @@ cost worth weighing rather than picking:
 (d) is the most promising because it fails closed without failing
 useless, but it needs the review panel, which is the next M9 batch. The
 decision belongs with that work.
+
+
+### D30 — CLOSED: WebGPU is not an option for Stage 2; it is 4-5x SLOWER than WASM on the real adapter (M9)
+
+Left open at M8 with a legitimate doubt: the first WebGPU measurement was
+taken in headless Edge, which injects `--enable-unsafe-swiftshader`, so
+3054 ms looked like what software rasterisation looks like rather than
+what a GPU looks like. Measuring a software fallback and calling it
+WebGPU would have been a real error, so the question was reopened.
+
+**Measured properly.** Headed Edge (no software-rasteriser flag), on the
+machine's real adapter — `navigator.gpu.requestAdapter()` reports
+`intel / xe-2lpg`, the Arc 140V — with conditions recorded, and paired
+back-to-back against WASM in the same machine state:
+
+| runtime | cold p50 @ w400 | incremental p50 | per inference |
+| --- | ---: | ---: | ---: |
+| WASM (8 threads) | 533-691 ms | 80-112 ms | ~85 ms |
+| WebGPU (real Arc 140V) | 2931 / 2938 ms | 424-769 ms | ~420 ms |
+
+Reproduced twice at 2931 and 2938 ms. Conditions on the final run:
+battery 75%, `% Processor Performance` 89.1%, CPU idle — a healthy state,
+not a throttled one.
+
+**WebGPU is 4-5x slower than WASM here, not faster.** The doubt about the
+headless number was well founded and the number was nearly right anyway:
+the earlier 3054 ms was not SwiftShader, it was WebGPU.
+
+**Why, and why this is expected rather than a configuration mistake.**
+The model ships q8-quantized. onnxruntime-web's WebGPU execution provider
+has limited int8 matmul coverage, so quantized operators it cannot run on
+the GPU fall back to CPU per-operator — and every fallback costs a tensor
+round-trip across the GPU/CPU boundary. A q8 transformer on WebGPU
+therefore pays GPU dispatch overhead AND CPU compute AND transfer cost,
+which is a straightforward way to be slower than simply running the whole
+thing on well-threaded WASM SIMD. Nothing here suggests a
+misconfiguration to chase.
+
+**Closed, and would be closed even if it had been faster.** WebGPU is not
+universally available: it depends on the browser, the GPU, the driver and
+enterprise policy. So it could only ever be an OPPORTUNISTIC accelerator
+with a WASM fallback beside it — which means shipping and maintaining TWO
+inference runtimes, with two sets of numerical behaviour to validate,
+two failure modes, and an eval matrix that doubles. The bar for that
+complexity is a large, reliable win. The measured result is a large loss,
+so the bar is not merely unmet; it points the other way.
+
+WASM is the single runtime. Revisit only if onnxruntime-web ships real
+int8 GPU matmul coverage, and re-measure before believing it.
 
 
 ## Status after M2

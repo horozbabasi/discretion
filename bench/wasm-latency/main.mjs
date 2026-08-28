@@ -31,8 +31,17 @@ const COLD_SAMPLES = 15;
 const INCREMENTAL_SAMPLES = 15;
 const OVERLAP = 96;
 
-/** Windows spanning the shipped 400 up to a Latin-safe 1200. */
-const WINDOWS = [400, 600, 800, 1200];
+/**
+ * Windows spanning the shipped 400 up to a Latin-safe 1200.
+ *
+ * Overridable via ?windows=400,1200 so a focused comparison (one runtime
+ * against another, or one machine state against another) does not have to pay
+ * for the full sweep. A comparison run should always fix every other variable.
+ */
+const WINDOWS = (new URLSearchParams(location.search).get('windows') ?? '400,600,800,1200')
+  .split(',')
+  .map((w) => Number.parseInt(w, 10))
+  .filter((w) => Number.isFinite(w) && w > 0);
 
 function chunk(text, size) {
   const chunks = [];

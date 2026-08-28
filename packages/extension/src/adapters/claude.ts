@@ -54,7 +54,7 @@ function queryAll<E extends Element>(root: ParentNode, selector: string): readon
  * would silently fail for every non-English user — the exact class of bug that
  * is invisible to an English-speaking developer testing on their own machine.
  */
-const COMPOSER_STRATEGIES: readonly ElementStrategy<HTMLElement>[] = [
+export const CLAUDE_COMPOSER_STRATEGIES: readonly ElementStrategy<HTMLElement>[] = [
   {
     id: 'claude/composer-role-textbox',
     tier: 'attribute',
@@ -109,7 +109,7 @@ const SEND_BUTTON_SELECTOR = [
   'button[type="submit"]',
 ].join(', ');
 
-const RESPONSE_ROOT_STRATEGIES: readonly ElementStrategy[] = [
+export const CLAUDE_RESPONSE_STRATEGIES: readonly ElementStrategy[] = [
   {
     id: 'claude/response-main',
     tier: 'attribute',
@@ -250,7 +250,7 @@ export class ClaudeAdapter implements SiteAdapter {
   }
 
   getComposer(): Resolution<ComposerHandle> {
-    return resolveUnique('composer', this.document, COMPOSER_STRATEGIES, COMPOSER_INVARIANTS);
+    return resolveUnique('composer', this.document, CLAUDE_COMPOSER_STRATEGIES, COMPOSER_INVARIANTS);
   }
 
   getComposerText(handle: ComposerHandle): string {
@@ -317,7 +317,7 @@ export class ClaudeAdapter implements SiteAdapter {
     return resolveUnique(
       'response-root',
       this.document,
-      RESPONSE_ROOT_STRATEGIES,
+      CLAUDE_RESPONSE_STRATEGIES,
       RESPONSE_ROOT_INVARIANTS,
     );
   }

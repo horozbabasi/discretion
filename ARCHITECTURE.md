@@ -1328,6 +1328,148 @@ times *within one sitting*, which controls for noise and not for machine
 state. Repetition is not replication.
 
 
+### D28 — The Stage 2 window stays at 400 because a larger one is a CORRECTNESS violation, not a slower tradeoff (M9)
+
+M9 measured four window sizes on both the cold and incremental paths,
+expecting to widen the window to 1200 for the cold-path win. The window
+stays at 400. **The reason that decides it is correctness, and it holds
+regardless of any latency number.**
+
+**A 1200-character CJK chunk exceeds the model's 512-token limit.** The
+400 bound was set at M6 from exactly this. Feed the model 1200 characters
+of Chinese and the input is TRUNCATED at 512 tokens — the tail is never
+seen, and nothing reports an error. Any entity past the cut is silently
+undetected.
+
+**Measured, not inherited** (`bench/wasm-latency/tokens-per-char.mjs`, the
+shipped model's own tokenizer, 400-character samples of real prose per script):
+
+| script | tokens/char | tokens at a 1200-char window | chars that fit in 512 tokens |
+| --- | ---: | ---: | ---: |
+| Chinese (Simplified) | 0.723 | **867 - truncates** | 708 |
+| Japanese | 0.563 | **675 - truncates** | 910 |
+| Korean | 0.525 | **630 - truncates** | 975 |
+| Arabic | 0.260 | 312 | 1969 |
+| German | 0.245 | 294 | 2089 |
+| Thai | 0.225 | 270 | 2275 |
+| English / Russian | 0.220 | 264 | 2327 |
+| Hindi (Devanagari) | 0.212 | 255 | 2409 |
+
+Two corrections to what was assumed before measuring. M6's "worst case one
+token per character" is **conservative**: the true worst is 0.723 for Chinese,
+so 400 has more headroom than the bound assumed (708 characters would fit).
+And Thai and the Indic scripts are **not** in the danger set - both tokenize at
+Latin-like ratios. The problem is specifically CJK.
+
+
+That is silent under-detection **for an entire class of users, in their
+own languages, while every component reports success.** It is the same
+failure class as the Arabic-Indic digit bug closed at M8 (D21), where
+identifiers written in non-ASCII digits matched no detector at all and
+the pipeline reported a clean document. The lesson there was that a gap
+which only affects text a developer does not read is the hardest kind to
+notice and the worst kind to ship. Repeating it deliberately, for
+latency, would be indefensible.
+
+So a global 1200 is not "a tradeoff with a mode cost". It is a bug.
+
+**The secondary reasons are real and belong underneath it**, and they
+would justify keeping 400 even if the CJK argument did not exist:
+
+- **Cold and incremental want opposite sizes.** Measured: 400 -> 1200
+  buys 1099 ms on a cold paste and costs 603 ms on every debounced
+  keystroke burst. Larger windows are ~1.35x more efficient per
+  character (fewer inferences, overhead amortised) but incremental cost
+  is per WINDOW, so a bigger window redoes more characters per edit.
+- **Two window sizes would cost the entire cache.** The content-hash
+  cache keys on chunk text, so 400-char and 1200-char chunks are
+  disjoint populations. A document that used both would get ZERO reuse
+  across them: the first keystroke after a paste would re-infer
+  everything. Avoiding that needs a per-document pinned window — a mode
+  that must be correct every time or the result is worse than either
+  option alone.
+
+**The standing constraint for any future revisit: windowing must be
+SCRIPT-AWARE from the start, never a global bump.** The window size is a
+function of the tokenizer's behaviour on the input's script, and the only
+safe global value is the one that holds for the worst script. A change
+that raises the window without re-measuring tokens-per-character for CJK
+reintroduces this bug. The measurement above also shows what a
+script-aware design could safely do: roughly 700 characters for Chinese
+against roughly 2300 for Latin — the cold-path win is available, but only
+per script, never globally.
+
+### D29 — OPEN: node-identity binding has nothing to bind when the composer was never typed into (M9)
+
+Recorded as a known gap rather than resolved, because the right answer
+is not obvious and guessing at it would be worse than naming it.
+
+**The case.** `verifyBinding` requires that the bound element has
+received user input during this page session (construction #3, the input
+witness). Several legitimate flows fill a composer without any user
+editing event:
+
+- a draft the site restores after a reload;
+- a URL-parameter prefill (`/new?q=...`);
+- a suggested-prompt chip that sets the composer programmatically;
+- an edit-a-previous-message flow that populates an editor;
+- any programmatic set, followed by the user simply clicking Send.
+
+**What runs today: the send is BLOCKED**, with code
+`no-input-witness`. `verifyBinding` reaches that branch because
+`originComposer` resolves fine (the button path finds the region's single
+editable), node identity matches, and the element is connected — so the
+witness is the only failing check.
+
+**Measured in a real browser** (`scripts/probe-input-events.py`), because
+jsdom cannot answer it and the unit tests dispatch synthetic events
+directly at the composer, which assumes the answer:
+
+| filling path | raises editing events? | witnessed? |
+| --- | --- | --- |
+| typing into contenteditable | `beforeinput` + `input`, both targeting the editing host | yes |
+| typing into a textarea | both, targeting the textarea | yes |
+| paste (Ctrl+V) | `beforeinput` targets the inner `<p>`; `input` targets the host | **yes, but only via `input`** |
+| `execCommand('insertText')` (our own write) | `input` only, targeting the host | yes |
+| programmatic `innerHTML =` | **none at all** | no |
+| focus/click without typing | none | no |
+
+**A near-miss the probe caught.** On paste, `beforeinput` targets the
+inner paragraph, not the editing host. Had the witness listened to
+`beforeinput` alone — which was the more obvious choice, since it fires
+first — the composer would never have been witnessed on a paste, and
+every paste-then-send would have been blocked. It works only because the
+witness also listens to `input`. That was luck rather than judgement, and
+it is now a deliberate, documented requirement.
+
+**The tension, stated honestly.** Fail-closed says block, and blocking is
+what happens. But a legitimate flow blocked on a real site is a bug found
+by users rather than by us, and "the extension stops you sending after
+clicking a suggested prompt" is the kind of defect that gets it
+uninstalled — which protects nobody. The witness is the weakest of the
+four constructions precisely here: it is the only one that can be wrong
+in the SAFE direction and still do damage.
+
+**Not redesigned yet, on purpose.** The candidate answers each have a
+cost worth weighing rather than picking:
+(a) treat a programmatic fill as witnessed if the text was present before
+    the extension attached — cheap, but it trusts page state, which is
+    exactly what the witness exists not to do;
+(b) require the witness only when the composer's text CHANGED since the
+    last successful bind, so a restored draft binds once and thereafter
+    behaves normally;
+(c) drop the witness and rely on constructions #1, #2 and #4 alone,
+    accepting that a decoy in the same region as the send button is no
+    longer excluded;
+(d) fall back to an explicit user confirmation in the review panel when
+    the witness is missing, converting a silent block into a visible
+    "protect and send" step.
+
+(d) is the most promising because it fails closed without failing
+useless, but it needs the review panel, which is the next M9 batch. The
+decision belongs with that work.
+
+
 ## Status after M2
 
 Stage 1 is complete: 113 registered detectors — 57 NATIONAL_ID and 19

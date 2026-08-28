@@ -64,6 +64,9 @@ Standing decisions a session must know before touching these areas:
 
 ## Working rules
 
+**Standing rule (6): repetition is not replication.** Reproducing a measurement within one sitting controls for noise, not for machine state. Vary the state — power, thermal, load — or name the state as a condition of the result. ARCHITECTURE.md D27 does this for power; the rule generalizes to anything the machine can be in a mode about.
+
+
 - Read SPEC.md before starting any milestone.
 - Record every non-obvious judgement call in ARCHITECTURE.md with reasoning, not just the decision.
 - Commit at the end of each milestone with a descriptive summary of what was built and measured.

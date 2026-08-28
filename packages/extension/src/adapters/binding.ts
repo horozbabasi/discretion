@@ -85,8 +85,17 @@ export class InputWitness {
       const origin = event.composedPath()[0];
       if (isEditableSurface(origin ?? null)) this.witnessed.add(origin as HTMLElement);
     };
-    // `beforeinput` as well as `input`: composers that intercept and re-render
-    // may never emit a plain `input` event on the element itself.
+    // BOTH events are required, and the reason is measured rather than
+    // defensive. `scripts/probe-input-events.py` establishes in a real browser
+    // that on PASTE, `beforeinput` targets the inner paragraph of a
+    // contenteditable while `input` targets the editing host; on typing, both
+    // target the host. Listening to `beforeinput` alone — the more obvious
+    // choice, since it fires first — would therefore never witness the
+    // composer on a paste, and every paste-then-send would be blocked with
+    // 'no-input-witness'. Listening to `input` alone would miss composers that
+    // intercept and re-render without emitting one on the element itself.
+    //
+    // Do not drop either listener without re-running that probe.
     this.document.addEventListener('beforeinput', onInput, { capture: true });
     this.document.addEventListener('input', onInput, { capture: true });
     this.detach = () => {

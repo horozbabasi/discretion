@@ -10,6 +10,8 @@ export default tseslint.config(
     ignores: [
       '**/dist/**',
       '**/build/**',
+      // Live-probe bundle: generated dev-tool output, never shipped or edited.
+      '**/.probe/**',
       '**/node_modules/**',
       '**/coverage/**',
       '.hf-cache/**',

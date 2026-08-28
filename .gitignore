@@ -42,3 +42,6 @@ npm-debug.log*
 
 # Loadable extension bundle (build output; dist/ holds tsc declarations)
 packages/extension/build/
+
+# Live-probe bundle and its browser profile (dev tool; never shipped)
+packages/extension/.probe/

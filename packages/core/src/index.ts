@@ -110,6 +110,15 @@ export type { GazetteerHit, GazetteerType } from './gazetteer/index.js';
 // ── Stage 4: overlap resolution (M8) ──
 export { resolveOverlaps, coverageHoles } from './fuse/resolve.js';
 export { fitCalibration, calibrate, reliability } from './fuse/calibrate.js';
+export { PROFILES, decide, customProfile } from './fuse/profiles.js';
+export type { ProfileName, SensitivityProfile, UserLists, ProfileDecision } from './fuse/profiles.js';
+export { computeExposure, exposureBand, EXPOSURE_LIMITATION } from './exposure/index.js';
+export type {
+  ExposureReport,
+  ExposureInput,
+  ExposureContribution,
+  CategoryBreakdown,
+} from './exposure/index.js';
 export type {
   CalibrationBin,
   CalibrationCurve,

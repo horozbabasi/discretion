@@ -55,6 +55,8 @@ export type { SecretProvider } from './secretProviders.js';
 export { TRIGGER_LEXICONS } from './triggerLexicons.js';
 export type { TriggerLexicon } from './triggerLexicons.js';
 export { DOMAIN_LEXICONS } from './domainLexicons.js';
+export { SEVERITY_WEIGHTS, TYPE_FACTORS, CATEGORY_OF } from './severityWeights.js';
+export type { SeverityCategory, CategoryWeight, TypeFactor } from './severityWeights.js';
 
 // ── Stage 2b gazetteers (M7) ──
 export { GAZETTEERS } from './gazetteers.js';

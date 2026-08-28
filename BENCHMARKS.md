@@ -754,3 +754,36 @@ correct.
 55.4%, because the prose-labeled-secret class (D19) is a *detection* gap, not
 an overlap one: those secrets have no competing candidate to resolve against.
 Fusion addressed the half it could.
+
+### The exposure score
+
+Computed in core from **calibrated** confidence, which is what makes it
+meaningful: summing raw detector confidences would be adding numbers that are
+not comparable across types, the exact problem calibration removes.
+
+Severity weights live in `packages/data/src/severityWeights.ts` and derive from
+a stated principle rather than per-type intuition — **irreversibility first,
+then re-identification power, and where they disagree irreversibility wins.**
+That produces one deliberately counter-intuitive ordering: government identity
+(100) outranks credentials (70), because a key rotates in minutes and a
+national identity number never does. It is the judgement to argue with first,
+and it is stated in the file rather than buried in the numbers.
+
+Monotonicity is structural — non-negative contributions through a strictly
+increasing saturating transform — and tested **independently** of the
+calibration monotonicity, over 500-run property tests covering entity
+addition, removal, and confidence increase. The two are separate properties
+with separate failure modes; inheriting one would leave the other untested.
+
+### Carried into M9 as open, unsmoothed
+
+None of these is resolved, and none should be read as acceptable:
+
+| open item | number | why it is still open |
+| --- | --- | --- |
+| **GENERIC_SECRET recall** | **55.4%** | A *detection* problem, not an overlap one. Prose-labeled secrets have no competing candidate to resolve against, so Stage 4 could not touch it — fusion addressed only the half that was arbitration. |
+| **TAX_ID recall** | **91.2%** | The cost of refusing to settle the cross-scheme ambiguity with a static ordering. NATIONAL_ID and TAX_ID tie deliberately, so confidence decides, and it sometimes picks wrong. |
+| **Over-confident calibration bucket** | 30.9% predicted vs **16.9% observed** | 77 samples, so it may be noise — but it errs in the direction that matters, and is treated as real until more data says otherwise. |
+| **Mid-range calibration is thinly fitted** | 4,755 of 5,416 held-out observations sit in the top bucket | The bands that most need accurate confidence have the least data to fit. More corpus depth in 0.3–0.8 is the fix, not retuning bins until the table looks better. |
+| **p50 latency** | 255.8 ms vs 250 ms budget | Missed under conditions favourable on *both* axes: hardware above SPEC's mid-range reference, and onnxruntime-node rather than the slower WASM the extension will use. The gap is a floor. |
+| **p99 latency on cold paste** | 601.6 ms | Hidden for typed input by debounced incremental detection with content-hash caching, but the paste guard has no pre-computed result for a large cold paste. That is the p99 path, and it is M9's. |

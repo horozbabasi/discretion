@@ -16,8 +16,22 @@
  * Per-tab vault lifecycle is extension work (M9).
  */
 
-import { maskOriginal, normalize, runStage1 } from '@privacyshield/core';
-import type { MaskResult, Stage1Candidate, SubstitutionMode } from '@privacyshield/core';
+import {
+  calibrate,
+  computeExposure,
+  maskOriginal,
+  normalize,
+  resolveOverlaps,
+  runStage1,
+} from '@privacyshield/core';
+import { CALIBRATION_MODEL } from '@privacyshield/data';
+import type {
+  CalibrationModel,
+  ExposureReport,
+  MaskResult,
+  Stage1Candidate,
+  SubstitutionMode,
+} from '@privacyshield/core';
 import { Vault } from '@privacyshield/core';
 
 export interface AnalysisResult {
@@ -27,7 +41,19 @@ export interface AnalysisResult {
   readonly mode: SubstitutionMode;
   /** Wall-clock for normalize + Stage 1 + mask, in milliseconds. */
   readonly elapsedMs: number;
+  /**
+   * Document exposure, computed from CALIBRATED confidence.
+   *
+   * The bundled calibration model is what makes this honest: an exposure
+   * score built on raw detector confidence would be adding up numbers that
+   * are not comparable across types, which is the exact problem calibration
+   * exists to remove. See ARCHITECTURE.md D23.
+   */
+  readonly exposure: ExposureReport;
 }
+
+/** The committed model, shaped for core's calibrator. */
+const MODEL = CALIBRATION_MODEL as unknown as CalibrationModel;
 
 export type AnalyzeFn = (text: string, mode: SubstitutionMode, seed: number) => AnalysisResult;
 
@@ -37,8 +63,24 @@ export const analyze: AnalyzeFn = (text, mode, seed) => {
   const candidates = runStage1(normalization);
   const vault = new Vault();
   const maskResult = maskOriginal(text, candidates, vault, { mode, seed });
+
+  // Exposure runs on RESOLVED candidates: an unresolved set double-counts
+  // every overlap, so a single credential covered by three detectors would
+  // inflate the score threefold.
+  const resolved = resolveOverlaps(
+    candidates
+      .filter((c) => c.sensitive)
+      .map((c) => ({ candidate: c, confidence: c.rawConfidence })),
+  );
+  const exposure = computeExposure(
+    resolved.emitted.map((item) => ({
+      type: item.candidate.type,
+      calibratedConfidence: calibrate(MODEL, item.candidate.type, item.confidence),
+    })),
+  );
+
   const elapsedMs = performance.now() - started;
-  return { original: text, candidates, maskResult, mode, elapsedMs };
+  return { original: text, candidates, maskResult, mode, elapsedMs, exposure };
 };
 
 /** One random session seed so two visitors see different surrogates. */

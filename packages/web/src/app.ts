@@ -1,3 +1,4 @@
+import { exposureBand } from '@privacyshield/core';
 /**
  * app.ts — the playground: input pane (textarea + highlight backdrop),
  * masked output pane, summary rail, mode toggle, loadable examples.
@@ -84,6 +85,7 @@ export function createApp(mount: HTMLElement, options: AppOptions = {}): App {
   });
 
   const summaryBody = el('div', { class: 'summary-body' });
+  const exposureBody = el('div', { class: 'exposure-body' });
   const elapsedNote = el('span', { class: 'elapsed' });
 
   const surrogateBtn = el(
@@ -117,7 +119,7 @@ export function createApp(mount: HTMLElement, options: AppOptions = {}): App {
         'p',
         { class: 'masthead-note' },
         'Runs entirely in this tab — zero network, nothing stored. ',
-        el('span', { class: 'masthead-scope' }, 'Stage 0–1 detection + substitution (M5 build).'),
+        el('span', { class: 'masthead-scope' }, 'Stage 0–1 detection + substitution, with calibrated exposure (M8 build).'),
       ),
     ),
     el(
@@ -154,9 +156,15 @@ export function createApp(mount: HTMLElement, options: AppOptions = {}): App {
         el('h2', {}, 'Found'),
         summaryBody,
         el(
+          'section',
+          { class: 'exposure', role: 'region', 'aria-label': 'Document exposure' },
+          el('h2', { class: 'exposure-title' }, 'Exposure'),
+          exposureBody,
+        ),
+        el(
           'p',
           { class: 'summary-footnote' },
-          'Stage 1 only: validated identifiers, raw confidence. Names, addresses and context awareness arrive with M6–M7; calibration and sensitivity profiles with M8.',
+          'Stage 1 detectors only here: names and addresses need the Stage 2 model, which the extension loads in a worker (M9). Exposure uses the calibrated confidence scale fitted in M8 — see BENCHMARKS.md for the reliability curve.',
         ),
       ),
     ),
@@ -199,6 +207,7 @@ export function createApp(mount: HTMLElement, options: AppOptions = {}): App {
       el('p', { class: 'output-hint' }, 'The masked version of your text appears here.'),
     ]);
     setChildren(summaryBody, [el('p', { class: 'summary-empty' }, 'Nothing analyzed yet.')]);
+    setChildren(exposureBody, [el('p', { class: 'summary-empty' }, 'Nothing analyzed yet.')]);
     elapsedNote.textContent = '';
   }
 
@@ -219,6 +228,7 @@ export function createApp(mount: HTMLElement, options: AppOptions = {}): App {
       ),
     ]);
     setChildren(summaryBody, [el('p', { class: 'summary-empty' }, 'Unavailable — detection failed.')]);
+    setChildren(exposureBody, [el('p', { class: 'summary-empty' }, 'Unavailable — detection failed.')]);
     elapsedNote.textContent = '';
   }
 
@@ -259,6 +269,71 @@ export function createApp(mount: HTMLElement, options: AppOptions = {}): App {
     }
 
     renderSummary(result);
+    renderExposure(result);
+  }
+
+  /**
+   * The exposure panel.
+   *
+   * Shows the decomposition, not just the number: SPEC requires the score be
+   * explainable by construction, and a bare 0-100 with no breakdown would be
+   * exactly the "score that cannot show its work" it rules out. The limitation
+   * text travels with the report rather than being written into the markup
+   * here, so it cannot drift from what core says.
+   */
+  function renderExposure(result: AnalysisResult): void {
+    const { exposure } = result;
+    const score = Math.round(exposure.score);
+    const band = exposureBand(exposure.score);
+
+    if (exposure.contributions.length === 0) {
+      setChildren(exposureBody, [
+        el('p', { class: 'summary-empty' }, 'No sensitive values, so nothing to score.'),
+      ]);
+      return;
+    }
+
+    const meter = el(
+      'div',
+      {
+        class: `exposure-meter band-${band}`,
+        role: 'meter',
+        'aria-valuenow': String(score),
+        'aria-valuemin': '0',
+        'aria-valuemax': '100',
+        'aria-label': `Exposure score ${score} of 100, ${band}`,
+      },
+      el('div', { class: 'exposure-fill', style: `width: ${score}%` }),
+    );
+
+    const categories = exposure.byCategory.map((c) =>
+      el(
+        'div',
+        { class: 'exposure-row' },
+        el('span', { class: 'exposure-cat' }, c.category.replace(/-/g, ' ')),
+        el('span', { class: 'exposure-bar' }, el('span', { style: `width: ${Math.round(c.share * 100)}%` })),
+        el('span', { class: 'exposure-share' }, `${Math.round(c.share * 100)}%`),
+      ),
+    );
+
+    const top = exposure.topContributors.map((c) =>
+      el('li', { class: 'exposure-contrib' }, c.detail),
+    );
+
+    setChildren(exposureBody, [
+      el(
+        'p',
+        { class: 'exposure-headline' },
+        el('span', { class: `exposure-score band-${band}` }, String(score)),
+        el('span', { class: 'exposure-of' }, ' / 100'),
+        el('span', { class: 'exposure-band' }, band),
+      ),
+      meter,
+      ...categories,
+      el('p', { class: 'exposure-sub' }, 'Largest contributors'),
+      el('ul', { class: 'exposure-list' }, ...top),
+      el('p', { class: 'exposure-limitation' }, exposure.limitation),
+    ]);
   }
 
   function renderSummary(result: AnalysisResult): void {

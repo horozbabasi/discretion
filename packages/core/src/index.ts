@@ -111,6 +111,8 @@ export type { GazetteerHit, GazetteerType } from './gazetteer/index.js';
 export { resolveOverlaps, coverageHoles } from './fuse/resolve.js';
 export { fitCalibration, calibrate, reliability } from './fuse/calibrate.js';
 export { PROFILES, decide, customProfile } from './fuse/profiles.js';
+export { explain, toDetectedEntity, explainOmission } from './fuse/explain.js';
+export type { FusionInput } from './fuse/explain.js';
 export type { ProfileName, SensitivityProfile, UserLists, ProfileDecision } from './fuse/profiles.js';
 export { computeExposure, exposureBand, EXPOSURE_LIMITATION } from './exposure/index.js';
 export type {

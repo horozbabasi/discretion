@@ -255,3 +255,57 @@ describe('playground app', () => {
     }
   });
 });
+
+/**
+ * The exposure panel (M8).
+ *
+ * SPEC requires the score be explainable by construction, so the panel is
+ * tested for its DECOMPOSITION, not just for showing a number — a bare 0–100
+ * with no breakdown would be the "score that cannot show its work" SPEC rules
+ * out. The limitation text is required to be visible wherever the score is.
+ */
+describe('exposure panel', () => {
+  it('shows a score, its category split, and the largest contributors', () => {
+    const { app, mount } = mountApp();
+    typeText(mount, app, SAMPLE);
+
+    const panel = mount.querySelector('.exposure-body')!;
+    expect(panel.querySelector('.exposure-score')?.textContent).toMatch(/^\d+$/);
+    expect(panel.querySelectorAll('.exposure-row').length).toBeGreaterThan(0);
+    expect(panel.querySelectorAll('.exposure-contrib').length).toBeGreaterThan(0);
+  });
+
+  it('always states the limitation alongside the score', () => {
+    const { app, mount } = mountApp();
+    typeText(mount, app, SAMPLE);
+    expect(mount.querySelector('.exposure-limitation')?.textContent).toContain(
+      'not a guarantee of safety',
+    );
+  });
+
+  it('scores a document with nothing sensitive as having nothing to score', () => {
+    const { app, mount } = mountApp();
+    typeText(mount, app, 'The meeting moved to Thursday and everyone agreed.');
+    expect(mount.querySelector('.exposure-body')?.textContent).toContain('nothing to score');
+  });
+
+  it('exposes the meter to assistive technology with its real value', () => {
+    const { app, mount } = mountApp();
+    typeText(mount, app, SAMPLE);
+    const meter = mount.querySelector('.exposure-meter');
+    expect(meter?.getAttribute('role')).toBe('meter');
+    expect(Number(meter?.getAttribute('aria-valuenow'))).toBeGreaterThan(0);
+    expect(meter?.getAttribute('aria-valuemax')).toBe('100');
+  });
+
+  it('rises when more sensitive values are added, never falls', () => {
+    // The user-visible face of the monotonicity property.
+    const { app, mount } = mountApp();
+    const read = () => Number(mount.querySelector('.exposure-score')?.textContent ?? '0');
+
+    typeText(mount, app, `Contact ${generate.generateValidEmail(31)}.`);
+    const withEmail = read();
+    typeText(mount, app, `Contact ${generate.generateValidEmail(31)}. IBAN ${generate.generateValidIban(32)}.`);
+    expect(read()).toBeGreaterThanOrEqual(withEmail);
+  });
+});

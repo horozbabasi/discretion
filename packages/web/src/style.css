@@ -562,3 +562,144 @@ body {
     min-height: 300px;
   }
 }
+
+/* ── Exposure panel (M8) ─────────────────────────────────────────────────
+   The score has to show its work: the meter alone would be the "score that
+   cannot show its work" SPEC rules out, so the category split and the largest
+   contributors sit under it, and the limitation text is always visible rather
+   than tucked behind a tooltip. */
+.exposure {
+  border-top: 1px solid var(--rule);
+  margin-top: 1.1rem;
+  padding-top: 0.9rem;
+}
+
+.exposure-title {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  margin: 0 0 0.6rem;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+
+.exposure-headline {
+  align-items: baseline;
+  display: flex;
+  gap: 0.35rem;
+  margin: 0 0 0.5rem;
+}
+
+.exposure-score {
+  font-size: 1.9rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  line-height: 1;
+}
+
+.exposure-of {
+  color: var(--ink-dim);
+  font-size: 0.8rem;
+}
+
+.exposure-band {
+  color: var(--ink-dim);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  margin-left: auto;
+  text-transform: uppercase;
+}
+
+/* Bands read as severity without relying on hue alone: the meter also fills
+   proportionally, so the reading survives a monochrome or colour-blind view. */
+.band-none   { color: var(--ink-dim); }
+.band-low    { color: #3f7d58; }
+.band-moderate { color: #a8791f; }
+.band-high   { color: #c2521f; }
+.band-severe { color: #b3252b; }
+
+.exposure-meter {
+  background: var(--rule);
+  border-radius: 999px;
+  height: 6px;
+  margin-bottom: 0.85rem;
+  overflow: hidden;
+}
+
+.exposure-fill {
+  background: currentColor;
+  height: 100%;
+  transition: width 140ms ease-out;
+}
+
+.exposure-row {
+  align-items: center;
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: 7.2rem 1fr 2.2rem;
+  margin-bottom: 0.28rem;
+}
+
+.exposure-cat {
+  color: var(--ink-dim);
+  font-size: 0.73rem;
+}
+
+.exposure-bar {
+  background: var(--rule);
+  border-radius: 999px;
+  display: block;
+  height: 4px;
+  overflow: hidden;
+}
+
+.exposure-bar > span {
+  background: var(--ink-dim);
+  display: block;
+  height: 100%;
+}
+
+.exposure-share {
+  color: var(--ink-dim);
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.exposure-sub {
+  color: var(--ink-dim);
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  margin: 0.9rem 0 0.3rem;
+  text-transform: uppercase;
+}
+
+.exposure-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.exposure-contrib {
+  color: var(--ink);
+  font-size: 0.72rem;
+  line-height: 1.45;
+  padding-left: 0.7rem;
+  position: relative;
+}
+
+.exposure-contrib::before {
+  color: var(--ink-dim);
+  content: '·';
+  left: 0;
+  position: absolute;
+}
+
+.exposure-limitation {
+  border-top: 1px dashed var(--rule);
+  color: var(--ink-dim);
+  font-size: 0.68rem;
+  line-height: 1.5;
+  margin: 0.9rem 0 0;
+  padding-top: 0.6rem;
+}

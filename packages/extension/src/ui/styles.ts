@@ -115,14 +115,26 @@ export const PANEL_STYLES = `
 .title { font-weight: 600; }
 .sub { color: var(--ps-muted); font-size: 12px; }
 
-.items { list-style: none; margin: 0; padding: 4px 0; }
+.group { display: block; }
+.group + .group { border-top: 1px solid var(--ps-border); }
+.group-title {
+  margin: 0;
+  padding: 8px 12px 2px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ps-muted);
+}
+
+.items { list-style: none; margin: 0; padding: 0 0 4px; }
 
 .item {
   display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 2px 12px;
-  align-items: center;
-  padding: 8px 12px;
+  grid-template-columns: auto 1fr auto;
+  gap: 2px 10px;
+  align-items: baseline;
+  padding: 6px 12px;
 }
 .item + .item { border-top: 1px solid var(--ps-border); }
 
@@ -130,16 +142,13 @@ export const PANEL_STYLES = `
    opacity: opacity composites against the background and drops 13px text below
    WCAG AA in the light theme, so the item a user chose to keep unmasked would
    be the hardest one to read. */
-.item[data-reverted='true'] .type,
 .item[data-reverted='true'] .surrogate {
   color: var(--ps-muted);
   text-decoration: line-through;
 }
 
-.type { font-weight: 600; }
 .explanation { grid-column: 1 / -1; color: var(--ps-muted); font-size: 12px; }
 .surrogate {
-  grid-column: 1 / -1;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 12px;
   color: var(--ps-accent);

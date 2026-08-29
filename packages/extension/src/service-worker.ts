@@ -41,5 +41,13 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, sender) => {
   }
   if (message.kind === 'unsupported-site') {
     setBadge(tabId, false);
+    return;
+  }
+  if (message.kind === 'detection-error') {
+    // A detection failure is a degraded page in exactly the sense the badge
+    // means: this tab is not being checked. It is deliberately NOT a separate
+    // badge state - two ways of saying "unprotected" would let a user learn
+    // that one of them is the harmless one.
+    setBadge(tabId, true);
   }
 });

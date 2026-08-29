@@ -40,7 +40,8 @@
  * ─────────────────────────────────────────────────────────────────────────
  */
 
-import type { ReviewContent, SurfaceState } from './surfaceState.js';
+import type { ReviewContent, ReviewGroup, SurfaceState } from './surfaceState.js';
+import { itemCount } from './surfaceState.js';
 import { PANEL_STYLES } from './styles.js';
 import { detectTheme, onSystemThemeChange } from './theme.js';
 
@@ -245,7 +246,8 @@ export class Surface {
   }
 
   private isVisible(): boolean {
-    return this.state.kind === 'review' || this.state.kind === 'degraded';
+    const kind = this.state.kind;
+    return kind === 'review' || kind === 'degraded' || kind === 'findings';
   }
 
   private applyTheme(): void {
@@ -380,6 +382,7 @@ export class Surface {
 
     this.applyTheme();
     if (state.kind === 'review') this.renderReview(panel, state.content);
+    else if (state.kind === 'findings') this.renderFindings(panel, state.content);
     else if (state.kind === 'degraded') {
       this.renderDegraded(panel, state.failures.map((failure) => failure.target));
     }
@@ -448,41 +451,14 @@ export class Surface {
     panel.setAttribute('aria-label', 'PrivacyShield: review what will be masked before sending');
     panel.tabIndex = -1;
 
-    const count = content.items.length;
-    const head = this.el('div', 'head');
-    head.append(
-      this.text('span', 'title', `${count} item${count === 1 ? '' : 's'} to mask`),
-      this.text('span', 'sub', `exposure ${Math.round(content.exposureScore)}/100`),
+    const count = itemCount(content);
+    panel.append(
+      this.head(
+        `${String(count)} item${count === 1 ? '' : 's'} to mask`,
+        `exposure ${String(Math.round(content.exposureScore))}/100`,
+      ),
     );
-    panel.append(head);
-
-    const list = this.el('ul', 'items');
-    content.items.forEach((item, index) => {
-      const li = this.el('li', 'item');
-      li.setAttribute('data-reverted', String(item.reverted));
-
-      li.append(this.text('span', 'type', item.entityType));
-      li.append(this.text('span', 'confidence', `${Math.round(item.confidence * 100)}%`));
-      li.append(this.text('span', 'explanation', item.explanation));
-      li.append(this.text('span', 'surrogate', item.surrogate));
-
-      const toggle = this.el('button', 'link') as HTMLButtonElement;
-      toggle.type = 'button';
-      const action = item.reverted ? 'Mask this' : 'Keep original';
-      toggle.textContent = action;
-      // The accessible name STARTS with the visible text, per WCAG 2.5.3
-      // (Label in Name), so speech input still activates the button by what is
-      // written on it. The position is appended because five detected email
-      // addresses otherwise produce five buttons with identical names, and a
-      // screen-reader user reading the button list alone cannot tell which one
-      // reverts which detection.
-      toggle.setAttribute('aria-label', `${action}: ${item.entityType}, item ${index + 1} of ${count}`);
-      toggle.addEventListener('click', () => this.callbacks.onToggleItem(item.id));
-      li.append(toggle);
-
-      list.append(li);
-    });
-    panel.append(list);
+    this.appendGroups(panel, content);
 
     const actions = this.el('div', 'actions');
     const cancel = this.el('button', '') as HTMLButtonElement;
@@ -497,6 +473,117 @@ export class Surface {
 
     actions.append(cancel, send);
     panel.append(actions);
+  }
+
+  /**
+   * What detection found, shown while the user types.
+   *
+   * NOT a dialog and NOT a live region. It appears and updates as someone
+   * writes a message: `role="alert"` would interrupt them on every keystroke
+   * that changed the count, and `role="dialog"` would announce a question that
+   * is not being asked. A labelled region is what it is - content the user can
+   * navigate to when they want it, announced when they get there.
+   *
+   * It does not take focus for the same reason. The user is mid-sentence.
+   */
+  private renderFindings(panel: HTMLElement, content: ReviewContent): void {
+    const count = itemCount(content);
+    panel.setAttribute('role', 'region');
+    panel.setAttribute(
+      'aria-label',
+      `PrivacyShield: ${String(count)} sensitive item${count === 1 ? '' : 's'} detected in this message`,
+    );
+
+    panel.append(
+      this.head(
+        `${String(count)} item${count === 1 ? '' : 's'} detected`,
+        `exposure ${String(Math.round(content.exposureScore))}/100`,
+      ),
+    );
+    this.appendGroups(panel, content);
+
+    // Said plainly, because the alternative is a panel that implies a
+    // protection which is not running. Detection is wired; the send gate is
+    // not, so nothing here is stopping or changing what gets sent. A panel
+    // listing what "will be masked" while sends go out untouched is the
+    // failure this project treats as critical, arriving as a UI string.
+    const note = this.el('div', 'degraded');
+    note.append(
+      this.text(
+        'div',
+        'why',
+        'Detection only: this build does not yet intercept sends, so nothing here changes the message you send.',
+      ),
+    );
+    panel.append(note);
+  }
+
+  private head(title: string, sub: string): HTMLElement {
+    const head = this.el('div', 'head');
+    head.append(this.text('span', 'title', title), this.text('span', 'sub', sub));
+    return head;
+  }
+
+  /**
+   * The grouped detection list. SPEC.md: "grouped by type".
+   *
+   * One list per group with its own heading, rather than one flat list with a
+   * type column: a screen-reader user tabbing the panel hears the group name
+   * once per group instead of once per row, and the count in each heading is
+   * the thing that answers "how much of this is credentials".
+   */
+  private appendGroups(panel: HTMLElement, content: ReviewContent): void {
+    const total = itemCount(content);
+    let position = 0;
+    for (const group of content.groups) {
+      panel.append(this.renderGroup(group, () => (position += 1), total));
+    }
+  }
+
+  private renderGroup(group: ReviewGroup, nextPosition: () => number, total: number): HTMLElement {
+    const section = this.el('section', 'group');
+    section.setAttribute('data-entity-type', group.entityType);
+
+    const heading = this.text('h2', 'group-title', `${group.label} (${String(group.items.length)})`);
+    const headingId = `ps-group-${group.entityType.toLowerCase()}`;
+    heading.id = headingId;
+    section.append(heading);
+
+    const list = this.el('ul', 'items');
+    // The list is labelled by its heading, so the group name is announced when
+    // a screen reader enters the list rather than being repeated on every row.
+    list.setAttribute('aria-labelledby', headingId);
+
+    for (const item of group.items) {
+      const position = nextPosition();
+      const li = this.el('li', 'item');
+      li.setAttribute('data-reverted', String(item.reverted));
+
+      li.append(this.text('span', 'confidence', `${String(Math.round(item.confidence * 100))}%`));
+      li.append(this.text('span', 'surrogate', item.surrogate));
+      li.append(this.text('span', 'explanation', item.explanation));
+
+      const toggle = this.el('button', 'link') as HTMLButtonElement;
+      toggle.type = 'button';
+      const action = item.reverted ? 'Mask this' : 'Keep original';
+      toggle.textContent = action;
+      // The accessible name STARTS with the visible text, per WCAG 2.5.3
+      // (Label in Name), so speech input still activates the button by what is
+      // written on it. The type and position are appended because five
+      // detected email addresses otherwise produce five buttons with identical
+      // names, and a screen-reader user reading the button list alone cannot
+      // tell which one reverts which detection.
+      toggle.setAttribute(
+        'aria-label',
+        `${action}: ${group.label}, item ${String(position)} of ${String(total)}`,
+      );
+      toggle.addEventListener('click', () => this.callbacks.onToggleItem(item.id));
+      li.append(toggle);
+
+      list.append(li);
+    }
+    section.append(list);
+    return section;
   }
 
   private renderDegraded(panel: HTMLElement, targets: readonly string[]): void {

@@ -10,6 +10,7 @@ export { detectScripts, getCharScript, classifyCodePoint, scriptsCompatible } fr
 export type { CodePointClass } from './scripts.js';
 
 export { normalize } from './normalization.js';
+export { labelOf } from './entityLabel.js';
 
 export {
   composeMaps,

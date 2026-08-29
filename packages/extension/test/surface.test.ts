@@ -19,22 +19,39 @@ import { resetDocument } from './dom-helpers.js';
 
 const REVIEW: ReviewContent = {
   exposureScore: 62,
-  items: [
+  groups: [
     {
-      id: 'a',
       entityType: 'EMAIL',
-      confidence: 0.97,
-      explanation: 'Looks like a personal email address.',
-      surrogate: 'jane.doe@example.org',
-      reverted: false,
+      label: 'Email',
+      items: [
+        {
+          id: 'a',
+          confidence: 0.97,
+          explanation: 'Looks like a personal email address.',
+          surrogate: 'jane.doe@example.org',
+          reverted: false,
+        },
+        {
+          id: 'c',
+          confidence: 0.91,
+          explanation: 'Matched a known pattern.',
+          surrogate: 'sam.reed@example.net',
+          reverted: false,
+        },
+      ],
     },
     {
-      id: 'b',
       entityType: 'IBAN',
-      confidence: 0.99,
-      explanation: 'Passed the IBAN checksum.',
-      surrogate: 'GB29NWBK60161331926819',
-      reverted: true,
+      label: 'IBAN',
+      items: [
+        {
+          id: 'b',
+          confidence: 0.99,
+          explanation: 'Passed the IBAN checksum.',
+          surrogate: 'GB29NWBK60161331926819',
+          reverted: true,
+        },
+      ],
     },
   ],
 };
@@ -138,14 +155,19 @@ describe('isolation', () => {
     const { surface, root } = makeSurface();
     const hostile: ReviewContent = {
       exposureScore: 10,
-      items: [
+      groups: [
         {
-          id: 'x',
-          entityType: '<img src=x onerror="alert(1)">',
-          confidence: 0.5,
-          explanation: '<script>alert(2)</script>',
-          surrogate: '</style><b>bold</b>',
-          reverted: false,
+          entityType: 'EMAIL',
+          label: '<img src=x onerror="alert(1)">',
+          items: [
+            {
+              id: 'x',
+              confidence: 0.5,
+              explanation: '<script>alert(2)</script>',
+              surrogate: '</style><b>bold</b>',
+              reverted: false,
+            },
+          ],
         },
       ],
     };
@@ -212,8 +234,8 @@ describe('keyboard and controls', () => {
     const { surface, root } = makeSurface();
     surface.setState({ kind: 'review', content: REVIEW });
     const buttons = Array.from(root.querySelectorAll('button'));
-    // Two per-item toggles plus Cancel and Mask-and-send.
-    expect(buttons).toHaveLength(4);
+    // Three per-item toggles plus Cancel and Mask-and-send.
+    expect(buttons).toHaveLength(5);
     for (const button of buttons) {
       expect(button.tagName).toBe('BUTTON');
       expect(button.getAttribute('type')).toBe('button');
@@ -250,13 +272,17 @@ describe('keyboard and controls', () => {
   it('reports confirm, cancel and per-item reverts', () => {
     const { surface, root, calls } = makeSurface();
     surface.setState({ kind: 'review', content: REVIEW });
-    const buttons = Array.from(root.querySelectorAll('button'));
+    // Found by what they say rather than by index: the grouped list moves
+    // items around, and a positional assertion would pass or fail for reasons
+    // having nothing to do with the controls.
+    const byText = (label: string): HTMLButtonElement | undefined =>
+      Array.from(root.querySelectorAll('button')).find((b) => b.textContent === label);
 
-    buttons[0]?.click();
+    root.querySelector('.item button')?.dispatchEvent(new MouseEvent('click'));
     expect(calls.toggled).toEqual(['a']);
-    buttons[2]?.click();
+    byText('Cancel')?.click();
     expect(calls.cancel).toBe(1);
-    buttons[3]?.click();
+    byText('Mask and send')?.click();
     expect(calls.confirm).toBe(1);
   });
 
@@ -264,9 +290,11 @@ describe('keyboard and controls', () => {
     const { surface, root } = makeSurface();
     surface.setState({ kind: 'review', content: REVIEW });
     const items = Array.from(root.querySelectorAll('.item'));
-    expect(items[0]?.getAttribute('data-reverted')).toBe('false');
-    expect(items[1]?.getAttribute('data-reverted')).toBe('true');
-    expect(items[1]?.querySelector('button')?.textContent).toBe('Mask this');
+    const reverted = items.filter((i) => i.getAttribute('data-reverted') === 'true');
+    expect(items).toHaveLength(3);
+    expect(reverted).toHaveLength(1);
+    expect(reverted[0]?.querySelector('button')?.textContent).toBe('Mask this');
+    expect(items[0]?.querySelector('button')?.textContent).toBe('Keep original');
   });
 
   it('restores focus when a blocking panel closes', () => {
@@ -604,5 +632,98 @@ describe('stacking and survival bounds', () => {
     expect(calls.surfaceLost).toBe(1);
     expect(document.querySelector('privacyshield-surface')).toBeNull();
     surface.destroy();
+  });
+});
+
+describe('findings: what was detected, not a decision', () => {
+  it('is a labelled region, not a dialog and not an alert', () => {
+    // It appears and updates while someone is writing. `role="alert"` would
+    // interrupt them on every keystroke that changed the count, and
+    // `role="dialog"` would announce a question that is not being asked.
+    const { surface, root } = makeSurface();
+    surface.setState({ kind: 'findings', content: REVIEW });
+
+    const panel = root.querySelector('.panel');
+    expect(panel?.getAttribute('role')).toBe('region');
+    expect(panel?.getAttribute('aria-live')).toBeNull();
+    expect(panel?.getAttribute('aria-modal')).toBeNull();
+    expect(panel?.getAttribute('aria-label')).toContain('detected');
+  });
+
+  it('does NOT take focus, because the user is mid-sentence', () => {
+    const { surface } = makeSurface();
+    const composer = document.createElement('input');
+    document.body.append(composer);
+    composer.focus();
+
+    surface.setState({ kind: 'findings', content: REVIEW });
+    expect(document.activeElement).toBe(composer);
+  });
+
+  it('offers NO Cancel and NO "Mask and send", because there is no send to gate', () => {
+    // A button that silently does nothing is worse than an absent one, and
+    // SPEC's no-stubs rule applies to UI as much as to functions. The
+    // per-item reverts are here because they record a real decision; the
+    // actions are not, because there is nothing for them to act on yet.
+    const { surface, root } = makeSurface();
+    surface.setState({ kind: 'findings', content: REVIEW });
+
+    const labels = Array.from(root.querySelectorAll('button')).map((b) => b.textContent);
+    expect(labels).not.toContain('Cancel');
+    expect(labels).not.toContain('Mask and send');
+    expect(labels.filter((l) => l === 'Keep original' || l === 'Mask this')).toHaveLength(3);
+  });
+
+  it('says plainly that nothing is being intercepted', () => {
+    // The alternative is a panel implying a protection that is not running,
+    // which is the failure this project treats as critical, arriving as a UI
+    // string.
+    const { surface, root } = makeSurface();
+    surface.setState({ kind: 'findings', content: REVIEW });
+    expect(root.textContent).toContain('does not yet intercept sends');
+  });
+});
+
+describe('detections are grouped by type', () => {
+  // SPEC.md: "detections grouped by type".
+  it('renders one section per type, each with its own count', () => {
+    const { surface, root } = makeSurface();
+    surface.setState({ kind: 'review', content: REVIEW });
+
+    const groups = Array.from(root.querySelectorAll('.group'));
+    expect(groups).toHaveLength(2);
+    expect(groups[0]?.getAttribute('data-entity-type')).toBe('EMAIL');
+    expect(groups[0]?.querySelector('.group-title')?.textContent).toBe('Email (2)');
+    expect(groups[1]?.querySelector('.group-title')?.textContent).toBe('IBAN (1)');
+  });
+
+  it('labels each list by its heading rather than repeating the type per row', () => {
+    // A screen-reader user hears the group name once on entering the list,
+    // not once per row.
+    const { surface, root } = makeSurface();
+    surface.setState({ kind: 'review', content: REVIEW });
+
+    for (const list of Array.from(root.querySelectorAll('ul.items'))) {
+      const id = list.getAttribute('aria-labelledby');
+      expect(id).not.toBeNull();
+      expect(root.getElementById(id as string)).not.toBeNull();
+    }
+  });
+
+  it('disambiguates same-type revert controls by position', () => {
+    // Two detected email addresses otherwise produce two buttons with
+    // identical accessible names, and a screen-reader user reading the button
+    // list alone cannot tell which one reverts which detection.
+    const { surface, root } = makeSurface();
+    surface.setState({ kind: 'review', content: REVIEW });
+
+    const names = Array.from(root.querySelectorAll('.item button')).map((b) =>
+      b.getAttribute('aria-label'),
+    );
+    expect(new Set(names).size).toBe(names.length);
+    // WCAG 2.5.3: the accessible name starts with the visible text, so speech
+    // input still activates the button by what is written on it.
+    expect(names[0]).toBe('Keep original: Email, item 1 of 3');
+    expect(names[2]).toBe('Mask this: IBAN, item 3 of 3');
   });
 });

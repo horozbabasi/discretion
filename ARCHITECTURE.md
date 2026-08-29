@@ -3839,6 +3839,184 @@ existing tests, each of which had been invisible:
 The brand test was then verified BY VARYING THE CONDITION rather than
 asserted: removing `readonly [InapplicableBrand]: true` fails the build with
 `TS2578: Unused '@ts-expect-error' directive`, and restoring it passes.
+### D39 - Detection wired to the surface, read-only (M9)
+
+SPEC's content-script flow, steps 1 and 5. Steps 2-4 (submit interception,
+the write-back, the send gate) are absent, not stubbed.
+
+**The composition lives in the extension, not in core.** `analyze.ts` holds no
+detection logic - every stage is core's. What it owns is the ORDER and what is
+threaded between stages: resolve overlaps BEFORE calibrating and scoring
+exposure (an unresolved set double-counts every overlap, so one credential
+covered by three detectors would inflate the score threefold and appear three
+times in the panel), then calibrate, then apply the profile, then mask, then
+compute exposure. The playground has its own composition and it is
+deliberately a different one - Stage 1 alone against a text area.
+
+**Surrogates come from the masker, not from `chooseSurrogate`.** The masker is
+what enforces the two properties a DISPLAYED surrogate must already have:
+consistency through the session vault, and the collision check that stops a
+surrogate from containing the value it replaces. Calling the generator
+directly would show the user one string and substitute another.
+
+**A reported detection with no surrogate throws rather than being skipped.** It
+would be a detection the user cannot revert and one that will be substituted
+anyway, so `entities.length !== reported.length` is a hard error.
+
+### D39a - Why `findings` is a fourth state and not the review panel (M9)
+
+The review panel is a blocking question: it takes focus, offers Cancel and
+"Mask and send", and exists because a send is waiting on an answer. None of
+that is true in this batch - there is no send gate - so rendering it would
+mean two buttons that silently do nothing and a panel claiming a protection
+that is not running. SPEC's no-stubs rule applies to UI as much as to
+functions.
+
+So `findings` is its own state: same host, same grouped list, same per-item
+reverts (those record a real decision, held in the session, which the gate
+will read), no actions. It is `role="region"` rather than `role="alert"` or
+`role="dialog"`, and it does not take focus - it appears and updates while
+someone is writing a message, so an alert would interrupt them on every
+keystroke that changed the count and a dialog would announce a question
+nobody asked.
+
+It also says, in the panel, that sends are not intercepted. That string is
+not an apology for an unfinished build; it is the difference between a panel
+that reports and a panel that lies. A user reading "3 items to mask" and then
+sending unmasked text is the exact failure mode this project treats as
+critical, arriving as a UI string.
+
+### D39b - The composer is re-resolved on every pass, never remembered (M9)
+
+D34i and D38a at the controller. The composer is re-resolved on the health
+poll, on navigation, and immediately whenever the surface reports it lost its
+anchor. When the NODE IDENTITY changes:
+
+  - the input listener is re-bound (bound to the composer rather than the
+    document, so the site's own search box does not trigger analysis);
+  - the surface's anchor is replaced;
+  - **the session is cleared** - the vault held originals from a message the
+    user has left, and a revert decided about that message is not a decision
+    about this one.
+
+Reverts are keyed by VAULT ID, which derives from the value rather than from
+position. Typing a sentence above a detection shifts every offset below it, so
+a position-keyed revert would silently transfer the user's decision to a
+different detection.
+
+Analysis is generation-counted. It is asynchronous, so two runs can be in
+flight and the slower one can finish last; without the counter a result
+computed from text the user has already replaced would overwrite the result
+computed from what they are looking at.
+
+### D39c - Fail-closed with nothing yet to close (M9)
+
+SPEC: "Any detection error, timeout, or adapter failure blocks the send."
+There is no gate, so nothing here can block. What it can do - and must - is
+refuse to look successful. Every failure path sets DEGRADED, which is the same
+state an adapter failure produces and the state the gate will read.
+
+The controller test caught this being wrong on the first attempt: the composer
+was resolved and READ one line above the try block, so an adapter that threw
+on read produced an unhandled rejection and left the panel showing whatever it
+had been showing - on a page where nothing had been found yet, an empty panel.
+"Found nothing" and "could not look" are indistinguishable to a user and only
+one of them is safe. Every adapter call is now inside the guard, `refresh()`
+is guarded too (an adapter throwing there would have taken the health poll
+down with it, after which nothing would ever re-check the page), and the
+debounced call reports a rejection rather than voiding it.
+
+Stale results are dropped on failure as well, or the next revert would
+re-render a panel describing an analysis known to be wrong.
+
+### D39d - The NER worker is the one part of step 1 that is absent (M9)
+
+Reported rather than quietly skipped, because SPEC lists it in the same
+sentence as the three things that are done.
+
+It is not a wiring problem. The qualified model (BENCHMARKS.md M6:
+xlm-roberta-base-ner-hrl, q8) is a ~280 MB asset, and it has to run WASM. A
+content script is subject to the HOST PAGE's CSP for WASM compilation, and
+`'wasm-unsafe-eval'` in this manifest applies to extension pages, not to
+content scripts - so the model cannot run where detection currently runs. The
+options are the service worker (evicted routinely, which would discard a warm
+280 MB model) or an offscreen document, which needs the `offscreen`
+permission. The manifest requests `storage` and nothing else, and
+PERMISSIONS.md justifies that list; adding to it is a decision, not an
+implementation detail. Hence a batch of its own.
+
+Two constructions keep the absence from passing unnoticed:
+
+  - `analyzeText`'s `ner` argument is REQUIRED and nullable. Stage 2 cannot be
+    reached by forgetting it.
+  - `stagesRun` is DERIVED from that argument, never declared, so an analysis
+    cannot claim Stage 2 ran when no engine was passed. The send gate must
+    refuse to ship while it is null, and this is the field that makes the
+    refusal checkable rather than remembered.
+
+### D39e - MEASURED, not fixed: 74% of the content script is a stage that cannot run (M9)
+
+Wiring detection took `content.js` from a small script to **4,613,033 bytes**.
+Three base64 string literals account for 3,386,068 of them: the M7 Bloom-filter
+gazetteers (762,502 / 342,031 / 308,524 entries).
+
+They are consulted only for PERSON / ORG / LOCATION candidates, and only Stage
+2 produces those - so in a build with `ner: null` the gazetteers are never
+decoded. The Bloom sets themselves decode lazily on first use, so no decode
+happens; but the base64 still ships and is materialised as strings when the
+module evaluates, in every tab, on all three sites.
+
+NOT fixed here, deliberately. When NER lands the gazetteers are needed, so
+this is not waste in the finished product - it is a question about where
+detection should run, and the answer is entangled with D39d's offscreen-
+document decision. Fixing it now would be choosing that architecture through a
+size optimisation.
+
+What was measured: the byte counts above, from the built bundle, and the
+structural fact that `isGazetteerType` gates every lookup. What was NOT
+measured: page-load impact in a real browser. A `vm.Script` compile timing was
+taken and discarded as meaningless - V8 pre-parses and compiles function
+bodies lazily, so the number describes the measurement rather than the load.
+
+### D39f - `labelOf` moved into core; the masker widened to PipelineCandidate (M9)
+
+Two small changes made because the alternative was a lie in a type or a
+duplicate in a map.
+
+`labelOf` was in `packages/web`. The extension's panel must name the same types
+the same way, and two label maps drift the moment a type is added to one of
+them - which is directly against the "adding a national identifier touches
+exactly one new file" property. Moved to core (pure string work, no
+environment), and web now imports it rather than keeping a copy.
+
+`maskOriginal` and `resolveForMasking` took `readonly Stage1Candidate[]`.
+Neither reads the `stage` discriminant, and the two candidate shapes are
+otherwise identical - `Stage2Candidate extends Omit<Stage1Candidate, 'stage'>`.
+Typing them to Stage 1 alone was the narrower claim, not the safer one: it
+silently excluded PERSON / ORG / LOCATION, the entities SPEC most wants
+surrogates for. `resolveForMasking` is generic in the candidate type so callers
+that pass Stage 1 candidates still get Stage 1 candidates back.
+
+### D39g - The fixture that detected nothing (M9)
+
+Recorded because it nearly shipped as a passing test.
+
+The first version of `detection.test.ts` used the obvious values -
+`jane.doe@example.org`, card `4111 1111 1111 1111`. Both are RESERVED
+DOCUMENTATION VALUES. The detectors find them and correctly mark them
+`sensitive: false`, the analyzer correctly declines to offer masking for them,
+and the test asserted against an empty entity set. Every assertion about
+leakage, about surrogates never containing originals, about calibrated
+confidence, would have passed vacuously.
+
+Fixture values are now GENERATED with core's own seeded generators, which
+produce valid-and-not-reserved instances by construction.
+
+One observation from that first run, left as an observation: `4111 1111 1111
+1111` was reported as a Japanese `NATIONAL_ID` at 0.94 - it passes the My
+Number mod-11 check, and the credit-card detector's correct "known test value"
+suppression means nothing outranks it. Pre-existing core behaviour, surfaced
+by wiring rather than caused by it. Not chased here.
 
 ## Standing contracts (established in M1)
 

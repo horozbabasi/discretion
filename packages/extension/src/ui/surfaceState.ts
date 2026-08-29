@@ -160,11 +160,10 @@ export function composerTemporarilyDisabled(failure: ResolutionFailure): Inappli
   );
 }
 
-/** One detection as the review panel shows it. SPEC's step 5. */
+/** One detection as the panel shows it. SPEC's step 5. */
 export interface ReviewItem {
   readonly id: string;
-  readonly entityType: string;
-  /** Calibrated, 0–1. */
+  /** Calibrated, 0–1. SPEC asks for calibrated confidence, not raw. */
   readonly confidence: number;
   readonly explanation: string;
   /** What will replace it. Shown; the original never is. */
@@ -173,14 +172,47 @@ export interface ReviewItem {
   readonly reverted: boolean;
 }
 
-export interface ReviewContent {
+/**
+ * Detections of one entity type.
+ *
+ * SPEC.md: "grouped by type". Grouped in the MODEL rather than by the
+ * renderer, because the grouping is also what the accessible name of each
+ * revert control is built from - five detected email addresses otherwise
+ * produce five controls with identical names - and a renderer that regrouped
+ * on the fly could disagree with the model about which group an item is in.
+ */
+export interface ReviewGroup {
+  /** The raw entity type, e.g. 'CREDIT_CARD'. Stable; for tests and data-*. */
+  readonly entityType: string;
+  /** Human-readable, e.g. 'Credit card'. */
+  readonly label: string;
   readonly items: readonly ReviewItem[];
+}
+
+export interface ReviewContent {
+  readonly groups: readonly ReviewGroup[];
   /** 0–100. */
   readonly exposureScore: number;
 }
 
+/** Total detections across every group. */
+export function itemCount(content: ReviewContent): number {
+  return content.groups.reduce((total, group) => total + group.items.length, 0);
+}
+
 export type SurfaceState =
   | { readonly kind: 'hidden' }
+  /**
+   * Detections, shown while the user types. NOT a decision.
+   *
+   * Separate from `review` because `review` is a blocking question - it takes
+   * focus, offers Cancel and "Mask and send", and exists because a send is
+   * waiting on an answer. None of that is true here: there is no send gate, so
+   * a panel with those controls would offer buttons that do nothing and claim
+   * a protection that is not running. SPEC's no-stubs rule applies to UI as
+   * much as to functions.
+   */
+  | { readonly kind: 'findings'; readonly content: ReviewContent }
   | { readonly kind: 'review'; readonly content: ReviewContent }
   | { readonly kind: 'degraded'; readonly failures: readonly ResolutionFailure[] }
   | { readonly kind: 'inactive'; readonly evidence: readonly Inapplicable[] };

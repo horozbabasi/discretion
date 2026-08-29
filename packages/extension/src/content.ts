@@ -2,17 +2,23 @@
  * Content script.
  *
  * SCOPE OF THIS SLICE, stated so its limits are not mistaken for its design.
- * M9 builds the extension in steps. This step establishes the adapter
- * subsystem: site identification, the input witness, continuous health
- * monitoring, and the observable diagnostic. It deliberately does NOT intercept
- * submits yet, because detection is not wired in yet, and a submit interceptor
- * with nothing behind it could only do one of two wrong things — block every
- * send, or wave sends through while looking like protection. Interception lands
- * together with the detection pipeline, and the binding gate it will call
- * (verifyBinding) is already built and tested.
+ * M9 builds the extension in steps. This step wires DETECTION to the surface,
+ * read-only: the composer is read, the pipeline runs, and what it found is
+ * rendered. Nothing is written to the composer, no submit is intercepted, and
+ * nothing is blocked.
  *
  * SPEC.md: "1. Identify site, load adapter, run healthCheck, warm the NER
- * worker" — the first three are here; worker warming arrives with the worker.
+ * worker." The first three are here. The NER worker is NOT: the model is a
+ * ~280 MB asset that has to run WASM outside the host page's CSP, which means
+ * an offscreen document and therefore a manifest permission this extension
+ * does not currently request. That is an asset-and-permissions batch, not a
+ * wiring one, and `stagesRun` in analyze.ts records that Stage 2 did not run
+ * rather than letting its absence pass unremarked.
+ *
+ * Submit interception is likewise still absent rather than stubbed. An
+ * interceptor with no gate behind it can only do one of two wrong things -
+ * block every send, or wave sends through while looking like protection - and
+ * the binding gate it will call (verifyBinding) is already built and tested.
  */
 
 import type { HealthReport } from './adapters/index.js';
@@ -21,6 +27,7 @@ import type { SiteAdapter } from './adapters/index.js';
 import type { ExtensionMessage, HealthMessage } from './messages.js';
 import { buildDiagnostic, markScriptStart } from './diagnostics.js';
 import { loadDebugPreference, renderDiagnostic, renderUnsupported } from './debug.js';
+import { DetectionController } from './detection/controller.js';
 
 const HEALTH_INTERVAL_MS = 15_000;
 
@@ -100,6 +107,32 @@ function start(): void {
   let lastVerdict: string | null = null;
   let lastUrl = location.href;
 
+  /**
+   * Detection, and the surface it renders into.
+   *
+   * `ner: null` is deliberate and load-bearing: the argument is required, so
+   * Stage 2 cannot be reached by forgetting it, and the analysis records that
+   * it did not run. The send gate must refuse to ship while this is null.
+   *
+   * A failure here does not throw into the page. It is reported, and the
+   * controller has already put the surface into its degraded state - the one
+   * thing that must never happen is a detection error resolving to an empty
+   * panel, because "found nothing" and "could not look" are indistinguishable
+   * to the user and only one of them is safe.
+   */
+  const detection = new DetectionController({
+    adapter,
+    document,
+    ner: null,
+    onError: (error) => {
+      // Never the error's data, only its type and message: a detection error
+      // can carry a candidate, and a candidate carries page text.
+      const detail = error instanceof Error ? `${error.name}: ${error.message}` : 'unknown error';
+      report({ kind: 'detection-error', detail });
+    },
+  });
+  detection.start();
+
   /** Emits a diagnostic regardless of whether the verdict has changed. */
   const forceDiagnostic = (): void => {
     renderDiagnostic(buildDiagnostic(adapter, document));
@@ -111,6 +144,10 @@ function start(): void {
       lastOk = null; // Force a report: the composer is re-created on navigation.
       lastVerdict = null;
     }
+    // Re-resolves the composer, which is what catches the element being
+    // replaced by an SPA navigation or a conversation switch (D34i, D38a).
+    detection.refresh();
+
     const health = adapter.healthCheck();
 
     // The service worker only needs state transitions: it drives a badge.
@@ -171,6 +208,9 @@ function start(): void {
     clearInterval(timer);
     document.removeEventListener('keydown', onDiagnoseKey, { capture: true });
     witness.stop();
+    // SPEC: originals live in memory only, per-tab-session, cleared on
+    // nav-away/close. This is the nav-away.
+    detection.destroy();
   });
   // SPA navigation fires popstate; conversation switches that use pushState do
   // not, which is why the poll also compares the URL.

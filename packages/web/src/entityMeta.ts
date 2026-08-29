@@ -61,32 +61,9 @@ export function familyOf(type: EntityType): EntityFamily {
   return FAMILY_BY_TYPE[type] ?? 'other';
 }
 
-/** Human-readable label, e.g. 'CREDIT_CARD' → 'Credit card'. */
-export function labelOf(type: EntityType): string {
-  const words = type.toLowerCase().split('_');
-  const first = words[0] ?? '';
-  const label = [first.charAt(0).toUpperCase() + first.slice(1), ...words.slice(1)].join(' ');
-  // Initialisms that read wrong in sentence case.
-  return label
-    .replace(/\bIban\b|\biban\b/g, 'IBAN')
-    .replace(/\bIp\b|\bip\b/g, 'IP')
-    .replace(/\bMac\b|\bmac\b/g, 'MAC')
-    .replace(/\bUrl\b|\burl\b/g, 'URL')
-    .replace(/\bJwt\b|\bjwt\b/g, 'JWT')
-    .replace(/\bApi\b|\bapi\b/g, 'API')
-    .replace(/\bVin\b|\bvin\b/g, 'VIN')
-    .replace(/\bmrz\b/g, 'MRZ')
-    .replace(/\bVat\b|\bvat\b/g, 'VAT')
-    .replace(/\bUs\b|\bus\b/g, 'US')
-    .replace(/\bUk\b|\buk\b/g, 'UK')
-    .replace(/\bCa\b/g, 'CA')
-    .replace(/\bAu\b/g, 'AU')
-    .replace(/\bIn\b/g, 'IN')
-    .replace(/\bBr\b/g, 'BR')
-    .replace(/\bbsb\b/g, 'BSB')
-    .replace(/\bifsc\b/g, 'IFSC')
-    .replace(/\bnpi\b/g, 'NPI');
-}
+// The label map moved to core: the extension's review panel names the same
+// types, and two maps drift the moment a type is added to one of them.
+export { labelOf } from '@privacyshield/core';
 
 /** Confidence tier name for a raw Stage 1 confidence value. */
 export function confidenceTier(raw: number): 'maximum' | 'high' | 'medium' | 'low' {

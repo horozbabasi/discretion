@@ -30,6 +30,7 @@ import { runStage1 } from '../detect/runner.js';
 import type { Stage1Options } from '../detect/runner.js';
 import type { SubstitutionMode, VaultEntry } from '../types.js';
 import type { Stage1Candidate } from '../detect/types.js';
+import type { PipelineCandidate } from '../context/types.js';
 import type { Vault } from './vault.js';
 import { chooseSurrogate } from './surrogates.js';
 import { comparisonForm, separatorFree } from './egressGuard.js';
@@ -70,7 +71,9 @@ function bracketToken(type: string, ordinal: number): string {
  * for determinism. A documented stopgap until Stage 4 fusion (M8) resolves
  * overlaps against calibrated scores.
  */
-export function resolveForMasking(candidates: readonly Stage1Candidate[]): Stage1Candidate[] {
+export function resolveForMasking<C extends PipelineCandidate>(
+  candidates: readonly C[],
+): C[] {
   const sensitive = candidates.filter((c) => c.sensitive);
   const ranked = [...sensitive].sort((a, b) => {
     if (b.rawConfidence !== a.rawConfidence) return b.rawConfidence - a.rawConfidence;
@@ -79,7 +82,7 @@ export function resolveForMasking(candidates: readonly Stage1Candidate[]): Stage
     if (lenB !== lenA) return lenB - lenA;
     return a.detectorId < b.detectorId ? -1 : 1;
   });
-  const kept: Stage1Candidate[] = [];
+  const kept: C[] = [];
   for (const c of ranked) {
     if (!kept.some((k) => c.originalStart < k.originalEnd && k.originalStart < c.originalEnd)) {
       kept.push(c);
@@ -89,12 +92,18 @@ export function resolveForMasking(candidates: readonly Stage1Candidate[]): Stage
 }
 
 /**
- * Mask the given ORIGINAL text using the Stage 1 candidates found in it.
+ * Mask the given ORIGINAL text using the candidates found in it.
  * The candidates' `originalStart`/`originalEnd` must index into `original`.
+ *
+ * Takes `PipelineCandidate` rather than `Stage1Candidate` because Stage 2's
+ * PERSON/ORG/LOCATION entities must be masked too, and nothing in this file
+ * reads the `stage` discriminant — the two candidate shapes are otherwise
+ * identical. Typing it to Stage 1 alone was the narrower claim, not the safer
+ * one: it silently excluded the entities SPEC most wants surrogates for.
  */
 export function maskOriginal(
   original: string,
-  candidates: readonly Stage1Candidate[],
+  candidates: readonly PipelineCandidate[],
   vault: Vault,
   options: MaskOptions = {},
 ): MaskResult {
@@ -186,13 +195,13 @@ interface ForbiddenNeedle {
 }
 
 /** The candidate's canonical in comparison form (falls back to the value). */
-function separatorFreeCanonical(c: Stage1Candidate, value: string): string {
+function separatorFreeCanonical(c: PipelineCandidate, value: string): string {
   return comparisonForm(c.canonical ?? value);
 }
 
 /** Pick a collision-free, consistent replacement for one value. */
 function selectReplacement(
-  c: Stage1Candidate,
+  c: PipelineCandidate,
   value: string,
   sourceDoc: string,
   vault: Vault,

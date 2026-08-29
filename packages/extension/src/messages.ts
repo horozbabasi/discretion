@@ -22,4 +22,17 @@ export interface UnsupportedSiteMessage {
   readonly kind: 'unsupported-site';
 }
 
-export type ExtensionMessage = HealthMessage | UnsupportedSiteMessage;
+/**
+ * Detection did not complete.
+ *
+ * Reported so the badge can show that the page is NOT being checked. `detail`
+ * is the error's name and message only - never its payload, because a
+ * detection error can carry the candidate it failed on and a candidate carries
+ * page text.
+ */
+export interface DetectionErrorMessage {
+  readonly kind: 'detection-error';
+  readonly detail: string;
+}
+
+export type ExtensionMessage = HealthMessage | UnsupportedSiteMessage | DetectionErrorMessage;

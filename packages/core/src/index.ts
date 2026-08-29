@@ -73,10 +73,12 @@ export { decodeEntities } from './ner/merge.js';
 export { chunkText } from './ner/chunk.js';
 export type { Chunk } from './ner/chunk.js';
 export { NerEngine } from './ner/engine.js';
+export { ChunkCache } from './ner/chunkCache.js';
 export type { NerEngineOptions } from './ner/engine.js';
 export { runStage2 } from './ner/runStage2.js';
 export type {
   NerEntityType,
+  NerRecognizer,
   NerSpan,
   Stage2Candidate,
   TokenClassifier,

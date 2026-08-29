@@ -1,0 +1,48 @@
+{
+  "manifest_version": 3,
+  "name": "PS offscreen lifetime probe",
+  "version": "0.0.1",
+  "minimum_chrome_version": "116",
+  "permissions": [
+    "offscreen",
+    "storage"
+  ],
+  "host_permissions": [
+    "http://localhost/*"
+  ],
+  "background": {
+    "service_worker": "sw.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://localhost/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'none'; base-uri 'none'; form-action 'none'; connect-src 'self'"
+  },
+  "cross_origin_embedder_policy": {
+    "value": "require-corp"
+  },
+  "cross_origin_opener_policy": {
+    "value": "same-origin"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "probe-result.html",
+        "tiny.wasm"
+      ],
+      "matches": [
+        "http://localhost/*"
+      ]
+    }
+  ]
+}

@@ -40,7 +40,7 @@
  * ─────────────────────────────────────────────────────────────────────────
  */
 
-import type { NerEngine, SensitivityProfile } from '@privacyshield/core';
+import type { NerRecognizer, SensitivityProfile } from '@privacyshield/core';
 import { PROFILES } from '@privacyshield/core';
 
 import type { ComposerHandle, SiteAdapter } from '../adapters/index.js';
@@ -72,7 +72,7 @@ export interface ControllerOptions {
    * Stage 2. Required so it cannot be forgotten, null while the model is not
    * bundled - see analyze.ts.
    */
-  readonly ner: NerEngine | null;
+  readonly ner: NerRecognizer | null;
   readonly profile?: SensitivityProfile;
   /** Reported instead of thrown, so the caller decides what a failure means. */
   readonly onError: (error: unknown) => void;

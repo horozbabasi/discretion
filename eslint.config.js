@@ -10,6 +10,12 @@ export default tseslint.config(
     ignores: [
       '**/dist/**',
       '**/build/**',
+      // The offscreen-lifetime probe: a throwaway EXTENSION, not project code.
+      // It is loaded into a browser by its own manifest, so it runs under
+      // chrome-extension globals that this config has no reason to define for
+      // the repo at large, and it is committed as evidence for a measurement
+      // rather than as something anyone imports. See its README.
+      'packages/extension/scripts/offscreen-probe/ext/**',
       // Live-probe bundle: generated dev-tool output, never shipped or edited.
       '**/.probe/**',
       '**/node_modules/**',

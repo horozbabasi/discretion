@@ -13,6 +13,7 @@ from playwright.sync_api import sync_playwright
 BUILD = Path(__file__).resolve().parent.parent / 'build'
 
 REQUIRED = ['manifest.json', 'content.js', 'service-worker.js',
+            'offscreen.js', 'offscreen.html',
             'icons/icon16.png', 'icons/icon48.png', 'icons/icon128.png']
 
 missing = [f for f in REQUIRED if not (BUILD / f).is_file()]
@@ -62,8 +63,19 @@ with sync_playwright() as p:
             if sorted(got['host_permissions']) != sorted([
                 'https://chatgpt.com/*', 'https://claude.ai/*', 'https://gemini.google.com/*']):
                 errors.append(f"host_permissions changed: {got['host_permissions']}")
-            if got.get('permissions') != ['storage']:
-                errors.append(f"permissions is not exactly ['storage']: {got.get('permissions')}")
+            # Pinned as a SET so the assertion is about which permissions are
+            # held, not the order they happen to appear in. `offscreen` is here
+            # because a content script cannot compile WebAssembly under the
+            # host page's CSP and the model must run somewhere - measured, see
+            # scripts/offscreen-probe. Anything beyond these two is a
+            # permission nobody justified in PERMISSIONS.md.
+            if sorted(got.get('permissions') or []) != ['offscreen', 'storage']:
+                errors.append(f"permissions is not exactly [offscreen, storage]: {got.get('permissions')}")
+            # No web-accessible resources at all: an offscreen document reads
+            # packaged files through its own origin, so listing the 280 MB model
+            # would only let the three host sites fetch and fingerprint it.
+            if got.get('web_accessible_resources'):
+                errors.append(f"web_accessible_resources should be absent: {got.get('web_accessible_resources')}")
 
             # SPEC's zero-network claim: nothing in the package may name a
             # remote origin. Checked against Chrome's parsed manifest, not the

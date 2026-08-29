@@ -10,6 +10,7 @@
     "https://gemini.google.com/*"
   ],
   "permissions": [
+    "offscreen",
     "storage"
   ],
   "action": {

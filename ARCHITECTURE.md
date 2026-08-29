@@ -4017,6 +4017,318 @@ One observation from that first run, left as an observation: `4111 1111 1111
 Number mod-11 check, and the credit-card detector's correct "known test value"
 suppression means nothing outranks it. Pre-existing core behaviour, surfaced
 by wiring rather than caused by it. Not chased here.
+### D40 - The verification findings, ranked. The largest is that no test file was ever typechecked (M9)
+
+D34f collected thirteen defects in checking code and drew the right lesson from
+their shapes. This ranks that family, because the three added since are not
+peers of the thirteen - one of them is the reason a whole class of check could
+not have worked at all.
+
+**RANK 1. NO TEST FILE IN THIS REPOSITORY WAS EVER TYPECHECKED.**
+
+Every package's tsconfig includes only `src/**/*.ts`. `tsc -b` never looked at
+a test. Consequences, in increasing order of seriousness:
+
+- Type errors in tests surfaced only if they happened to break at run time.
+- Every `@ts-expect-error` across 1,065 tests was **inert**. The directive's
+  whole value is that it fails loudly when the error it expects does not
+  occur; never being evaluated, it could only ever pass.
+- The specific casualty found: `surface-state.test.ts` asserted that the
+  branded `Inapplicable` type has no structural escape hatch - the
+  construction that stops a caller declaring a failure "not applicable"
+  without having observed anything. It asserted nothing. Worse, when the
+  directive WAS finally evaluated, the assignment failed because `reason`
+  widened to `string`, so it would have passed with the brand removed.
+
+Enabling `tsconfig.test.json` immediately found three existing tests asserting
+nothing: a forensics fixture missing two required fields (hidden because a
+`Partial<>` spread made everything optional), an `it.each` table whose second
+column the callback never took, and a test that `delete`d a standard method off
+the shared jsdom document instead of restoring it.
+
+This outranks the thirteen because those were individual checks that were
+wrong. This was a mechanism that could not work, for a class of check, across
+the entire suite, for the life of the project - and its failure mode was
+silence.
+
+**The standard it sets.** The brand test was then verified by REMOVING THE
+BRAND and watching the build fail with `TS2578: Unused '@ts-expect-error'
+directive`, then restoring it and watching it pass. That is what every check on
+this list should have had: not "the test passes", but "the test fails when the
+thing it checks is broken". Applied since, as a matter of course - the Stage 2b
+move and the chunk cache were each verified by mutating the implementation and
+confirming the specific tests fail (three mutants each; one survived and
+exposed a test that passed for the wrong reason, below).
+
+**RANK 2. THE WASM BENCHMARK FETCHED ITS RUNTIME FROM A CDN**, so every WASM
+latency figure it published described a build that does not ship - in a project
+whose first non-negotiable is zero runtime network access. Recorded in full at
+D40b, because it was found later and its own story is worth reading.
+
+**RANK 3. RESERVED DOCUMENTATION VALUES ARE RIGHT FOR LIVE DOM PROBES AND
+WRONG FOR DETECTION FIXTURES.**
+
+The first `detection.test.ts` used `jane.doe@example.org` and card
+`4111 1111 1111 1111` - the obvious, responsible choices, and the same
+instinct that is correct when building a page fixture. For a DETECTION fixture
+they are exactly wrong, and for the same reason they are right elsewhere: the
+detectors recognise them as documentation values and correctly mark them
+`sensitive: false`, so the analyzer correctly declines to offer masking.
+
+Every assertion in that file - that the panel never carries an original value,
+that surrogates are consistent across runs, that confidence is calibrated, that
+overlaps are not double-counted - ran against an **empty entity set** and
+passed. A whole file of green tests about nothing.
+
+Fixtures are now built with core's own seeded generators, which produce
+valid-and-not-reserved instances by construction. The general rule: a fixture
+for code that DETECTS sensitive values must contain values that are sensitive,
+and "safe to write down" and "exercises the code" are in direct tension here in
+a way they are not anywhere else in this repo.
+
+**RANK 4. A TEST THAT PASSED BECAUSE ITS CLOCK MOVED WITH THE DEADLINE.**
+
+The chunk cache's "a cache hit does not consume the inference deadline" test
+mocked `Date.now()` to a fixed point far in the future. It passed - and it
+passed just as well with the deadline checked BEFORE the cache lookup, which is
+the defect it exists to catch. `recognize()` computes its own deadline from
+`Date.now()`, so freezing the clock moves the deadline along with it and
+expires nothing. The mock now advances after the first read. Found by mutation,
+not by reading.
+
+### D40a - NOTED, not chased: known-test-value suppression is scoped to one detector (M9)
+
+Surfaced while wiring detection, verified rather than assumed, and left alone.
+
+`4111 1111 1111 1111` - the canonical Visa test card - is reported as a
+Japanese `NATIONAL_ID` at 0.94 calibrated confidence. Demonstrated:
+
+```
+CREDIT_CARD    detector=credit-card              sensitive=false
+NATIONAL_ID    detector=national-id-jp-my-number sensitive=true
+after resolveOverlaps over the SENSITIVE set:
+  survives: NATIONAL_ID (national-id-jp-my-number)
+```
+
+**The finding is not "a false positive". It is where the suppression lives.**
+`TEST_CARDS` is a `ReadonlySet` private to `creditCard.ts`, and
+`sensitive: !TEST_CARDS.has(pan)` marks only the CREDIT_CARD candidate. There
+is no registry of "values known to be documentation values". So a string one
+detector knows to be a test value stays fully available for every other
+detector to claim - and overlap resolution then actively prefers the claimant
+that thinks it is sensitive, because "a non-sensitive candidate must never
+displace one that would otherwise be masked" is the right rule for every other
+case.
+
+`sensitive: false` reads as a statement about the STRING and is a statement
+about ONE DETECTOR'S READING of the string. That is the same shape as the
+send-control finding: eleven clauses across three adapters shared one
+unexamined assumption - a literal `<button>` tag - which the tier ladder made
+look like independent fallback coverage. A property that reads as global and is
+local.
+
+**Low severity, and not chased now.** The consequence is a documentation value
+being masked, which costs the user a surrogate they did not need - not a real
+value being sent in the clear. The fix is a cross-detector suppression pass,
+which is Stage 4 work with its own eval implications, and doing it inside a
+wiring batch would put an unmeasured change into the scoring path.
+### D40b - RANK 2, retrospectively: the WASM benchmark fetched its runtime from a CDN (M9)
+
+Found while making the IPC comparison like-for-like, and large enough to sit
+directly under the typechecking finding in D40.
+
+`bench/wasm-latency` never set `env.backends.onnx.wasm.wasmPaths`. Left unset,
+onnxruntime-web resolves its `.wasm` binaries from `cdn.jsdelivr.net`.
+Confirmed by watching the network:
+
+```
+http://localhost:5202/hfmodels/.../onnx/model_quantized.onnx
+https://cdn.jsdelivr.net/npm/onnxruntime-web@1.26.0-dev.../dist/ort-wasm-simd-threaded.asyncify.wasm
+```
+
+**Two consequences.**
+
+First, every WASM latency figure this harness published - the M9 numbers in
+BENCHMARKS.md, and the WASM side of D30's WebGPU comparison - was measured
+against a runtime downloaded at run time rather than the one the extension
+bundles. The harness's own header says it exists because "the shipped
+configuration cannot be measured from Node even in principle", and it was then
+measuring a different unshipped configuration. D30's WASM-versus-WebGPU
+CONCLUSION is unaffected - both sides fetched the same way, and the gap was
+4-5x - but the absolute numbers describe a build nobody ships.
+
+Second, and worse in kind: **a benchmark in a project whose first
+non-negotiable is zero runtime network access was silently network-dependent.**
+Nothing failed. Nothing warned. The only reason it surfaced at all is that the
+extension - which cannot reach the network - was 3.1x faster on the cold path,
+and a measurement that much better than its comparison is a defect report about
+the measurement rather than a result.
+
+The harness now serves the binaries from `node_modules/onnxruntime-web/dist`
+over a local route and logs the resolved `wasmPaths`, so the same silence
+cannot happen twice. The offscreen document reports its resolved backend in
+`OffscreenStatus` for the same reason: a runtime that silently falls back is a
+large latency difference and is invisible unless it is read back and printed.
+
+### D41 - Stage 2 runs in an offscreen document. The lifetime was verified before anything was built on it (M9)
+
+The decision was made externally: NER goes in an offscreen document, and the
+service-worker option is closed - MV3 evicts an idle service worker after ~30 s
+and model load is measured in seconds, so eviction would charge the user that
+cost on a keystroke, repeatedly. What follows is the verification the decision
+was conditional on, and what building it actually cost.
+
+**VERIFIED FIRST, IN A REAL BROWSER** (`packages/extension/scripts/offscreen-probe`,
+Edge 151.0.4129.107, 8 cores, results committed beside the scripts):
+
+| claim | measured |
+| --- | --- |
+| Survives idle with state intact | **Yes at 45 / 120 / 300 / 600 s.** Same module-evaluation nonce throughout, and 64 MB of touched memory still checksummed correctly. |
+| `crossOriginIsolated` inside it | **true**, and a Web Worker created there inherits it |
+| Can compile WebAssembly | **Yes** |
+| Content script can reach it directly | **Yes**, no service-worker hop on the message path |
+| IPC round trip, no work behind it | **p50 1.2-2.0 ms**, near-flat from 0 to 20,000 characters |
+| Reads packaged files not in `web_accessible_resources` | **Yes** - three such files fetched, all 200 |
+
+`hasDocument()` alone could not have answered the first row: it cannot tell
+"still resident" from "torn down and quietly re-created". The nonce can.
+
+**RESIDENCY IS A CURRENT BEHAVIOUR, NOT A CONTRACT - and this is the finding
+the decision most needs.** Chrome documents that only `AUDIO_PLAYBACK` sets a
+lifetime limit and that "all other reasons don't set lifetime limits", and in
+the Chromium source every other reason maps to an `EmptyLifetimeEnforcer` whose
+`IsActive()` returns `true` unconditionally. But `TerminateDocument()` exists
+and is unused, and Chrome DevRel has said on the record that they expect to
+"add more checks to ensure offscreen documents are closed when they are no
+longer being used".
+
+So the code treats the document as something that can vanish: the recognizer
+re-provisions on EVERY call (a cheap no-op when it is there), and a send is
+blocked while the model is unavailable rather than proceeding unchecked.
+**If Chrome does start closing idle offscreen documents, the model-load cost
+returns to the user's critical path and the placement decision needs
+revisiting.** That is reported, not worked around.
+
+**THE CONTROL THAT REFUTED THE OTHER READING.** The idle probe also observed
+the service worker never restarting across ten minutes, which reads as "the
+offscreen document keeps it alive". Running the identical idle wait with NO
+offscreen document showed the service worker still did not restart - so the
+observation is an artefact of the debugger the test is driven through, and the
+probe can say nothing about service-worker eviction. Reported as unmeasured.
+(The Chromium source says the opposite of the naive reading anyway:
+`ProcessManager::CanKeepalive()` returns false for `ViewType::kOffscreenDocument`.)
+
+### D41a - A content script cannot compile WebAssembly under a host page's CSP. Measured (M9)
+
+This is the load-bearing claim for the `offscreen` permission, so it is
+measured rather than asserted. A probe compiled a minimal WebAssembly module
+from inside a content script's OWN ISOLATED WORLD, on host pages serving three
+policies:
+
+| host page CSP | `new WebAssembly.Module(...)` in the content script |
+| --- | --- |
+| none | compiles |
+| `script-src 'self'; object-src 'none'` | **throws** |
+| `script-src 'nonce-...' 'strict-dynamic' 'unsafe-inline' https:` | **throws** |
+
+The third is the shape Gemini actually serves (captured 2026-08-29: its
+`script-src` carries `'unsafe-eval'` but no `'wasm-unsafe-eval'`). ChatGPT and
+Claude refuse a plain header fetch, so their exact policies are unread; the
+`self-only` row is the general case and does not depend on which of the three
+is being visited.
+
+An earlier probe compiled WASM successfully in a page and proved nothing: it
+ran in the page's MAIN world, which is a different world with a different
+policy. The isolated-world result is the one that bears on this.
+
+`crossOriginIsolated` is also false in a content script's world, so even where
+compilation succeeds the runtime is held to one thread - a second, independent
+reason the model cannot live there.
+
+### D41b - A named port, not runtime.sendMessage, and that is a privacy decision (M9)
+
+`chrome.runtime.sendMessage` from a content script fires `onMessage` in EVERY
+frame of the extension - Chrome documents it in those words. The payload on
+this channel is the user's composer text, unredacted, because that is what the
+model has to see. Broadcasting it would deliver the plaintext to an open popup
+and to the options page (M10 adds both) as well as to the offscreen document.
+It never leaves the extension's own origin, so it is not a leak; it is the
+wrong shape for a tool whose premise is that this text reaches as few places as
+possible.
+
+A named port narrows delivery, with one rule making it exact: **exactly one
+context may accept `NER_CHANNEL`**. Chrome specifies that when several
+listeners respond, the first wins and the others are discarded silently, with
+no defined ordering across contexts - and under fail-closed, losing that race
+is a blocked send with no diagnosis. So the race must not exist.
+
+The consequence worth stating plainly: **the service worker never receives
+composer text.** It provisions the document and nothing else. The only contexts
+that ever hold the text are the content script that read it and the offscreen
+document that classifies it.
+
+### D41c - One crossing per recognize, not one per chunk (M9)
+
+The obvious boundary is `TokenClassifier`: proxy `classify()` and leave the
+engine in the content script. It is the wrong one. The engine windows a
+document into ~400-character chunks, so a 2,000-character message is seven
+crossings instead of one - and each would carry the model's raw token
+predictions back, which for a 400-character chunk is a hundred-odd
+`{label, score, piece}` objects, far more data than the handful of spans they
+decode to.
+
+So the whole engine lives offscreen and the boundary is `recognize()`.
+Alignment, decoding and the per-call deadline stay with the model. `runStage2`
+and `detect` were changed to take a `NerRecognizer` interface rather than the
+concrete `NerEngine`, which is also what keeps `engine.ts` - and therefore the
+gazetteers it now pulls in - out of the content script's bundle.
+
+**Two deadlines, deliberately.** The engine's own budget bounds inference. It
+cannot help if the offscreen document dies mid-call, the port closes, or the
+message is simply never answered: no timer on the far side would ever fire. So
+the near side imposes its own, strictly larger, and treats its expiry as it
+treats an error. The far side's deadline produces a useful diagnosis ("too
+slow"); the near side's only ever means "did not answer", which is worse.
+
+### D41d - The provisioning race, found by measuring rather than by reading (M9)
+
+The first benchmark run failed with `Could not establish connection. Receiving
+end does not exist.` The content script asked the service worker to create the
+offscreen document and connected immediately, without waiting - and
+`chrome.runtime.connect` to an absent receiver fails exactly that way.
+
+The production path had the same race, and it would have shown up as a
+detection error on every fresh page load, self-healing on a later retry, which
+is the kind of intermittent failure that gets attributed to something else.
+
+Fixed at both ends: the service worker replies only AFTER the document exists
+(it previously returned `undefined`, closing the channel without an answer),
+and the recognizer owns its own provisioning and awaits it before connecting.
+Running that on every call rather than once is what also covers the document
+disappearing later, which D41 says must be assumed.
+
+### D41e - Two bundling findings, both from watching it fail (M9)
+
+**A hand-picked list of ORT WASM variants is a guess about someone else's
+hardware.** Four `ort-wasm-*` builds ship - plain, jsep, jspi, asyncify - and
+which one loads is decided at run time by feature detection. Four were copied
+by name; the runtime asked for `ort-wasm-simd-threaded.asyncify.mjs`, which was
+not among them, and Stage 2 failed with "no available backend found". All four
+are now copied by enumerating the directory. ~77 MB beside a 278 MB model is
+the cheaper mistake than shipping the wrong one.
+
+**onnxruntime-web has a non-bundled variant behind an export condition.** The
+default embeds its `.wasm` binaries as base64 `data:` URIs - two literals
+totalling 62 MB inside a 68 MB `offscreen.js`, which the document must parse
+before the model can begin loading, and which were never reachable because
+`env.backends.onnx.wasm.wasmPaths` points at the copied files. Selecting
+`onnxruntime-web-use-extern-wasm` in the build's resolve conditions took
+`offscreen.js` from **68,146,827 to 5,235,629 bytes**.
+
+Vite's `assetsInlineLimit: 0` was tried first and changed nothing, because the
+inlining is inside the distributed package rather than something the bundler
+chose. That is recorded because the wrong hypothesis cost a build cycle and the
+right one was one export-map read away.
 
 ## Standing contracts (established in M1)
 

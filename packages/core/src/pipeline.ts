@@ -22,7 +22,7 @@ import { DOMAIN_LEXICONS, TRIGGER_LEXICONS } from '@privacyshield/data';
 import type { NormalizationResult } from './types.js';
 import { runStage1, type Stage1Options } from './detect/runner.js';
 import { runStage2 } from './ner/runStage2.js';
-import type { NerEngine } from './ner/engine.js';
+import type { NerRecognizer } from './ner/types.js';
 import { analyzeContext, type ContextOptions } from './context/score.js';
 import type { ContextScoredCandidate, DocumentProfile, PipelineCandidate } from './context/types.js';
 
@@ -33,7 +33,7 @@ export interface DetectOptions {
    * Stage 2 engine. Omit to run without named-entity recognition — the
    * playground and the Stage-1 eval baseline both do.
    */
-  readonly ner?: NerEngine;
+  readonly ner?: NerRecognizer;
   /** Stage 3 configuration. Defaults to the bundled trigger lexicons. */
   readonly context?: ContextOptions;
 }

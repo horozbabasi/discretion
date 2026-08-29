@@ -8,12 +8,11 @@
  * nothing is blocked.
  *
  * SPEC.md: "1. Identify site, load adapter, run healthCheck, warm the NER
- * worker." The first three are here. The NER worker is NOT: the model is a
- * ~280 MB asset that has to run WASM outside the host page's CSP, which means
- * an offscreen document and therefore a manifest permission this extension
- * does not currently request. That is an asset-and-permissions batch, not a
- * wiring one, and `stagesRun` in analyze.ts records that Stage 2 did not run
- * rather than letting its absence pass unremarked.
+ * worker." All four are here. The model runs in an OFFSCREEN DOCUMENT, because
+ * a content script cannot compile WebAssembly under the host page's CSP -
+ * measured, not assumed; see packages/extension/scripts/offscreen-probe. It is
+ * warmed at startup rather than on first use, so the 6,568 ms load is never on
+ * a keystroke.
  *
  * Submit interception is likewise still absent rather than stubbed. An
  * interceptor with no gate behind it can only do one of two wrong things -
@@ -28,6 +27,7 @@ import type { ExtensionMessage, HealthMessage } from './messages.js';
 import { buildDiagnostic, markScriptStart } from './diagnostics.js';
 import { loadDebugPreference, renderDiagnostic, renderUnsupported } from './debug.js';
 import { DetectionController } from './detection/controller.js';
+import { PortNerRecognizer } from './detection/portRecognizer.js';
 
 const HEALTH_INTERVAL_MS = 15_000;
 
@@ -108,11 +108,33 @@ function start(): void {
   let lastUrl = location.href;
 
   /**
-   * Detection, and the surface it renders into.
+   * Stage 2, in the offscreen document.
    *
-   * `ner: null` is deliberate and load-bearing: the argument is required, so
-   * Stage 2 cannot be reached by forgetting it, and the analysis records that
-   * it did not run. The send gate must refuse to ship while this is null.
+   * SPEC step 1: "warm the NER worker". Provisioning has to go through the
+   * service worker, because chrome.offscreen.* is not available to a content
+   * script - but the user's TEXT does not: it travels on a named port straight
+   * to the offscreen document, and the service worker never receives it. The
+   * recognizer does its own provisioning and waits for it, so there is no
+   * window in which the port is opened against a document that is not there.
+   *
+   * `ner` remains a REQUIRED, NULLABLE argument even now that it is never
+   * null here. That is not vestigial: it is what stops Stage 2 being reached
+   * by forgetting it, and `stagesRun` is derived from it rather than declared,
+   * so no analysis can claim Stage 2 ran when it did not. The send gate must
+   * refuse to ship while it can be null.
+   */
+  const recognizer = new PortNerRecognizer();
+  // Warm now, not on first keystroke. Model load is 6,568 ms measured; the
+  // entire reason it lives in a resident document is that nobody should ever
+  // wait for it. A failure is recorded, not thrown: the controller's own
+  // fail-closed path handles an unavailable model on the next analysis.
+  void recognizer.warmup().catch((error: unknown) => {
+    const detail = error instanceof Error ? `${error.name}: ${error.message}` : 'unknown error';
+    report({ kind: 'detection-error', detail });
+  });
+
+  /**
+   * Detection, and the surface it renders into.
    *
    * A failure here does not throw into the page. It is reported, and the
    * controller has already put the surface into its degraded state - the one
@@ -123,7 +145,7 @@ function start(): void {
   const detection = new DetectionController({
     adapter,
     document,
-    ner: null,
+    ner: recognizer,
     onError: (error) => {
       // Never the error's data, only its type and message: a detection error
       // can carry a candidate, and a candidate carries page text.
@@ -211,6 +233,8 @@ function start(): void {
     // SPEC: originals live in memory only, per-tab-session, cleared on
     // nav-away/close. This is the nav-away.
     detection.destroy();
+    // The port is dropped too. Anything still in flight carried composer text.
+    recognizer.disconnect();
   });
   // SPA navigation fires popstate; conversation switches that use pushState do
   // not, which is why the poll also compares the URL.

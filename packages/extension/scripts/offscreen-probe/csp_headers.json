@@ -1,0 +1,13 @@
+{
+  "https://chatgpt.com/": {
+    "error": "HTTPError: HTTP Error 403: Forbidden"
+  },
+  "https://claude.ai/": {
+    "error": "HTTPError: HTTP Error 403: Forbidden"
+  },
+  "https://gemini.google.com/app": {
+    "status": 200,
+    "csp": "script-src 'report-sample' 'nonce-XRfG1sizR3T0l3u86CRBUw' 'unsafe-inline' 'unsafe-eval' 'strict-dynamic' https: http:;object-src 'none';base-uri 'self';report-uri /_/BardChatUi/cspreport",
+    "cspReportOnly": null
+  }
+}

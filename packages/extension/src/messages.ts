@@ -35,4 +35,20 @@ export interface DetectionErrorMessage {
   readonly detail: string;
 }
 
-export type ExtensionMessage = HealthMessage | UnsupportedSiteMessage | DetectionErrorMessage;
+/**
+ * Provision the offscreen document.
+ *
+ * Carries nothing. It exists because `chrome.offscreen.*` is unavailable to
+ * content scripts, so the request has to be relayed - but the user's text is
+ * NOT relayed with it. That travels on a named port straight to the offscreen
+ * document, and the service worker never receives it.
+ */
+export interface EnsureOffscreenMessage {
+  readonly kind: 'ensure-offscreen';
+}
+
+export type ExtensionMessage =
+  | HealthMessage
+  | UnsupportedSiteMessage
+  | DetectionErrorMessage
+  | EnsureOffscreenMessage;

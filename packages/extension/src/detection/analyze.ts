@@ -27,19 +27,20 @@
  * left where it cannot be mistaken for a result.
  *
  * ─────────────────────────────────────────────────────────────────────────
- * THE NER ENGINE IS A REQUIRED ARGUMENT, AND IT MAY BE NULL
+ * THE RECOGNIZER IS A REQUIRED ARGUMENT, AND IT MAY STILL BE NULL
  *
- * Required, so that no caller can reach Stage 2 by forgetting it. Nullable,
- * because the extension does not yet ship the model: that is an asset and
- * permissions problem (a ~280 MB quantized model, an offscreen document to run
- * WASM outside the host page's CSP, and therefore a manifest permission the
- * extension does not currently request), not a wiring problem.
+ * Required, so that no caller can reach Stage 2 by forgetting it. The
+ * extension now always supplies one - the model runs in an offscreen document
+ * and this is a proxy to it - so the null case describes a configuration that
+ * no longer occurs in production, and the argument stays required and nullable
+ * anyway.
  *
- * `stagesRun` records what actually ran, and it is derived from the argument
- * rather than declared, so it cannot claim Stage 2 ran when no engine was
- * passed. When the send gate is built it must refuse to ship without an
- * engine; this is the field that makes that refusal checkable instead of
- * remembered.
+ * That is deliberate rather than vestigial. `stagesRun` is DERIVED from this
+ * argument, never declared, which is what makes "Stage 2 ran" a claim the code
+ * can support instead of a comment. Relaxing it once NER works would delete
+ * the only mechanism that keeps the claim honest, at exactly the moment the
+ * claim starts being worth making. The send gate must refuse to ship while
+ * this can be null.
  * ─────────────────────────────────────────────────────────────────────────
  */
 
@@ -59,7 +60,7 @@ import type {
   DetectionStage,
   EntityType,
   ExposureReport,
-  NerEngine,
+  NerRecognizer,
   PipelineCandidate,
   SensitivityProfile,
   SubstitutionMode,
@@ -74,10 +75,10 @@ const MODEL = CALIBRATION_MODEL as unknown as CalibrationModel;
 
 export interface AnalysisOptions {
   /**
-   * Stage 2. Required so it cannot be forgotten; null while the model is not
-   * bundled — see the header.
+   * Stage 2. Required so it cannot be forgotten. In the extension this is a
+   * proxy to the offscreen document, which is where the model runs.
    */
-  readonly ner: NerEngine | null;
+  readonly ner: NerRecognizer | null;
   readonly profile: SensitivityProfile;
   readonly lists?: UserLists;
   readonly mode: SubstitutionMode;

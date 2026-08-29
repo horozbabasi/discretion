@@ -14,8 +14,7 @@
 
 import type { NormalizationResult } from '../types.js';
 import { mapNormalizedSpan } from '../offsetMap.js';
-import type { NerEngine } from './engine.js';
-import type { Stage2Candidate } from './types.js';
+import type { NerRecognizer, Stage2Candidate } from './types.js';
 
 /** Collapse interior whitespace so trivial layout variants share a key. */
 function canonicalName(text: string): string {
@@ -24,7 +23,7 @@ function canonicalName(text: string): string {
 
 export async function runStage2(
   normalization: NormalizationResult,
-  engine: NerEngine,
+  engine: NerRecognizer,
 ): Promise<Stage2Candidate[]> {
   const { normalizedText, offsetMap } = normalization;
   const spans = await engine.recognize(normalizedText);
@@ -44,6 +43,9 @@ export async function runStage2(
       sensitive: true,
       canonical: canonicalName(span.text),
       metadata: { model: engine.id },
+      // Carried rather than re-looked-up: the hit was computed where the
+      // gazetteers live, which may be a different process from this one.
+      ...(span.gazetteer === undefined ? {} : { gazetteer: span.gazetteer }),
     };
   });
 }

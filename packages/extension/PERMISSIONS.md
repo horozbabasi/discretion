@@ -36,7 +36,7 @@ Slack — and masks it with the same engine, using **no additional host
 permissions at all**. Usefulness everywhere and a three-site permission claim
 are not in tension; that was a deliberate design choice.
 
-## `permissions: ["storage"]` — the only API permission
+## `permissions: ["storage"]` — settings, and nothing else
 
 **Justification.** Stores the user's own settings: sensitivity profile,
 per-entity toggles, surrogate-versus-token mode, allowlist and denylist, and
@@ -49,7 +49,64 @@ persistence, and Local Insights satisfies it by construction — it records
 memory only, scoped per tab session, and is cleared on navigation.
 
 **Why not `unlimitedStorage`.** Settings and counters are kilobytes. Asking
-for more would be unjustifiable.
+for more would be unjustifiable. The NER model is large, but it ships inside
+the package and is read from there; nothing writes it to storage.
+
+## `permissions: ["offscreen"]` — where the model runs
+
+**Justification.** Detection includes a local multilingual NER model
+(Stage 2), which executes WebAssembly. **A content script cannot compile
+WebAssembly when the host page ships a Content-Security-Policy**, and all three
+target sites do. An offscreen document is the only context in which the
+extension controls its own CSP, so it is the only place the model can run
+on-device. Without it the choice is not "run it somewhere else" — it is "send
+the user's text to a server", which is the thing this extension exists to
+prevent.
+
+**This is measured, not assumed.** A probe extension compiled a minimal
+WebAssembly module from inside a content script's own isolated world, on host
+pages serving three different policies
+(`packages/extension/scripts/offscreen-probe/`):
+
+| host page CSP | `new WebAssembly.Module(...)` in the content script |
+| --- | --- |
+| none | compiles |
+| `script-src 'self'; object-src 'none'` | **throws** |
+| `script-src 'nonce-…' 'strict-dynamic' 'unsafe-inline' https:` | **throws** |
+
+The third is the shape Gemini actually serves (captured 2026-08-29; its
+`script-src` carries `'unsafe-eval'` but no `'wasm-unsafe-eval'`). The same
+probe records `crossOriginIsolated === false` in the content script's world and
+`true` inside the offscreen document, so even where compilation succeeded the
+model would be limited to a single WASM thread.
+
+**It grants no access to user data.** `offscreen` lets the extension open one
+invisible document *of its own*, at its own origin, from files inside its own
+package. It reads nothing, reaches no site, and Chrome shows no install warning
+for it — there is no user-facing capability to warn about. What it changes is
+where the extension's own code runs, not what that code can see.
+
+**Why not the service worker.** MV3 evicts an idle service worker after about
+30 seconds. Model load is 6,568 ms measured, so eviction would charge the user
+6.5 seconds on a keystroke, repeatedly. An offscreen document's lifetime is
+independent of the service worker's, which is what makes "load once, keep
+resident" possible at all — see the residency note below, which is a measured
+current behaviour and not a guarantee.
+
+**Why not `chrome.scripting` into a page we control.** It would need a tab, be
+visible to the user, and still be subject to that page's policy. The offscreen
+document is the mechanism Chrome provides for exactly this.
+
+**No `web_accessible_resources`, and that is a correction.** An earlier draft of
+this file said the model and worker would be exposed to the three host origins
+so they could be fetched. They are not, and they must not be: an offscreen
+document loads packaged resources **through its own extension origin**, which
+needs no `web_accessible_resources` entry at all. Verified by fetching three
+files that are in no such list from inside the offscreen document — all
+returned 200. So the manifest declares no web-accessible resources of any kind,
+and the model is not reachable by chatgpt.com, claude.ai, gemini.google.com or
+anything else. Listing it would have been both unnecessary and a way to let any
+of those pages fingerprint the extension by requesting it.
 
 ## Permissions deliberately NOT requested
 
@@ -86,8 +143,11 @@ here, and the refusal is part of the product claim:
   same-origin`) are declared so WASM multi-threading is available. Measured:
   without them onnxruntime-web silently falls back to single-threaded, which
   makes an already-missed latency budget worse.
-- **`web_accessible_resources`** is scoped to the three host origins rather
-  than `<all_urls>`, so the model and worker are not fetchable by arbitrary
-  pages fingerprinting installed extensions.
+- **No `web_accessible_resources` at all.** An earlier draft planned to scope
+  it to the three host origins so the model and worker could be fetched. That
+  was wrong twice over: an offscreen document loads packaged resources through
+  its own extension origin and needs no such entry (verified), and any entry
+  would let the listed origins fetch — and therefore fingerprint — the model.
+  Nothing in this package is reachable from a web page.
 - **No `externally_connectable`**, so no website and no other extension can
   send messages to this one.

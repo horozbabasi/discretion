@@ -15,6 +15,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { generate, PROFILES, Vault } from '@privacyshield/core';
+import type { NerRecognizer } from '@privacyshield/core';
 
 import { analyzeText } from '../src/detection/analyze.js';
 import { DetectionSession } from '../src/detection/session.js';
@@ -124,6 +125,45 @@ describe('the analysis the panel is built from', () => {
     expect(analysis.stagesRun).toContain('stage1-validated-identifier');
     expect(analysis.stagesRun).toContain('stage3-context');
     expect(analysis.stagesRun).toContain('stage4-fusion');
+  });
+
+  it('records Stage 2 as HAVING run when a recognizer is supplied', async () => {
+    // The complement of the test above, and the reason `ner` stays a required
+    // nullable argument now that the extension always supplies one: stagesRun
+    // is DERIVED from the argument, so "Stage 2 ran" is a claim the code can
+    // support rather than a comment. Relaxing that once NER works would delete
+    // the mechanism at the moment it starts being worth having.
+    const recognizer: NerRecognizer = {
+      id: 'fake-recognizer',
+      warmup: () => Promise.resolve(),
+      recognize: () => Promise.resolve([]),
+    };
+    const analysis = await analyzeText(MESSAGE, { ...options(), ner: recognizer });
+    expect(analysis.stagesRun).toContain('stage2-ner');
+  });
+
+  it('carries a recognizer entity through to the panel, surrogate and all', async () => {
+    // End to end for Stage 2: a span from the recognizer must survive
+    // runStage2, Stage 3 scoring, calibration, the profile decision and
+    // masking - and arrive with a surrogate rather than the original name.
+    const name = 'Ferdinand Ekelund';
+    const text = `Please call ${name} about the invoice.`;
+    const recognizer: NerRecognizer = {
+      id: 'fake-recognizer',
+      warmup: () => Promise.resolve(),
+      recognize: (input: string) => {
+        const at = input.indexOf(name);
+        return Promise.resolve(
+          at < 0 ? [] : [{ type: 'PERSON' as const, start: at, end: at + name.length, text: name, score: 0.98 }],
+        );
+      },
+    };
+    const analysis = await analyzeText(text, { ...options(), ner: recognizer });
+    const person = analysis.entities.find((entity) => entity.type === 'PERSON');
+    expect(person).toBeDefined();
+    expect(person?.label).toBe('Person');
+    expect(person?.surrogate).not.toBe(name);
+    expect(`${person?.explanation ?? ''} ${person?.surrogate ?? ''}`).not.toContain(name);
   });
 
   it('finds nothing in text that contains nothing', async () => {

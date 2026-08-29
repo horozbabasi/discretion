@@ -81,6 +81,10 @@ async function main() {
   env.allowLocalModels = true;
   env.localModelPath = '/hfmodels/';
   env.backends.onnx.wasm.numThreads = navigator.hardwareConcurrency ?? 4;
+  // The SAME binaries the extension bundles. Left unset, the runtime fetches
+  // them from cdn.jsdelivr.net - which this harness was doing, silently, so
+  // every figure it published described a build that does not ship.
+  env.backends.onnx.wasm.wasmPaths = '/ort/';
 
   const device = new URLSearchParams(location.search).get('device') ?? 'wasm';
   log(
@@ -98,7 +102,7 @@ async function main() {
   // single-threaded WASM is a large latency difference and is invisible unless
   // it is read back and printed.
   const w = env.backends.onnx.wasm;
-  log(`ort resolved: numThreads=${w.numThreads} simd=${w.simd} proxy=${w.proxy}`);
+  log(`ort resolved: numThreads=${w.numThreads} simd=${w.simd} proxy=${w.proxy} wasmPaths=${String(w.wasmPaths)}`);
 
   const docs = Array.from({ length: Math.max(COLD_SAMPLES, INCREMENTAL_SAMPLES) }, (_, i) =>
     documentOf(i),

@@ -1,0 +1,7 @@
+{
+  "requests": [
+    "http://localhost:5202/hfmodels/jiting/xlm-roberta-base-ner-hrl_onnx/onnx/model_quantized.onnx",
+    "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.26.0-dev.20260416-b7804b056c/dist/ort-wasm-simd-threaded.asyncify.wasm"
+  ],
+  "log": "starting\u2026\ndevice=wasm threads=8 crossOriginIsolated=true\nmodel loaded in 21296 ms (excluded from all timings)\nort resolved: numThreads=8 simd=undefined proxy=false\nwindow  400: 7 chunks | cold p50 668 p95 784 | incr p50 105 p95 224 (1.27 re-inferred) | 95ms/inference"
+}

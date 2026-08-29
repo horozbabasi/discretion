@@ -28,7 +28,6 @@ import { buildStructureIndex, type StructureIndex, type StructuredSlot } from '.
 import { buildTriggerIndex, foldForMatch, type LanguageTriggers, type TriggerIndex } from './triggers.js';
 import { profileDocument, type DomainLexicon } from './documentProfile.js';
 import { NEGATIVE_RULES, ruleApplies } from './negativeRules.js';
-import { isGazetteerType, lookupGazetteer } from '../gazetteer/index.js';
 import type {
   ContextContribution,
   ContextScoredCandidate,
@@ -121,11 +120,6 @@ const FORMAT_WEIGHTS: Partial<Record<DocumentFormat, Partial<Record<EntityType, 
 export interface ContextOptions {
   readonly triggerLexicons?: readonly LanguageTriggers[];
   readonly domainLexicon?: DomainLexicon;
-  /**
-   * Consult the Stage 2b gazetteers. Default true. Turned off in focused
-   * tests, and by callers measuring the pipeline without them.
-   */
-  readonly useGazetteers?: boolean;
 }
 
 export interface ContextAnalysis {
@@ -358,10 +352,15 @@ export function analyzeContext(text: string, options: ContextOptions = {}): Cont
     candidate: PipelineCandidate,
     out: ContextContribution[],
   ): void {
-    if (options.useGazetteers === false) return;
-    if (!isGazetteerType(candidate.type)) return;
-
-    const hit = lookupGazetteer(candidate.text, candidate.type);
+    // READ, not looked up. The lookup moved to Stage 2b (ner/stage2b.ts),
+    // where SPEC puts it - "checked in parallel with the model" - and the
+    // static import that used to be here is why 3.4 MB of Bloom filters were
+    // linked into the content script to serve types only the model produces.
+    //
+    // Nothing is lost by reading: no Stage 1 detector declares PERSON, ORG or
+    // LOCATION (31 types, verified by enumeration), so no Stage 1 candidate
+    // could ever have reached the lookup that used to be here.
+    const hit = 'gazetteer' in candidate ? candidate.gazetteer : undefined;
     if (hit === undefined) return;
 
     // The matched name is the candidate's own text, so it must NOT go in the

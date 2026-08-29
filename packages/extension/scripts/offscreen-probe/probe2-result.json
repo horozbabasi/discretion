@@ -1,0 +1,61 @@
+{
+  "idleSeconds": 150,
+  "cspCases": {
+    "none": {
+      "sentPolicy": null,
+      "ok": true,
+      "world": "content-script-isolated",
+      "crossOriginIsolated": false,
+      "hasSharedArrayBuffer": false,
+      "wasm": {
+        "compiled": true,
+        "result": 42
+      },
+      "streaming": {
+        "compiled": true
+      },
+      "pageCsp": null
+    },
+    "self-only": {
+      "sentPolicy": "script-src 'self'; object-src 'none'",
+      "ok": true,
+      "world": "content-script-isolated",
+      "crossOriginIsolated": false,
+      "hasSharedArrayBuffer": false,
+      "wasm": {
+        "compiled": false,
+        "error": "WebAssembly.Module(): "
+      },
+      "streaming": {
+        "compiled": false,
+        "error": "WebAssembly.compileStreaming(): "
+      },
+      "pageCsp": null
+    },
+    "strict-dynamic-nonce": {
+      "sentPolicy": "script-src 'nonce-abc123' 'strict-dynamic' 'unsafe-inline' https:; object-src 'none'; base-uri 'none'",
+      "ok": true,
+      "world": "content-script-isolated",
+      "crossOriginIsolated": false,
+      "hasSharedArrayBuffer": false,
+      "wasm": {
+        "compiled": false,
+        "error": "WebAssembly.Module(): "
+      },
+      "streaming": {
+        "compiled": false,
+        "error": "WebAssembly.compileStreaming(): "
+      },
+      "pageCsp": null
+    }
+  },
+  "control": {
+    "hasDocumentBefore": false,
+    "hasDocumentAfter": false,
+    "swBootsBefore": 1,
+    "swBootsAfter": 1,
+    "swBootNonceBefore": "sw-4sv8obpveyt-1787967508343",
+    "swBootNonceAfter": "sw-4sv8obpveyt-1787967508343",
+    "serviceWorkerRestarted": false
+  }
+}

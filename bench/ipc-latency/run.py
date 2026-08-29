@@ -16,7 +16,6 @@
 import http.server
 import json
 import os
-import socket
 import socketserver
 import subprocess
 import sys
@@ -25,6 +24,8 @@ import time
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright
+
+import baseline_server
 
 REPO = Path(__file__).resolve().parents[2]
 BUILD = REPO / 'packages' / 'extension' / 'build'
@@ -113,47 +114,22 @@ def measure_ipc():
 
 
 def measure_baseline():
-    """Re-runs bench/wasm-latency in the same session, at window 400 only."""
-    harness = REPO / 'bench' / 'wasm-latency'
-    server = subprocess.Popen(
-        ['npx.cmd', 'vite', '--port', str(BASELINE_PORT), '--strictPort'],
-        cwd=harness, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=False,
-    )
+    """Re-runs bench/wasm-latency at window 400, with no bundler in the path."""
+    httpd = baseline_server.serve(BASELINE_PORT)
     try:
-        # POLLED, not slept. A fixed 6-second sleep worked until it did not:
-        # under load, npx plus vite took longer, the page load was refused, and
-        # the whole 900-second measurement then timed out waiting for a result
-        # that could never arrive. It also leaves an orphan holding the port
-        # for the next run, which --strictPort turns into a second failure with
-        # a different-looking cause.
-        # Probed as 'localhost', NOT '127.0.0.1'. Vite binds IPv6-only here, so
-        # an IPv4 probe never connects - and the first version of this check
-        # turned a perfectly healthy server into a hard failure, which is the
-        # check being wrong rather than the thing it checks. Playwright
-        # resolves 'localhost' the same way the probe now does.
-        deadline = time.time() + 90
-        while time.time() < deadline:
-            try:
-                with socket.create_connection(('localhost', BASELINE_PORT), timeout=1):
-                    break
-            except OSError:
-                time.sleep(0.5)
-        else:
-            raise RuntimeError(f'the baseline harness never listened on {BASELINE_PORT}')
         with sync_playwright() as p:
             b = p.chromium.launch(headless=False, channel='msedge')
             page = b.new_page()
-            page.goto(f'http://localhost:{BASELINE_PORT}/?windows=400', wait_until='domcontentloaded')
+            page.on('console', lambda m: print('  [console]', m.text[:200]))
+            page.on('requestfailed', lambda r: print('  [failed]', r.url[:120], r.failure))
+            page.goto(f'http://127.0.0.1:{BASELINE_PORT}/?windows=400', wait_until='domcontentloaded')
             page.wait_for_selector('#out[data-done="1"]', timeout=900_000)
             got = page.evaluate('window.__BENCH__')
             b.close()
             return got
     finally:
-        server.terminate()
-        try:
-            server.wait(timeout=15)
-        except Exception:
-            server.kill()
+        httpd.shutdown()
+        httpd.server_close()
 
 
 RESULTS['machine'] = machine_state()

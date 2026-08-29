@@ -1,0 +1,41 @@
+{
+  "machine": {
+    "batteryStatus": "1",
+    "batteryPercent": "14"
+  },
+  "baseline": null,
+  "ipc": {
+    "topology": "content script -> port -> offscreen document (one crossing per recognize)",
+    "status": {
+      "ready": true,
+      "threads": 8,
+      "crossOriginIsolated": true,
+      "modelId": "xlm-roberta-base-ner-hrl_onnx@q8",
+      "wasmPaths": "chrome-extension://bmaabloolmkdkmmccbkggfkkfeppkdjk/ort/",
+      "simd": null,
+      "proxy": false,
+      "loadedRuntimeFiles": [],
+      "loadMs": 7440,
+      "error": null
+    },
+    "ipcRoundTripMs": {
+      "p50": 0.5,
+      "p95": 1,
+      "min": 0.20000004768371582,
+      "max": 1.5
+    },
+    "cold": {
+      "p50": 196.70000004768372,
+      "p95": 401.2999999523163,
+      "min": 176.39999985694885,
+      "max": 401.2999999523163
+    },
+    "incremental": {
+      "p50": 100.5,
+      "p95": 201.59999990463257,
+      "min": 79.59999990463257,
+      "max": 201.59999990463257
+    },
+    "meanEntitiesPerDocument": 57.2
+  }
+}

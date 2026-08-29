@@ -45,3 +45,11 @@ packages/extension/build/
 
 # Live-probe bundle and its browser profile (dev tool; never shipped)
 packages/extension/.probe/
+
+# Benchmark-local copy of the onnxruntime binaries (77 MB; copied from
+# node_modules so the harness measures the same bytes the extension ships).
+bench/wasm-latency/public/
+
+# Python bytecode from the benchmark helpers.
+__pycache__/
+*.pyc

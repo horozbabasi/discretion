@@ -4329,6 +4329,80 @@ Vite's `assetsInlineLimit: 0` was tried first and changed nothing, because the
 inlining is inside the distributed package rather than something the bundler
 chose. That is recorded because the wrong hypothesis cost a build cycle and the
 right one was one export-map read away.
+### D41f - The IPC cost, measured. And a 3x cold-path gap left OPEN (M9)
+
+Both paths re-measured after wiring, in the same machine state, at window 400
+on 2,000-character documents - the same benchmark on both sides of the process
+boundary (`bench/ipc-latency/run.py`).
+
+| | in page (pre-IPC) | offscreen, via port | delta |
+| --- | ---: | ---: | ---: |
+| cold p50 | 638 ms | **~205 ms** | -433 ms |
+| cold p95 | 714 ms | ~452 ms | |
+| **incremental p50** | **97 ms** | **~104 ms** | **+7 ms** |
+| incremental p95 | 204 ms | ~213 ms | +9 ms |
+| per inference | 91 ms | ~29 ms | |
+| model load, paid once | 4,184 ms | 7,440-8,366 ms | |
+
+The offscreen figures are the median across five runs (cold p50 196.7 / 204.3 /
+216.7 / 219.6 / 220; incremental p50 100.5 / 100.9 / 104.9 / 109.2 / 109.3).
+
+**THE IPC COST ITSELF IS 0.4-0.5 ms p50**, measured directly with a `status`
+call that does no model work, near-flat from 0 to 20,000 characters of payload.
+One crossing per analysis, not one per chunk (D41c). Against a ~200 ms cold
+path that is **0.25%**, and against the ~100 ms incremental path **0.5%**.
+
+**The incremental path - the one SPEC's "pressing send is instant" rests on -
+is unchanged within noise: +7 ms.** That is the number the wiring was at risk
+of ruining, and it did not.
+
+**THE COLD PATH IS 3x FASTER THROUGH IPC, AND THAT IS NOT REPORTED AS A WIN.**
+A measurement far better than the thing it is compared against is a defect
+report about the comparison. Chasing it found one real defect - the harness was
+fetching its runtime from a CDN (D40b) - and fixing that changed the load time
+from 21,296 ms to 4,184 ms and the inference time not at all: 640.9 ms before,
+638 ms after.
+
+So the gap survives a like-for-like comparison, and these explanations are
+REFUTED rather than untested:
+
+- *Different weights.* Both load `model_quantized.onnx`; the extension has no
+  other file to load. Confirmed by watching the harness's network.
+- *Different runtime source.* Local versus CDN moved load time by 17 seconds
+  and inference by 3 ms.
+- *Different ORT variant.* Both use asyncify. The extension's was established
+  by accident: shipping only two variants failed with a request for
+  `ort-wasm-simd-threaded.asyncify.mjs`. The harness's is in the CDN URL it
+  fetched.
+- *Different work.* Both produce 7 chunks over the same 2,576 characters (core
+  snaps to word boundaries, so 378x6+308 against 400x6+176).
+- *Cache pollution on the offscreen side.* The first version of the benchmark
+  warmed on `docs[0]` and then measured it, reporting 1.1 ms for a
+  2,000-character document. Fixed by warming on a document outside the measured
+  set and dropping the port between samples; cold `min` is now 182 ms.
+- *Different threading.* Both report 8 threads and `crossOriginIsolated: true`;
+  both report `proxy: false`.
+
+**LEFT OPEN, DELIBERATELY.** D27 is this project's record of what attributing a
+4-6x latency swing to a plausible-sounding cause on a single co-occurrence
+costs, and the correction that followed. There is no candidate here that has
+been tested and held. Naming one now would be that mistake with better
+manners.
+
+What it does NOT affect: the decision, which was made on eviction cost and
+CSP, not on speed; the incremental figure, which is the interactive one and is
+flat; and the IPC overhead, which is isolated and small. What it DOES affect is
+BENCHMARKS.md's cold-path numbers, which describe the in-page harness and are
+now known to be pessimistic by roughly 3x relative to what the extension does -
+in the safe direction, but wrong.
+
+**One instrumentation attempt failed and is recorded because its failure mode
+is instructive.** `OffscreenStatus` briefly reported which runtime files the
+document had fetched, read from `performance.getEntriesByType('resource')`. It
+returned an empty array every time: onnxruntime-web fetches inside a Web
+Worker, which has its own Resource Timing buffer. A field that can only ever
+report "nothing was fetched" reads as evidence and is an artefact of where it
+was measured, so it was removed rather than kept and caveated.
 
 ## Standing contracts (established in M1)
 

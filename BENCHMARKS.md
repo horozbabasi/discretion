@@ -815,3 +815,46 @@ None of these is resolved, and none should be read as acceptable:
 | **Mid-range calibration is thinly fitted** | 4,755 of 5,416 held-out observations sit in the top bucket | The bands that most need accurate confidence have the least data to fit. More corpus depth in 0.3–0.8 is the fix, not retuning bins until the table looks better. |
 | **p50 latency** | 255.8 ms vs 250 ms budget | Missed under conditions favourable on *both* axes: hardware above SPEC's mid-range reference, and onnxruntime-node rather than the slower WASM the extension will use. The gap is a floor. |
 | **p99 latency on cold paste** | 601.6 ms | Hidden for typed input by debounced incremental detection with content-hash caching, but the paste guard has no pre-computed result for a large cold paste. That is the p99 path, and it is M9's. |
+
+## M9 - Stage 2 through the offscreen boundary
+
+Measured after moving the model into an offscreen document, both paths, same
+machine state, window 400, 2,000-character documents
+(`bench/ipc-latency/run.py`; raw results in `bench/ipc-latency/result.json`).
+
+| | in page (pre-IPC) | offscreen, via port | delta |
+| --- | ---: | ---: | ---: |
+| cold p50 | 638 ms | ~205 ms | -433 ms |
+| cold p95 | 714 ms | ~452 ms | |
+| **incremental p50** | **97 ms** | **~104 ms** | **+7 ms** |
+| incremental p95 | 204 ms | ~213 ms | +9 ms |
+| model load, once per document | 4,184 ms | 7,440-8,366 ms | |
+
+The IPC crossing itself is **p50 0.4-0.5 ms**, measured with a call that does
+no model work, near-flat from 0 to 20,000 characters. There is ONE crossing per
+analysis rather than one per chunk, so it is 0.25% of the cold path and 0.5% of
+the incremental path. The incremental path is the one SPEC's "pressing send is
+instant" rests on, and it is unchanged within noise.
+
+**TWO CORRECTIONS TO EVERY WASM FIGURE PUBLISHED ABOVE THIS SECTION.**
+
+1. **The harness was fetching its runtime from `cdn.jsdelivr.net`.** It never
+   set `wasmPaths`, so onnxruntime-web resolved its `.wasm` remotely - in a
+   project whose first non-negotiable is zero runtime network access. Fixed;
+   the binaries are now served from `node_modules`. It moved model load from
+   21,296 ms to 4,184 ms and inference by 3 ms, so the M6/M8/M9 comparisons
+   between models and runtimes stand, but they were taken against a build that
+   does not ship.
+
+2. **The cold-path numbers are pessimistic by roughly 3x** relative to what the
+   extension actually does, for reasons not yet established. See ARCHITECTURE.md
+   D41f: different weights, runtime source, ORT variant, chunk count and thread
+   count are all refuted by measurement, and no remaining candidate has been
+   tested. It is left open rather than attributed, which is D27's lesson.
+
+**The incremental path only became real in M9.** ARCHITECTURE.md D28 reasons
+about window size using "the content-hash cache", and the incremental figures
+throughout this file were measured against a harness that SIMULATED one -
+`recognize()` re-inferred every chunk on every call. The cache now exists
+(`packages/core/src/ner/chunkCache.ts`), per-connection so its keys, which are
+the user's text, die with the session.

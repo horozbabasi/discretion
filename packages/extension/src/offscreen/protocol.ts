@@ -63,6 +63,17 @@ export interface OffscreenStatus {
   /** `simd` is a tri-state in the runtime's own types: boolean or a mode name. */
   readonly simd: string | null;
   readonly proxy: boolean | null;
+  // NO `loadedRuntimeFiles` FIELD, and the absence is deliberate. Reading
+  // `performance.getEntriesByType('resource')` here to report which
+  // onnxruntime-web variant loaded returns an empty array every time:
+  // onnxruntime-web fetches its .mjs and .wasm inside a Web Worker, which has
+  // its own Resource Timing buffer that the document cannot see. A field that
+  // can only ever report "nothing was fetched" is worse than no field - it
+  // reads as evidence and is an artefact of where it was measured.
+  //
+  // The variant in force was established a different way, and by accident:
+  // shipping only two variants failed with a request for
+  // `ort-wasm-simd-threaded.asyncify.mjs`, which is what names it.
   readonly loadMs: number | null;
   /** Operator-facing. Never contains page text. */
   readonly error: string | null;

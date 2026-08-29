@@ -84,7 +84,7 @@ async function main() {
   // The SAME binaries the extension bundles. Left unset, the runtime fetches
   // them from cdn.jsdelivr.net - which this harness was doing, silently, so
   // every figure it published described a build that does not ship.
-  env.backends.onnx.wasm.wasmPaths = '/ort/';
+  env.backends.onnx.wasm.wasmPaths = '/hfmodels/ort/';
 
   const device = new URLSearchParams(location.search).get('device') ?? 'wasm';
   log(

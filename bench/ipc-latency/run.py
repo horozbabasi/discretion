@@ -16,6 +16,7 @@
 import http.server
 import json
 import os
+import socket
 import socketserver
 import subprocess
 import sys
@@ -119,7 +120,26 @@ def measure_baseline():
         cwd=harness, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=False,
     )
     try:
-        time.sleep(6)
+        # POLLED, not slept. A fixed 6-second sleep worked until it did not:
+        # under load, npx plus vite took longer, the page load was refused, and
+        # the whole 900-second measurement then timed out waiting for a result
+        # that could never arrive. It also leaves an orphan holding the port
+        # for the next run, which --strictPort turns into a second failure with
+        # a different-looking cause.
+        # Probed as 'localhost', NOT '127.0.0.1'. Vite binds IPv6-only here, so
+        # an IPv4 probe never connects - and the first version of this check
+        # turned a perfectly healthy server into a hard failure, which is the
+        # check being wrong rather than the thing it checks. Playwright
+        # resolves 'localhost' the same way the probe now does.
+        deadline = time.time() + 90
+        while time.time() < deadline:
+            try:
+                with socket.create_connection(('localhost', BASELINE_PORT), timeout=1):
+                    break
+            except OSError:
+                time.sleep(0.5)
+        else:
+            raise RuntimeError(f'the baseline harness never listened on {BASELINE_PORT}')
         with sync_playwright() as p:
             b = p.chromium.launch(headless=False, channel='msedge')
             page = b.new_page()
@@ -130,6 +150,10 @@ def measure_baseline():
             return got
     finally:
         server.terminate()
+        try:
+            server.wait(timeout=15)
+        except Exception:
+            server.kill()
 
 
 RESULTS['machine'] = machine_state()

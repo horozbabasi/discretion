@@ -76,6 +76,7 @@ export function resolveUnique<E extends Element>(
 ): Resolution<ElementHandle<E>> {
   const triedStrategies = strategies.map((s) => s.id);
   const invariantFailures: string[] = [];
+  let rejectedCandidate: Element | null = null;
 
   for (const tier of TIER_ORDER) {
     const matched = collectTier(strategies, tier, root);
@@ -97,7 +98,10 @@ export function resolveUnique<E extends Element>(
     for (const candidate of matched) {
       const broken = invariants.filter((inv) => !inv.holds(candidate.node));
       if (broken.length === 0) candidates.push(candidate);
-      else invariantFailures.push(`${tier}/${candidate.strategyId}: ${broken.map((b) => b.id).join(', ')}`);
+      else {
+        invariantFailures.push(`${tier}/${candidate.strategyId}: ${broken.map((b) => b.id).join(', ')}`);
+        rejectedCandidate ??= candidate.node;
+      }
     }
     if (candidates.length === 0) continue;
 
@@ -130,6 +134,10 @@ export function resolveUnique<E extends Element>(
         target,
         detail: `Every candidate failed its invariants (${invariantFailures.join('; ')}).`,
         triedStrategies,
+        // The element that was found and rejected, so a caller can decide
+        // whether it is absent BY DESIGN by inspecting THIS node rather than
+        // one it looked up separately.
+        ...(rejectedCandidate === null ? {} : { rejectedCandidate }),
       },
     };
   }

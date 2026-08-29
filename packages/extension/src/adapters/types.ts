@@ -120,6 +120,17 @@ export interface ResolutionFailure {
    */
   readonly detail: string;
   readonly triedStrategies: readonly string[];
+  /**
+   * The candidate that was found and then rejected, when `kind` is
+   * 'invariant'.
+   *
+   * Carried so that a caller deciding whether an element is absent BY DESIGN
+   * can bind that judgement to the element the failing resolution was actually
+   * about. Without it, the only way to hold the rejected element is to look it
+   * up again independently - and an evidence check performed on a DIFFERENT
+   * element than the one that failed is not evidence about the failure.
+   */
+  readonly rejectedCandidate?: Element;
 }
 
 export type Resolution<T> =

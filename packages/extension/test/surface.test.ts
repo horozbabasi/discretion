@@ -39,12 +39,16 @@ const REVIEW: ReviewContent = {
   ],
 };
 
-function makeSurface(): {
-  surface: Surface;
-  root: ShadowRoot;
-  calls: { confirm: number; cancel: number; toggled: string[] };
-} {
-  const calls = { confirm: 0, cancel: 0, toggled: [] as string[] };
+interface Calls {
+  confirm: number;
+  cancel: number;
+  toggled: string[];
+  anchorLost: number;
+  surfaceLost: number;
+}
+
+function makeSurface(): { surface: Surface; root: ShadowRoot; calls: Calls } {
+  const calls: Calls = { confirm: 0, cancel: 0, toggled: [], anchorLost: 0, surfaceLost: 0 };
   const surface = new Surface(document, {
     onConfirm: () => {
       calls.confirm += 1;
@@ -53,6 +57,12 @@ function makeSurface(): {
       calls.cancel += 1;
     },
     onToggleItem: (id) => calls.toggled.push(id),
+    onAnchorLost: () => {
+      calls.anchorLost += 1;
+    },
+    onSurfaceLost: () => {
+      calls.surfaceLost += 1;
+    },
   });
   surface.mount();
   const root = surface.shadowRootForTesting();
@@ -85,14 +95,40 @@ describe('isolation', () => {
     expect(document.body.textContent).not.toContain('Mask and send');
   });
 
-  it('resets inherited properties at :host, which the shadow boundary does not', () => {
+  it('declares every structural property with !important, which is what wins the cascade', () => {
     // The half of SPEC's requirement that shadow DOM does NOT give for free:
-    // font-family, colour, line-height and letter-spacing all inherit across
-    // the boundary, so a host page can restyle the panel without ever
-    // selecting it.
+    // font-family, colour, line-height, direction and letter-spacing all
+    // inherit across the boundary, so a host page can restyle the panel
+    // without ever selecting it.
+    //
+    // WHAT THIS TEST CAN AND CANNOT ASSERT. It reads the stylesheet, not the
+    // rendering: jsdom implements no cascade for shadow trees, so a
+    // computed-style assertion here would pass whatever the CSS said and mean
+    // nothing. What it checks is the mechanism the guarantee actually rests
+    // on - the encapsulation-context step of the cascade puts the OUTER tree
+    // ahead of the inner one for NORMAL declarations, so a bare `* { }` in the
+    // page beats anything declared here that is not !important. The previous
+    // version of this test looked for the substring `all: initial`, which was
+    // present and losing.
     const { root } = makeSurface();
-    const style = root.querySelector('style');
-    expect(style?.textContent).toContain('all: initial');
+    const css = root.querySelector('style')?.textContent ?? '';
+    const hostBlocks = css.match(/:host\s*\{[^}]*\}/gu)?.join('\n') ?? '';
+    expect(hostBlocks).toContain('all: initial !important');
+    for (const property of [
+      'position',
+      'z-index',
+      'display',
+      'pointer-events',
+      // Not reset by `all`, and both inherit: an RTL page would otherwise
+      // mirror the panel.
+      'direction',
+      'unicode-bidi',
+    ]) {
+      expect(hostBlocks).toMatch(new RegExp(`${property}\\s*:[^;]*!important`, 'u'));
+    }
+    // The hidden state has to survive the page too, or a page overriding
+    // display leaves an empty band pinned over the composer.
+    expect(css).toMatch(/data-hidden='true'\]\)\s*\{\s*display:\s*none\s*!important/u);
   });
 
   it('never uses innerHTML', () => {
@@ -160,10 +196,10 @@ describe('the three states', () => {
     // gets missed later.
     const composer = document.createElement('div');
     document.body.append(composer);
-    const evidence = sendControlNotExpected(composer, '') as Inapplicable;
+    const evidence = sendControlNotExpected(composer, () => '') as Inapplicable;
 
     const { surface, root } = makeSurface();
-    surface.setState({ kind: 'inactive', evidence });
+    surface.setState({ kind: 'inactive', evidence: [evidence] });
 
     const host = document.querySelector('privacyshield-surface');
     expect(host?.getAttribute('data-hidden')).toBe('true');
@@ -308,5 +344,265 @@ describe('theme', () => {
     const host = document.querySelector('privacyshield-surface');
     expect(host?.getAttribute('data-theme')).toBe('dark');
     vi.restoreAllMocks();
+  });
+});
+
+describe('semantics do not survive a state change', () => {
+  const FAILURE = { kind: 'not-found', target: 'composer', detail: 'x', triedStrategies: [] } as const;
+
+  it('drops the dialog role and label when review becomes degraded', () => {
+    // Each renderer used to set only the attributes it cared about, so
+    // renderDegraded left the dialog's aria-label in place and the alert was
+    // announced as "PrivacyShield: review what will be masked before sending"
+    // - a label describing a panel that is no longer there, read out instead
+    // of the failure that replaced it.
+    const { surface, root } = makeSurface();
+    surface.setState({ kind: 'review', content: REVIEW });
+    surface.setState({ kind: 'degraded', failures: [FAILURE] });
+
+    const panel = root.querySelector('.panel');
+    expect(panel?.getAttribute('role')).toBe('alert');
+    expect(panel?.getAttribute('aria-label')).toBeNull();
+    expect(panel?.getAttribute('aria-modal')).toBeNull();
+  });
+
+  it('drops the alert role when degraded becomes review', () => {
+    const { surface, root } = makeSurface();
+    surface.setState({ kind: 'degraded', failures: [FAILURE] });
+    surface.setState({ kind: 'review', content: REVIEW });
+
+    const panel = root.querySelector('.panel');
+    expect(panel?.getAttribute('role')).toBe('dialog');
+    expect(panel?.getAttribute('aria-live')).toBeNull();
+    expect(panel?.getAttribute('aria-atomic')).toBeNull();
+  });
+
+  it('leaves no role at all on a hidden panel', () => {
+    // A role="dialog" on a display:none panel is a dialog the accessibility
+    // tree still knows about and the user cannot reach.
+    const { surface, root } = makeSurface();
+    surface.setState({ kind: 'review', content: REVIEW });
+    surface.setState({ kind: 'hidden' });
+
+    const panel = root.querySelector('.panel');
+    expect(panel?.getAttribute('role')).toBeNull();
+    expect(panel?.getAttribute('aria-label')).toBeNull();
+    expect(panel?.hasAttribute('tabindex')).toBe(false);
+  });
+});
+
+describe('focus moves on transitions, not on paints', () => {
+  const FAILURE = { kind: 'not-found', target: 'composer', detail: 'x', triedStrategies: [] } as const;
+
+  it('does not pull focus back to the panel when a review re-renders', () => {
+    // Toggling an item re-renders the list. Taking focus on every render would
+    // drag the user off the button they just pressed, back to the panel, so
+    // reverting three detections in a row means finding your place three
+    // times.
+    const { surface, root } = makeSurface();
+    surface.setState({ kind: 'review', content: REVIEW });
+
+    const toggle = root.querySelectorAll('button')[0] as HTMLButtonElement;
+    toggle.focus();
+    expect(root.activeElement).toBe(toggle);
+
+    // Same kind, new content - exactly what a revert produces.
+    surface.setState({ kind: 'review', content: { ...REVIEW, exposureScore: 40 } });
+    expect(root.activeElement).not.toBe(root.querySelector('.panel'));
+  });
+
+  it('returns focus when review becomes degraded, not only when it hides', () => {
+    // review -> degraded is a real transition out of a blocking panel. Leaving
+    // focus on a panel whose contents were just replaced by an alert strands
+    // the user inside a live region with nothing to operate.
+    const { surface } = makeSurface();
+    const before = document.createElement('input');
+    document.body.append(before);
+    before.focus();
+
+    surface.setState({ kind: 'review', content: REVIEW });
+    surface.setState({ kind: 'degraded', failures: [FAILURE] });
+    expect(document.activeElement).toBe(before);
+  });
+
+  it('returns focus on destroy', () => {
+    // If the host goes while the panel holds focus, the active element becomes
+    // <body> and a keyboard user loses their place with no way back.
+    const { surface } = makeSurface();
+    const before = document.createElement('input');
+    document.body.append(before);
+    before.focus();
+
+    surface.setState({ kind: 'review', content: REVIEW });
+    surface.destroy();
+    expect(document.activeElement).toBe(before);
+  });
+});
+
+describe('the anchor is borrowed, and the page takes it back', () => {
+  // D34i at the surface layer. The panel is positioned from the composer's
+  // rect, so it depends on that element being resolved AND connected - and on
+  // all three sites the composer is replaced out from under us: Gemini swaps
+  // it on SPA navigation, ChatGPT on a conversation switch.
+
+  function anchored(): { surface: Surface; calls: Calls; composer: HTMLElement } {
+    const { surface, calls } = makeSurface();
+    const composer = document.createElement('div');
+    composer.getBoundingClientRect = () =>
+      ({ left: 100, top: 300, right: 500, bottom: 340, width: 400, height: 40 }) as DOMRect;
+    document.body.append(composer);
+    surface.setAnchor(composer);
+    return { surface, calls, composer };
+  }
+
+  it('reports the loss instead of silently measuring a detached node', () => {
+    // A detached element still answers getBoundingClientRect() - with all
+    // zeros. Nothing throws and nothing looks wrong: the panel just pins
+    // itself to the fallback position and stays there forever, because nothing
+    // would ever notice the anchor had died.
+    const { surface, calls, composer } = anchored();
+    surface.setState({ kind: 'review', content: REVIEW });
+    expect(calls.anchorLost).toBe(0);
+
+    composer.remove();
+    // Any measurement afterwards - a scroll, a resize, a re-render - finds it.
+    surface.setState({ kind: 'review', content: { ...REVIEW, exposureScore: 12 } });
+    expect(calls.anchorLost).toBe(1);
+  });
+
+  it('reports the loss only once, not on every scroll event afterwards', () => {
+    const { surface, calls, composer } = anchored();
+    surface.setState({ kind: 'review', content: REVIEW });
+    composer.remove();
+    surface.setState({ kind: 'review', content: { ...REVIEW, exposureScore: 12 } });
+    surface.setState({ kind: 'review', content: { ...REVIEW, exposureScore: 13 } });
+    expect(calls.anchorLost).toBe(1);
+  });
+
+  it('keeps a blocking panel VISIBLE when the anchor dies', () => {
+    // Hiding a panel because we lost track of an element would be fail-open:
+    // the send it was guarding would proceed unreviewed.
+    const { surface, composer } = anchored();
+    surface.setState({ kind: 'review', content: REVIEW });
+    composer.remove();
+    surface.setState({ kind: 'review', content: { ...REVIEW, exposureScore: 12 } });
+
+    const host = document.querySelector('privacyshield-surface') as HTMLElement;
+    expect(host.getAttribute('data-hidden')).toBe('false');
+    expect(host.style.left).toBe('50%');
+  });
+
+  it('refuses a detached element as an anchor in the first place', () => {
+    // Accepting one would defer the discovery to the next measurement and then
+    // report the loss as if it had just happened, when in fact the caller
+    // handed over a dead node.
+    const { surface, calls } = makeSurface();
+    const dead = document.createElement('div');
+    surface.setAnchor(dead);
+    surface.setState({ kind: 'review', content: REVIEW });
+    // Nothing was lost - nothing was ever accepted.
+    expect(calls.anchorLost).toBe(0);
+    const host = document.querySelector('privacyshield-surface') as HTMLElement;
+    expect(host.style.left).toBe('50%');
+  });
+
+  it('follows a REPLACEMENT anchor once the owner re-resolves', () => {
+    const { surface, composer } = anchored();
+    surface.setState({ kind: 'review', content: REVIEW });
+    composer.remove();
+
+    const replacement = document.createElement('div');
+    replacement.getBoundingClientRect = () =>
+      ({ left: 40, top: 500, right: 360, bottom: 540, width: 320, height: 40 }) as DOMRect;
+    document.body.append(replacement);
+    surface.setAnchor(replacement);
+
+    const host = document.querySelector('privacyshield-surface') as HTMLElement;
+    expect(host.style.left).toBe('40px');
+    expect(host.style.width).toBe('320px');
+  });
+});
+
+describe('positioning stays inside the viewport', () => {
+  it('does not shrink below a readable width', () => {
+    // The panel carries a blocking decision. Matching a very narrow composer
+    // exactly would produce a panel too narrow to read the decision in, which
+    // is worse than a panel slightly wider than the thing it points at.
+    const { surface } = makeSurface();
+    const narrow = document.createElement('div');
+    narrow.getBoundingClientRect = () =>
+      ({ left: 10, top: 300, right: 90, bottom: 340, width: 80, height: 40 }) as DOMRect;
+    document.body.append(narrow);
+    surface.setAnchor(narrow);
+    surface.setState({ kind: 'review', content: REVIEW });
+
+    const host = document.querySelector('privacyshield-surface') as HTMLElement;
+    expect(Number.parseInt(host.style.width, 10)).toBeGreaterThanOrEqual(240);
+  });
+
+  function anchorAt(rect: Partial<DOMRect>): HTMLElement {
+    const composer = document.createElement('div');
+    composer.getBoundingClientRect = () =>
+      ({ left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0, ...rect }) as DOMRect;
+    document.body.append(composer);
+    return composer;
+  }
+
+  it('clamps a composer that starts off the left edge', () => {
+    // A horizontally scrolled page can put the composer partly off-screen. A
+    // panel positioned faithfully to it would be partly unreachable, with no
+    // scrollbar to reach it, because the host is fixed.
+    const { surface } = makeSurface();
+    surface.setAnchor(
+      anchorAt({ left: -220, top: 300, right: 180, bottom: 340, width: 400, height: 40 }),
+    );
+    surface.setState({ kind: 'review', content: REVIEW });
+
+    const host = document.querySelector('privacyshield-surface') as HTMLElement;
+    expect(Number.parseInt(host.style.left, 10)).toBeGreaterThanOrEqual(0);
+  });
+
+  it('clamps a composer wider than the window', () => {
+    const { surface } = makeSurface();
+    const wide = window.innerWidth + 400;
+    surface.setAnchor(
+      anchorAt({ left: 0, top: 300, right: wide, bottom: 340, width: wide, height: 40 }),
+    );
+    surface.setState({ kind: 'review', content: REVIEW });
+
+    const host = document.querySelector('privacyshield-surface') as HTMLElement;
+    expect(Number.parseInt(host.style.width, 10)).toBeLessThanOrEqual(window.innerWidth);
+  });
+});
+
+describe('stacking and survival bounds', () => {
+  it('declares itself a manual popover so it renders in the top layer', () => {
+    // z-index cannot win this: 2147483000 loses to 2147483647, and a page
+    // transform on <body> or <html> would take the fixed-positioning
+    // containing block away entirely. A top-layer box is positioned against
+    // the viewport and paints above every stacking context in the document.
+    // "manual" because an auto popover light-dismisses on an outside click,
+    // and a panel blocking a send must not vanish because the user clicked the
+    // page behind it.
+    makeSurface();
+    const host = document.querySelector('privacyshield-surface') as HTMLElement;
+    expect(host.getAttribute('popover')).toBe('manual');
+  });
+
+  it('gives up re-attaching after a bound, and says so', async () => {
+    // Unbounded re-attachment turns a page that removes unknown children on a
+    // schedule into a mutation loop that never settles. Bounded, the failure is
+    // loud: the surface is showing nothing and can no longer claim to have
+    // warned anyone.
+    const { surface, calls } = makeSurface();
+    surface.setState({ kind: 'review', content: REVIEW });
+
+    for (let attempt = 0; attempt < 40; attempt += 1) {
+      document.querySelector('privacyshield-surface')?.remove();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+    expect(calls.surfaceLost).toBe(1);
+    expect(document.querySelector('privacyshield-surface')).toBeNull();
+    surface.destroy();
   });
 });

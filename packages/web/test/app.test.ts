@@ -239,6 +239,7 @@ describe('playground app', () => {
 
     // jsdom has no elementsFromPoint; the app reads it off `document`.
     const doc = document as Document & { elementsFromPoint?: (x: number, y: number) => Element[] };
+    const realElementsFromPoint = doc.elementsFromPoint;
     doc.elementsFromPoint = () => [textarea, mark];
     try {
       textarea.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 30, clientY: 30 }));
@@ -251,7 +252,10 @@ describe('playground app', () => {
       textarea.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 1, clientY: 1 }));
       expect(tooltip.hidden).toBe(true);
     } finally {
-      delete doc.elementsFromPoint;
+      // Restored, not deleted: `delete` strips a standard method off the
+      // shared jsdom document, so a later test that expected it to exist
+      // would fail for a reason having nothing to do with itself.
+      doc.elementsFromPoint = realElementsFromPoint;
     }
   });
 });

@@ -3655,6 +3655,190 @@ then the send gate. Detection first and the surface last leaves all four
 blockers open until the end of the milestone, which is where scope gets
 cut.
 
+### D38 - Adversarial review of the surface: what it found, and what the fixes actually were (M9)
+
+Twelve findings across four groups. Recorded here rather than only in the
+diff because three of them are about the DIFFERENCE between a check that
+holds and a check that appears to hold, which is a shape that recurs.
+
+**Group 1 - the state model let a caller reach INACTIVE without observing
+anything.** Four separate paths, all closed in `surfaceState.ts`:
+
+1. *The emptiness predicate was asserted by the caller, not observed.*
+   `sendControlNotExpected(composer, text)` verified the ELEMENT and then
+   trusted a `text` argument with no established relationship to it. A caller
+   passing a live composer and `''` produced evidence about a composer that
+   had text. It now takes a reader and CALLS IT with the element it just
+   checked. A predicate whose input the caller supplies is not an
+   observation.
+2. *The disabled observer was not bound to the failure it explained.* It took
+   a loose element, so it could describe a different node than the one that
+   failed - evidence about something else entirely. `ResolutionFailure` now
+   carries `rejectedCandidate` (populated only for `invariant`, the
+   found-then-rejected case), and the observer reads the element off the
+   failure. A consequence worth naming: an adapter whose strategies filter
+   uneditable nodes out INSIDE `find()` reports `not-found`, carries no
+   candidate, and the observer correctly refuses. Gemini's do that; ChatGPT's
+   do not. The refusal is right - with no rejected candidate there is nothing
+   to have observed.
+3. *Coverage was decided on the target alone, so evidence could explain
+   failure KINDS it contradicts.* "This site renders no send control while the
+   composer is empty" would have explained an AMBIGUOUS send control - two
+   were found, so they plainly exist. That is the ambiguity the whole adapter
+   layer exists to make loud, silenced by evidence asserting the opposite.
+   Each reason now whitelists the kinds it may explain.
+4. *Nothing related evidence to the health report in TIME.* Evidence cached at
+   page load could explain a failure detected minutes later, on a page that
+   had since changed completely. They must now come from the same synchronous
+   pass (250ms, generous for a slow layout, far too small for a cache), and
+   evidence stamped AFTER the check is rejected too - it cannot have informed
+   a decision that preceded it.
+
+Also in this group: `surfaceStateFor` branched on `health.ok`, but nothing in
+`HealthReport` constrains `ok` and `failures` to agree. A self-contradictory
+report now resolves to DEGRADED rather than to whichever field was consulted
+first. And the inactive state carries the full evidence LIST rather than
+`[0]`, because indexing reports an item that may have explained nothing.
+
+**Group 2 - the isolation claim was weaker than the comment said.** The
+stylesheet wrote `all: initial` on `:host` and the header claimed it reset
+every inherited property "in one stroke". Two errors:
+
+- *The cascade, not the property.* The ENCAPSULATION CONTEXT step is evaluated
+  BEFORE specificity, and for NORMAL declarations the OUTER tree wins. So any
+  page rule matching the host - a bare `*` at specificity zero - defeated
+  everything the panel declared. Dark-mode extensions and user stylesheets
+  ship `* { ... !important }` as a matter of course. Beyond restyling, such a
+  page could override `position: fixed` (dropping the host into flow as the
+  last child of `<body>`, lengthening page scroll - the panel breaking the
+  HOST, the other half of SPEC line 293) or `display: none` on the hidden
+  state (an empty bordered band pinned over the composer, swallowing clicks).
+  Every structural declaration is now `!important`, which reverses that step.
+- *`all` is not quite "all".* It resets every property EXCEPT `direction` and
+  `unicode-bidi`, both of which inherit and both of which cross the boundary.
+  An RTL host would have mirrored the panel. Both pinned explicitly.
+
+The test for this was a substring check for `all: initial` - present, and
+losing. It now asserts that each structural property carries `!important`,
+and says in its own comment that it reads the STYLESHEET rather than the
+rendering, because jsdom implements no cascade for shadow trees and a
+computed-style assertion there would pass whatever the CSS said.
+
+**Group 3 - stacking, positioning and cost.**
+
+- `z-index: 2147483000` loses to `2147483647`, and a `transform`, `filter`,
+  `contain` or `will-change` on `<body>` or `<html>` takes the
+  fixed-positioning containing block away entirely. Both are closed by the
+  TOP LAYER: the host is a `popover="manual"`, whose containing block is the
+  viewport and which paints above every stacking context in the document.
+  "manual" rather than "auto" because an auto popover light-dismisses on an
+  outside click, and a panel blocking a send must not vanish because the user
+  clicked the page behind it. Feature-detected and the result RECORDED rather
+  than assumed, because the fallback is a real behavioural difference.
+- `reposition()` early-returned only for `hidden`, so every scroll event on an
+  INACTIVE page - the default state of every page load until the user types -
+  forced two synchronous layouts of a page we do not own. Guarded on
+  visibility, and coalesced to one measurement per frame.
+- No viewport clamping: a composer off the left edge or wider than the window
+  produced a panel partly unreachable, with no scrollbar to reach it because
+  the host is fixed. Clamped, with a readable-width floor.
+
+**Group 4 - accessibility, where the panel changed state.**
+
+- *ARIA was overwritten, never reset.* Each renderer set only what it cared
+  about, so `review -> degraded` left `role="dialog"`'s `aria-label` in place
+  and the alert was announced as "review what will be masked before sending" -
+  a label for a panel that was no longer there, read out INSTEAD of the
+  failure that replaced it. `review -> hidden` left `role="dialog"` on a
+  `display: none` panel. Semantics are now cleared before the branch.
+- *Focus was taken on every render, not on transitions.* Toggling an item
+  re-renders the list, so each revert dragged the user off the button they had
+  just pressed. Focus now moves only on the transition INTO review.
+- *Focus was returned only when the panel hid*, so `review -> degraded` left
+  the user inside a live region with nothing to operate, and `destroy()`
+  stranded them on `<body>`. Both restore now.
+- Per-item toggles all had the same accessible name when two detections shared
+  an entity type; the position is appended, after the visible text, per WCAG
+  2.5.3.
+- The reverted-item de-emphasis used `opacity`, which composites and put 13px
+  text below AA - the item the user chose to keep unmasked was the hardest to
+  read. Now a solid muted colour.
+- `.panel:focus` (not `:focus-visible`), because the panel is focused
+  PROGRAMMATICALLY and `:focus-visible` is not guaranteed to match that: the
+  indicator would have been missing at exactly the moment focus moved
+  somewhere the user did not put it.
+
+### D38a - The detached composer: D34i arriving at the surface layer (M9)
+
+Not in the review's findings; called out separately and confirmed real.
+
+The panel is positioned from the composer's bounding rect, so it depends on
+that element being resolved AND connected. On all three sites it is replaced
+mid-session - Gemini on SPA navigation, ChatGPT on a conversation switch.
+
+What happened before the fix is worse than a crash. **A detached element still
+answers `getBoundingClientRect()`, with all zeros.** Nothing throws. The
+zero-rect branch is indistinguishable from "no anchor was ever set", so the
+panel silently moved to its bottom-centre fallback and stayed there for the
+rest of the session, because nothing in the system would ever notice the
+anchor had died. A blocking review panel would have gone on pointing at
+nothing, next to a composer it no longer tracked, while every component
+reported success.
+
+Three decisions:
+
+1. **The surface detects, but does not re-resolve.** Resolution belongs to the
+   adapter; a surface that went looking for a new composer would be a second,
+   unaudited implementation of the thing D26's four constructions exist to
+   make safe. It checks `isConnected` before every measurement and reports
+   `onAnchorLost` once, and the owner re-resolves and calls `setAnchor` again.
+2. **A lost anchor never hides a visible panel.** The fallback position is
+   used and the panel STAYS UP. Hiding a blocking panel because we lost track
+   of an element is fail-open: the send it was guarding would proceed
+   unreviewed.
+3. **`setAnchor` refuses a detached element outright.** Accepting one would
+   defer the discovery to the next measurement and then report the loss as if
+   it had just happened, when in fact the caller handed over a dead node.
+
+The same reasoning covers the HOST being removed: re-attachment is now bounded
+at 20, with `onSurfaceLost` reported at the bound. Unbounded re-attachment
+against a page that removes unknown children on a schedule is a mutation loop
+that never settles; and past the bound the surface is showing nothing and can
+no longer claim to have warned anyone, which the owner must treat as blocking.
+
+### D38b - No test file in the repository was typechecked (M9)
+
+Found while fixing a review finding, and larger than the finding.
+
+The review noted that `surface-state.test.ts` had a `@ts-expect-error` pinning
+the fact that the branded `Inapplicable` type cannot be satisfied by an object
+literal - the construction that stops a caller declaring a failure "not
+applicable" without observing anything - and that the test did not test it: the
+literal's `reason` widened to `string`, so the assignment failed for the wrong
+reason and would have failed identically with the brand removed.
+
+Underneath that: every package's tsconfig includes only `src/**/*.ts`, so
+`tsc -b` never looked at a test file at all. The directive was not merely
+weak, it was never evaluated - and `@ts-expect-error` fails loudly when the
+error it expects does not occur, which is precisely the signal being thrown
+away.
+
+Fixed at the root: `tsconfig.test.json` (noEmit, not a project reference,
+since `composite` requires emit and there is nothing to emit from tests) is
+now part of `npm run typecheck`. Turning it on found three real type errors in
+existing tests, each of which had been invisible:
+
+- a forensics fixture missing two required fields, hidden because the spread
+  of a `Partial<>` made everything optional;
+- an `it.each` table whose second column - the adapter each URL must select -
+  the callback never took, so the column asserted nothing. It is now asserted;
+- a test that `delete`d `elementsFromPoint` off the shared jsdom document
+  instead of restoring the original, which would fail a later test for a
+  reason having nothing to do with itself.
+
+The brand test was then verified BY VARYING THE CONDITION rather than
+asserted: removing `readonly [InapplicableBrand]: true` fails the build with
+`TS2578: Unused '@ts-expect-error' directive`, and restoring it passes.
 
 ## Standing contracts (established in M1)
 

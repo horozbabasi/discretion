@@ -1,56 +1,58 @@
 /**
- * The panel's stylesheet, scoped entirely inside the shadow root.
+ * The panel's stylesheet, scoped inside the shadow root.
  *
  * SPEC line 293: "All injected UI inside a shadow DOM so host CSS cannot break
  * it and it cannot break the host."
  *
- * Shadow encapsulation gives the second half for free — nothing here can leak
- * out. The first half needs care that the shadow boundary does NOT give:
- * INHERITED properties still cross it. `font-family`, `color`, `line-height`,
- * `letter-spacing`, `visibility` and `direction` all inherit from the host
- * element, so a site with `body { font-family: ComicSans; letter-spacing: 3px }`
- * restyles the panel through the boundary unless every inherited property is
- * reset at `:host`.
+ * ─────────────────────────────────────────────────────────────────────────
+ * WHY EVERY STRUCTURAL DECLARATION IS `!important`, WHICH IS NOT STYLE
  *
- * `all: initial` on `:host` is the blunt instrument for that, and it is used
- * deliberately in preference to naming each property: a list of resets is a
- * list someone must keep complete, and the failure mode is silent and only
- * visible on the one site that sets the property nobody thought of.
+ * The first version of this file wrote `all: initial` on `:host` and claimed
+ * it reset every inherited property "in one stroke". That claim was wrong, and
+ * the reason is the cascade rather than the property.
+ *
+ * In the CSS cascade, the ENCAPSULATION CONTEXT step is evaluated BEFORE
+ * specificity, and for NORMAL declarations the OUTER tree wins over the inner
+ * tree. So any page rule matching the host element — including a bare `*` at
+ * specificity zero — defeats everything declared here. `!important` reverses
+ * that step: for important declarations the INNER tree wins, and there is
+ * nothing the page can write that outranks it.
+ *
+ * This is not hypothetical. Dark-mode extensions and user stylesheets inject
+ * `* { … !important }` as a matter of course. Without this, such a page:
+ *   - restyles the panel through inherited properties (the failure this file
+ *     exists to prevent), and
+ *   - can override `position: fixed`, which drops the host into flow as the
+ *     last child of <body>, adding its height to the document and lengthening
+ *     page scroll — the panel breaking the HOST, which is the other half of
+ *     SPEC line 293, and
+ *   - can override the hidden state's `display: none`, leaving an empty
+ *     bordered band pinned over the composer that swallows clicks.
+ *
+ * all is also not quite "all": it resets every property EXCEPT `direction`
+ * and `unicode-bidi`, both of which inherit and both of which cross the
+ * boundary. An RTL host would otherwise mirror the panel. They are pinned
+ * explicitly.
+ * ─────────────────────────────────────────────────────────────────────────
  */
 export const PANEL_STYLES = `
+/* The reset, alone, so the structural rule below can override the longhands
+   all expands to. Order matters here. */
+:host { all: initial !important; }
+
 :host {
-  /* Every inherited property, reset in one stroke. See the header. */
-  all: initial;
-  position: fixed;
-  z-index: 2147483000;
-  display: block;
-  /* The host box is a positioning shell only; it must never intercept
-     clicks meant for the page underneath it. The panel re-enables them. */
-  pointer-events: none;
-}
+  /* all does not touch these two, and both inherit across the boundary. */
+  direction: ltr !important;
+  unicode-bidi: isolate !important;
 
-:host([data-hidden='true']) { display: none; }
+  position: fixed !important;
+  z-index: 2147483000 !important;
+  display: block !important;
+  /* The host box is a positioning shell; it must never intercept clicks meant
+     for the page underneath. The panel re-enables them for itself. */
+  pointer-events: none !important;
 
-*, *::before, *::after { box-sizing: border-box; }
-
-.panel {
-  pointer-events: auto;
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  font-size: 13px;
-  line-height: 1.45;
-  color: var(--ps-fg);
-  background: var(--ps-bg);
-  border: 1px solid var(--ps-border);
-  border-radius: 10px;
-  box-shadow: 0 6px 24px var(--ps-shadow);
-  max-height: 45vh;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-}
-
-/* Light is the default; dark overrides. Both are explicit so neither
-   depends on what the host happens to define. */
-:host {
+  /* Custom properties are untouched by all, so the palette survives. */
   --ps-bg: #ffffff;
   --ps-fg: #1b1f24;
   --ps-muted: #5b6672;
@@ -61,6 +63,7 @@ export const PANEL_STYLES = `
   --ps-warn-fg: #7a4a12;
   --ps-warn-border: #e6c79a;
   --ps-focus: #1c4f7c;
+  --ps-max-h: 45vh;
 }
 
 :host([data-theme='dark']) {
@@ -75,6 +78,30 @@ export const PANEL_STYLES = `
   --ps-warn-border: #6b5426;
   --ps-focus: #8ab4e8;
 }
+
+:host([data-hidden='true']) { display: none !important; }
+
+*, *::before, *::after { box-sizing: border-box; }
+
+.panel {
+  pointer-events: auto;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ps-fg);
+  background: var(--ps-bg);
+  border: 1px solid var(--ps-border);
+  border-radius: 10px;
+  box-shadow: 0 6px 24px var(--ps-shadow);
+  max-height: var(--ps-max-h);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* The degraded alert offers no control and cannot be dismissed, so it must not
+   sit between the user and the page it is reporting on. Readable, and
+   transparent to the pointer. */
+:host([data-state='degraded']) .panel { pointer-events: none; }
 
 .head {
   display: flex;
@@ -98,8 +125,16 @@ export const PANEL_STYLES = `
   padding: 8px 12px;
 }
 .item + .item { border-top: 1px solid var(--ps-border); }
+
+/* Reverted items are de-emphasised with a SOLID muted colour rather than
+   opacity: opacity composites against the background and drops 13px text below
+   WCAG AA in the light theme, so the item a user chose to keep unmasked would
+   be the hardest one to read. */
 .item[data-reverted='true'] .type,
-.item[data-reverted='true'] .surrogate { opacity: 0.55; text-decoration: line-through; }
+.item[data-reverted='true'] .surrogate {
+  color: var(--ps-muted);
+  text-decoration: line-through;
+}
 
 .type { font-weight: 600; }
 .explanation { grid-column: 1 / -1; color: var(--ps-muted); font-size: 12px; }
@@ -135,14 +170,14 @@ button {
 button.primary { background: var(--ps-accent); border-color: var(--ps-accent); color: var(--ps-bg); font-weight: 600; }
 button.link { border-color: transparent; padding: 2px 6px; color: var(--ps-accent); text-decoration: underline; }
 
-/* Visible focus, per SPEC. :focus-visible alone would leave programmatic
-   focus unindicated, and the panel focuses itself when it opens. */
+/* Visible focus. .panel:focus is PLAIN :focus deliberately: the panel is
+   focused programmatically when it opens, and :focus-visible is not guaranteed
+   to match a programmatic focus — the indicator would be missing at exactly
+   the moment focus moves somewhere the user did not put it. Buttons keep
+   :focus-visible so a mouse click does not leave a ring behind. */
+.panel:focus { outline: 2px solid var(--ps-focus); outline-offset: 2px; }
 button:focus-visible,
-.panel:focus-visible,
-[tabindex]:focus-visible {
-  outline: 2px solid var(--ps-focus);
-  outline-offset: 2px;
-}
+[tabindex]:focus-visible { outline: 2px solid var(--ps-focus); outline-offset: 2px; }
 
 .degraded {
   padding: 10px 12px;

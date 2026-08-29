@@ -1,0 +1,34 @@
+{
+  // ───────────────────────────────────────────────────────────────────────
+  // TEST FILES ARE TYPECHECKED TOO.
+  //
+  // Each package's tsconfig includes only `src/**/*.ts`, so until this file
+  // existed `tsc -b` never looked at a single test. Two consequences, and the
+  // second is the one that mattered:
+  //
+  //   - Type errors in tests surfaced only as runtime failures, and only if
+  //     they happened to break at runtime.
+  //   - A test asserting a COMPILE-TIME property was inert. `surface-state`
+  //     has one: an `@ts-expect-error` pinning the fact that the branded
+  //     `Inapplicable` type cannot be satisfied by an object literal, which is
+  //     what stops a caller declaring a failure "not applicable" without
+  //     observing anything. It was never evaluated, so it asserted nothing —
+  //     and `@ts-expect-error` fails loudly when the error it expects does not
+  //     occur, which is exactly the signal that was being thrown away.
+  //
+  // Not a project reference: `composite` requires emit, and there is nothing
+  // to emit from tests. Run separately, after `tsc -b` has produced the
+  // declaration files the tests import through workspace packages.
+  // ───────────────────────────────────────────────────────────────────────
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["node", "chrome"]
+  },
+  "include": ["packages/*/test/**/*.ts"]
+}

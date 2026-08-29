@@ -26,8 +26,71 @@
 
 export type Theme = 'light' | 'dark';
 
+/**
+ * Normalises any CSS colour to an rgb()/rgba() string.
+ *
+ * `getComputedStyle().backgroundColor` PRESERVES THE AUTHORED COLOUR SPACE for
+ * CSS Color 4 functions, so a site using `oklch()`, `lab()`, `hwb()` or
+ * `color(srgb ...)` — which is what a relative-colour or wide-gamut palette
+ * serialises to — hands back a string no rgb() regex matches. The sampler then
+ * finds nothing opaque, walks to the top, and falls back to the OS preference:
+ * the panel silently stops following the page's theme on exactly the modern
+ * sites most likely to use those functions.
+ *
+ * The 2D canvas colour parser accepts every CSS colour syntax and returns sRGB,
+ * with no network access and no layout. It is used when available, with the
+ * regex kept as the fallback for environments that have no canvas.
+ */
+/**
+ * One 2D context per document, created on first use.
+ *
+ * `detectTheme` walks up to twelve ancestors and parses a colour at each, so a
+ * fresh canvas per parse is up to twelve elements created and discarded per
+ * theme decision. It is also the difference between one failed getContext in
+ * an environment without canvas and one per parse.
+ */
+const COLOUR_CONTEXTS = new WeakMap<Document, CanvasRenderingContext2D | null>();
+
+function colourContext(doc: Document): CanvasRenderingContext2D | null {
+  const cached = COLOUR_CONTEXTS.get(doc);
+  if (cached !== undefined) return cached;
+  let context: CanvasRenderingContext2D | null = null;
+  try {
+    context = doc.createElement('canvas').getContext('2d');
+  } catch {
+    context = null;
+  }
+  COLOUR_CONTEXTS.set(doc, context);
+  return context;
+}
+
+function normaliseColour(value: string, doc: Document): string {
+  const context = colourContext(doc);
+  if (context === null) return value;
+  try {
+    // Parsed against two different sentinels. A value the CSS parser REJECTS
+    // leaves fillStyle untouched, so a single pass would read the sentinel
+    // back and report opaque black - making every unrecognised colour look
+    // like a dark page. Agreement across two sentinels means the value was
+    // actually parsed.
+    context.fillStyle = '#000000';
+    context.fillStyle = value;
+    const first = String(context.fillStyle);
+    context.fillStyle = '#ffffff';
+    context.fillStyle = value;
+    return first === String(context.fillStyle) ? first : value;
+  } catch {
+    return value;
+  }
+}
+
 /** Parsed sRGB, or null if the colour is transparent or unparseable. */
 function parseOpaqueColour(value: string): { r: number; g: number; b: number } | null {
+  const hex = /^#([0-9a-f]{6})$/iu.exec(value.trim());
+  if (hex !== null) {
+    const n = Number.parseInt(hex[1] as string, 16);
+    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+  }
   const match = /^rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:[,/\s]+([\d.]+))?\s*\)$/iu.exec(
     value.trim(),
   );
@@ -78,7 +141,8 @@ export function detectTheme(anchor: Element | null, doc: Document): Theme {
   let node: Element | null = anchor ?? doc.body;
   let hops = 0;
   while (node !== null && hops < 12) {
-    const colour = parseOpaqueColour(view.getComputedStyle(node).backgroundColor);
+    const raw = view.getComputedStyle(node).backgroundColor;
+    const colour = parseOpaqueColour(normaliseColour(raw, doc));
     if (colour !== null) {
       // 0.5 is the midpoint of the luminance range, not of the 0-255 range;
       // WCAG luminance is already perceptual, so a simple threshold is right.

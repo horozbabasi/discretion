@@ -141,10 +141,14 @@ describe('every registered adapter has strategies in the diagnostic', () => {
     ['https://claude.ai/chat/x', ClaudeAdapter],
     ['https://chatgpt.com/c/x', ChatGptAdapter],
     ['https://gemini.google.com/app/x', GeminiAdapter],
-  ])('%s', (url) => {
+  ])('%s', (url, Adapter) => {
     const adapter = pickAdapter(url, document, witness());
     expect(adapter).not.toBeNull();
     if (adapter === null) return;
+    // The table pairs a URL with the adapter it must select. Taking only the
+    // URL left the second column asserting nothing, which typechecking the
+    // tests surfaced as an arity mismatch.
+    expect(adapter).toBeInstanceOf(Adapter);
     const diagnostic = buildDiagnostic(adapter, document);
     expect(diagnostic.composer.strategies.length).toBeGreaterThan(0);
     expect(diagnostic.responseRoot.strategies.length).toBeGreaterThan(0);

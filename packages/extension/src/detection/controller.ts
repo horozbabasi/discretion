@@ -541,7 +541,25 @@ export class DetectionController {
     // selector being right. A wrong getComposer() means detection ran on the
     // wrong text, and this equality is what catches it.
     const binding = verifyBinding(composer.value, intent, this.options.witness);
-    if (!binding.ok) {
+
+    // ONE binding failure becomes a question instead of a refusal, and only
+    // one. `verifyBinding` checks in order, so reaching `no-input-witness`
+    // means everything before it PASSED: the event resolved to exactly one
+    // editable, that element IS the one detection ran on, and it is still in
+    // the document. The single unknown is whether the user typed the text.
+    //
+    // That is D29 - a restored draft, a URL prefill, a suggestion chip - and
+    // it is undecidable from the DOM but not from the screen. So it goes to
+    // the user (see `askForReview`), who is shown what will be sent and asked
+    // to confirm it is theirs.
+    //
+    // Every other code still refuses outright, because each means we do not
+    // know WHICH element is being submitted, and no question to the user can
+    // establish that: `undecidable` (the event resolved to no editable or
+    // several), `identity-mismatch` (detection ran on a different node than
+    // the one being sent), `detached` (the composer left the document since).
+    const unwitnessed = !binding.ok && binding.code === 'no-input-witness';
+    if (!binding.ok && !unwitnessed) {
       this.refuse(`This message was not sent. ${binding.detail}`);
       return;
     }
@@ -581,14 +599,28 @@ export class DetectionController {
       return;
     }
 
+    if (analysis.entities.length === 0 && !unwitnessed) {
+      this.release(replay);
+      return;
+    }
     if (analysis.entities.length === 0) {
+      // Nothing to mask, but the composer still holds text nobody saw typed.
+      // The question D29 asks is "is this your message", which is not the same
+      // question as "is there anything sensitive in it" - and releasing here
+      // because the answer to the second is no would skip the first entirely.
+      const approvedEmpty = await this.askForReview(analysis, true);
+      if (!approvedEmpty) {
+        this.surface.setState({ kind: 'hidden' });
+        return;
+      }
+      this.options.witness.creditUserConfirmation(composer.value.node);
       this.release(replay);
       return;
     }
 
     this.lastEntities = analysis.entities;
     this.lastExposure = analysis.exposure.score;
-    const approved = await this.askForReview(analysis);
+    const approved = await this.askForReview(analysis, unwitnessed);
     if (!approved) {
       // Cancelled. The composer is untouched and nothing was sent; the user is
       // back where they were, with their text intact.
@@ -596,6 +628,12 @@ export class DetectionController {
       return;
     }
 
+    if (unwitnessed) {
+      // The user has now said this is their message. Recorded so the rest of
+      // the session does not ask again about the same element - they answered
+      // once, and answering is the decision.
+      this.options.witness.creditUserConfirmation(composer.value.node);
+    }
     this.applyAndRelease(composer.value, text, analysis, replay);
   }
 
@@ -664,13 +702,14 @@ export class DetectionController {
   }
 
   /** Opens the review panel and waits for the user. */
-  private askForReview(analysis: Analysis): Promise<boolean> {
+  private askForReview(analysis: Analysis, unwitnessed = false): Promise<boolean> {
     this.resolveDecision(false);
     this.surface.setState({
       kind: 'review',
       content: {
         groups: this.group(analysis.entities),
         exposureScore: analysis.exposure.score,
+        ...(unwitnessed ? { unwitnessed: true } : {}),
       },
     });
     return new Promise<boolean>((resolve) => {

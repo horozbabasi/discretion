@@ -193,6 +193,14 @@ export interface ReviewContent {
   readonly groups: readonly ReviewGroup[];
   /** 0–100. */
   readonly exposureScore: number;
+  /**
+   * The composer holds text this extension never saw the user type.
+   *
+   * D29: a restored draft, a URL prefill or a suggestion chip. The panel then
+   * has to ask a second question - is this your message? - because the DOM
+   * cannot answer it and the person looking at the screen can.
+   */
+  readonly unwitnessed?: boolean;
 }
 
 /** Total detections across every group. */

@@ -153,18 +153,26 @@ describe('refusals', () => {
     h.controller.destroy();
   });
 
-  it('REFUSES when the composer was never typed into', async () => {
-    // D26 construction #3. Text the user never typed, in a composer-shaped
-    // element, is a bug or an attack; either way the send does not proceed.
+  it('REFUSES an identity mismatch outright, with no question asked', async () => {
+    // D26 construction #2. Detection ran on a different node than the one this
+    // event submits, so we do not know which text is about to be sent - and no
+    // question to the user can establish that. Unlike the no-input-witness
+    // case below, this one stays a refusal.
     const h = harness();
-    // Set the text WITHOUT an input event, so the witness never sees it.
-    h.composer.textContent = `my iban is ${IBAN}`;
-    giveEverythingLayout();
-    pressEnter(h.composer);
+    type(h.composer, `my iban is ${IBAN}`);
     await settle();
 
-    expect(h.state()).toBe('degraded');
+    const decoy = document.createElement('div');
+    decoy.setAttribute('contenteditable', 'true');
+    document.body.append(decoy);
+    giveEverythingLayout();
+    // The submit resolves to the decoy; detection ran on the real composer.
+    decoy.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true }));
+    pressEnter(decoy);
+    await settle();
+
     expect(h.pageSends).toEqual([]);
+    expect(h.state()).not.toBe('review');
     h.controller.destroy();
   });
 
@@ -401,6 +409,119 @@ describe('the paste guard: early warning, not a gate', () => {
     expect(h.composer.textContent).toBe(masked);
     expect(h.pageSends.length).toBeGreaterThan(0);
     for (const sent of h.pageSends) expect(sent).not.toContain(IBAN);
+    h.controller.destroy();
+  });
+});
+
+describe('D29: a composer the user never typed into', () => {
+  // A restored draft, a URL prefill, or a suggestion chip. Before this, the
+  // gate refused these outright: correct, and useless, on a path two of the
+  // three sites offer on first run.
+
+  /** Fills the composer the way a prefill does: no editing event, ever. */
+  function prefill(node: HTMLElement, text: string): void {
+    node.textContent = text;
+    giveEverythingLayout();
+  }
+
+  it('ASKS instead of refusing, and says why', async () => {
+    const h = harness();
+    prefill(h.composer, `my iban is ${IBAN}`);
+    pressEnter(h.composer);
+    await settle();
+
+    expect(h.state()).toBe('review');
+    const root = h.controller.panelRootForTesting();
+    expect(root?.textContent).toContain('Check this is your message');
+    expect(root?.textContent).toContain('did not see you type it');
+    h.controller.destroy();
+  });
+
+  it('labels the action "Protect and send", not the routine one', async () => {
+    // The label is the answer to the question above it. "Mask and send" would
+    // read as the same confirmation as every other send, which is what this is
+    // not.
+    const h = harness();
+    prefill(h.composer, `my iban is ${IBAN}`);
+    pressEnter(h.composer);
+    await settle();
+
+    const labels = Array.from(
+      h.controller.panelRootForTesting()?.querySelectorAll('button') ?? [],
+    ).map((b) => b.textContent);
+    expect(labels).toContain('Protect and send');
+    expect(labels).not.toContain('Mask and send');
+    h.controller.destroy();
+  });
+
+  it('still sends nothing until the user answers', async () => {
+    const h = harness();
+    prefill(h.composer, `my iban is ${IBAN}`);
+    pressEnter(h.composer);
+    await settle();
+    expect(h.pageSends).toEqual([]);
+    h.controller.destroy();
+  });
+
+  it('CANCEL leaves the prefilled message untouched and unsent', async () => {
+    const h = harness();
+    const message = `my iban is ${IBAN}`;
+    prefill(h.composer, message);
+    pressEnter(h.composer);
+    await settle();
+
+    press(h.controller, 'Cancel');
+    await settle();
+    expect(h.composer.textContent).toBe(message);
+    expect(h.pageSends).toEqual([]);
+    h.controller.destroy();
+  });
+
+  it('CONFIRM masks it and releases, exactly like a typed message', async () => {
+    const h = harness();
+    prefill(h.composer, `my iban is ${IBAN}`);
+    pressEnter(h.composer);
+    await settle();
+
+    press(h.controller, 'Protect and send');
+    await settle();
+
+    expect(h.composer.textContent).not.toContain(IBAN);
+    expect(h.pageSends.length).toBeGreaterThan(0);
+    for (const sent of h.pageSends) expect(sent).not.toContain(IBAN);
+    h.controller.destroy();
+  });
+
+  it('does not ask twice about the same element', async () => {
+    // The user answered. Asking again on every send would make the
+    // confirmation a nag rather than a decision.
+    const h = harness();
+    prefill(h.composer, `my iban is ${IBAN}`);
+    pressEnter(h.composer);
+    await settle();
+    press(h.controller, 'Protect and send');
+    await settle();
+
+    prefill(h.composer, `another iban ${IBAN}`);
+    pressEnter(h.composer);
+    await settle();
+
+    const root = h.controller.panelRootForTesting();
+    expect(root?.textContent).not.toContain('Check this is your message');
+    h.controller.destroy();
+  });
+
+  it('asks even when there is NOTHING sensitive to mask', async () => {
+    // "Is this your message" is a different question from "is there anything
+    // in it". Releasing because the answer to the second is no would skip the
+    // first entirely - which is the whole hole D29 describes.
+    const h = harness();
+    prefill(h.composer, 'what is the capital of France?');
+    pressEnter(h.composer);
+    await settle();
+
+    expect(h.state()).toBe('review');
+    expect(h.pageSends).toEqual([]);
     h.controller.destroy();
   });
 });

@@ -349,8 +349,8 @@ describe('survival', () => {
     surface.setAnchor(null);
     surface.setState({ kind: 'review', content: REVIEW });
     const host = document.querySelector('privacyshield-surface') as HTMLElement;
-    expect(host.style.left).toBe('50%');
-    expect(host.style.bottom).toBe('16px');
+    expect(host.style.getPropertyValue('--ps-left')).toBe('50%');
+    expect(host.style.getPropertyValue('--ps-bottom')).toBe('16px');
   });
 });
 
@@ -517,7 +517,7 @@ describe('the anchor is borrowed, and the page takes it back', () => {
 
     const host = document.querySelector('privacyshield-surface') as HTMLElement;
     expect(host.getAttribute('data-hidden')).toBe('false');
-    expect(host.style.left).toBe('50%');
+    expect(host.style.getPropertyValue('--ps-left')).toBe('50%');
   });
 
   it('refuses a detached element as an anchor in the first place', () => {
@@ -531,7 +531,7 @@ describe('the anchor is borrowed, and the page takes it back', () => {
     // Nothing was lost - nothing was ever accepted.
     expect(calls.anchorLost).toBe(0);
     const host = document.querySelector('privacyshield-surface') as HTMLElement;
-    expect(host.style.left).toBe('50%');
+    expect(host.style.getPropertyValue('--ps-left')).toBe('50%');
   });
 
   it('follows a REPLACEMENT anchor once the owner re-resolves', () => {
@@ -546,8 +546,8 @@ describe('the anchor is borrowed, and the page takes it back', () => {
     surface.setAnchor(replacement);
 
     const host = document.querySelector('privacyshield-surface') as HTMLElement;
-    expect(host.style.left).toBe('40px');
-    expect(host.style.width).toBe('320px');
+    expect(host.style.getPropertyValue('--ps-left')).toBe('40px');
+    expect(host.style.getPropertyValue('--ps-width')).toBe('320px');
   });
 });
 
@@ -565,7 +565,7 @@ describe('positioning stays inside the viewport', () => {
     surface.setState({ kind: 'review', content: REVIEW });
 
     const host = document.querySelector('privacyshield-surface') as HTMLElement;
-    expect(Number.parseInt(host.style.width, 10)).toBeGreaterThanOrEqual(240);
+    expect(Number.parseInt(host.style.getPropertyValue('--ps-width'), 10)).toBeGreaterThanOrEqual(240);
   });
 
   function anchorAt(rect: Partial<DOMRect>): HTMLElement {
@@ -587,7 +587,7 @@ describe('positioning stays inside the viewport', () => {
     surface.setState({ kind: 'review', content: REVIEW });
 
     const host = document.querySelector('privacyshield-surface') as HTMLElement;
-    expect(Number.parseInt(host.style.left, 10)).toBeGreaterThanOrEqual(0);
+    expect(Number.parseInt(host.style.getPropertyValue('--ps-left'), 10)).toBeGreaterThanOrEqual(0);
   });
 
   it('clamps a composer wider than the window', () => {
@@ -599,7 +599,7 @@ describe('positioning stays inside the viewport', () => {
     surface.setState({ kind: 'review', content: REVIEW });
 
     const host = document.querySelector('privacyshield-surface') as HTMLElement;
-    expect(Number.parseInt(host.style.width, 10)).toBeLessThanOrEqual(window.innerWidth);
+    expect(Number.parseInt(host.style.getPropertyValue('--ps-width'), 10)).toBeLessThanOrEqual(window.innerWidth);
   });
 });
 
@@ -769,5 +769,59 @@ describe('the degraded panel says what actually went wrong', () => {
     });
     expect(root.textContent).toContain('not protecting this page');
     expect(root.textContent).toContain('Could not find: composer');
+  });
+});
+
+describe('the panel is actually positioned where it is computed to be', () => {
+  // Found in a live screenshot, not by a test. `styles.ts` declares
+  // `all: initial !important` on :host to stop the page restyling the panel,
+  // and an author-important declaration outranks a non-important INLINE one -
+  // so the stylesheet protecting the panel was resetting the panel's own
+  // position, and `position: fixed` with no offsets falls back to the static
+  // position: the top-left of <body>. It rendered in the corner of every page
+  // for several batches. The assertions that existed checked STATE and TEXT,
+  // and nothing looked at WHERE.
+  function anchorAt(rect: Partial<DOMRect>): HTMLElement {
+    const node = document.createElement('div');
+    node.getBoundingClientRect = () =>
+      ({ left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0, ...rect }) as DOMRect;
+    document.body.append(node);
+    return node;
+  }
+
+  it('sets its offsets as IMPORTANT, so the reset cannot win', () => {
+    const { surface } = makeSurface();
+    surface.setAnchor(anchorAt({ left: 120, top: 400, right: 560, bottom: 448, width: 440, height: 48 }));
+    surface.setState({ kind: 'review', content: REVIEW });
+
+    const host = document.querySelector('privacyshield-surface') as HTMLElement;
+    // Written as CUSTOM PROPERTIES, which is the only channel that reaches the
+    // host past `all: initial !important` - inline `left: ... !important` was
+    // tried first and lost, because for important declarations the INNER tree
+    // beats the outer one.
+    expect(host.style.getPropertyValue('--ps-left')).toBe('120px');
+    expect(host.style.getPropertyValue('--ps-width')).toBe('440px');
+    // And the stylesheet must actually consume them, or setting them is inert.
+    const css = makeSurface().root.querySelector('style')?.textContent ?? '';
+    expect(css).toContain('left: var(--ps-left, auto) !important');
+  });
+
+  it('clears the previous branch offsets rather than layering on them', () => {
+    // The anchored branch sets top/left; the fallback sets bottom/transform. A
+    // `bottom` left over from the fallback would pin the panel to two edges at
+    // once.
+    const { surface } = makeSurface();
+    surface.setAnchor(null);
+    surface.setState({ kind: 'review', content: REVIEW });
+    const host = document.querySelector('privacyshield-surface') as HTMLElement;
+    expect(host.style.getPropertyValue('--ps-bottom')).toBe('16px');
+
+    surface.setAnchor(anchorAt({ left: 120, top: 400, right: 560, bottom: 448, width: 440, height: 48 }));
+    expect(host.style.getPropertyValue('--ps-bottom')).toBe('');
+    expect(host.style.getPropertyValue('--ps-transform')).toBe('');
+    // Above the anchor, per SPEC's "panel above the composer". Asserted as a
+    // relationship rather than a number: jsdom gives the panel zero height, so
+    // a literal would pin the test environment's arithmetic.
+    expect(Number.parseInt(host.style.getPropertyValue('--ps-top'), 10)).toBeLessThan(400);
   });
 });

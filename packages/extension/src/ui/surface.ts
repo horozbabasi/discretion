@@ -69,6 +69,16 @@ const MIN_PANEL_WIDTH_PX = 240;
 /** Gap between the panel and the composer, and the viewport inset. */
 const MARGIN_PX = 8;
 
+/** Placement custom properties, cleared between branches. See `place`. */
+const PLACEMENT_PROPERTIES = [
+  '--ps-left',
+  '--ps-right',
+  '--ps-top',
+  '--ps-bottom',
+  '--ps-width',
+  '--ps-transform',
+];
+
 export interface SurfaceCallbacks {
   /** The user accepted the masking and wants the send to proceed. */
   readonly onConfirm: () => void;
@@ -310,12 +320,12 @@ export class Surface {
       // it would cover the page's own controls. The panel STAYS VISIBLE — it
       // may be blocking a send, and hiding it because we lost track of an
       // element would be fail-open.
-      host.style.left = '50%';
-      host.style.right = '';
-      host.style.bottom = '16px';
-      host.style.top = '';
-      host.style.transform = 'translateX(-50%)';
-      host.style.width = 'min(560px, calc(100vw - 32px))';
+      this.place({
+        left: '50%',
+        bottom: '16px',
+        transform: 'translateX(-50%)',
+        width: 'min(560px, calc(100vw - 32px))',
+      });
       return;
     }
 
@@ -324,9 +334,6 @@ export class Surface {
     const viewportHeight = view?.innerHeight ?? rect.bottom;
     const margin = MARGIN_PX;
 
-    host.style.transform = '';
-    host.style.bottom = '';
-    host.style.right = '';
 
     // Clamped to the viewport. A composer can be wider than the window (a
     // horizontally scrolled page) or start off its left edge, and a panel
@@ -334,8 +341,6 @@ export class Surface {
     // scrollbar to reach it, because the host is fixed.
     const width = Math.max(MIN_PANEL_WIDTH_PX, Math.min(rect.width, viewportWidth - margin * 2));
     const left = Math.max(margin, Math.min(rect.left, viewportWidth - width - margin));
-    host.style.left = `${Math.round(left)}px`;
-    host.style.width = `${Math.round(width)}px`;
 
     // Above the composer, per SPEC, unless there is no room — then below, and
     // clamped so a tall panel below a composer near the fold is not pushed off
@@ -343,7 +348,50 @@ export class Surface {
     const panelHeight = this.panel?.getBoundingClientRect().height ?? 0;
     const above = rect.top - panelHeight - margin;
     const below = Math.min(rect.bottom + margin, Math.max(margin, viewportHeight - panelHeight - margin));
-    host.style.top = `${Math.round(above >= margin ? above : below)}px`;
+    this.place({
+      left: `${String(Math.round(left))}px`,
+      top: `${String(Math.round(above >= margin ? above : below))}px`,
+      width: `${String(Math.round(width))}px`,
+    });
+  }
+
+  /**
+   * Apply the computed position, through the one channel that reaches it.
+   *
+   * ─────────────────────────────────────────────────────────────────────────
+   * These are written as CUSTOM PROPERTIES (`--ps-left`, ...), which
+   * `styles.ts` consumes. That indirection is load-bearing.
+   *
+   * `styles.ts` declares `all: initial !important` on `:host` to stop the page
+   * restyling the panel. For IMPORTANT declarations the INNER tree beats the
+   * outer one - the rule that file's own header explains - and an inline style
+   * on the host is outer-tree. So the reset overruled the panel's own
+   * position, `position: fixed` resolved with no offsets, and the panel
+   * rendered at the TOP-LEFT CORNER of every page.
+   *
+   * It was in every screenshot taken across the whole send-gate batch and went
+   * unnoticed, because the assertions were about STATE and TEXT - `data-state`,
+   * the words in the panel - and nothing looked at WHERE. A live screenshot on
+   * a real site is what showed it, and the first fix - inline `!important` -
+   * did not work either, for the same reason, which the unit tests could not
+   * tell because jsdom resolves no cascade.
+   *
+   * Custom properties are the one channel that crosses the boundary: `all`
+   * does not reset them, which is the same reason the palette survives.
+   * Measured in a real browser: `--ps-left: 400px` resolves to `left: 400px`,
+   * where an inline `left: 400px !important` resolved to `0px`.
+   * ─────────────────────────────────────────────────────────────────────────
+   */
+  private place(styles: Readonly<Record<string, string>>): void {
+    const host = this.host;
+    if (host === null) return;
+    // Cleared first, so a value the previous branch set does not survive into
+    // one that does not set it - `bottom` from the fallback outliving a later
+    // anchored position would pin the panel to two edges at once.
+    for (const property of PLACEMENT_PROPERTIES) host.style.removeProperty(property);
+    for (const [property, value] of Object.entries(styles)) {
+      host.style.setProperty(`--ps-${property}`, value);
+    }
   }
 
   private render(): void {
@@ -462,6 +510,26 @@ export class Surface {
         `exposure ${String(Math.round(content.exposureScore))}/100`,
       ),
     );
+
+    // D29. The extension never saw this text typed, so it cannot tell a
+    // restored draft from a decoy holding text while the real composer holds
+    // something else. The DOM cannot answer that; the person reading the
+    // screen can. So the panel asks, in place of the silent block that used to
+    // happen here - and it asks BEFORE the list, because it changes what the
+    // list means.
+    if (content.unwitnessed === true) {
+      const notice = this.el('div', 'degraded');
+      notice.append(
+        this.text('div', 'title', 'Check this is your message'),
+        this.text(
+          'div',
+          'why',
+          'This text was already in the box - PrivacyShield did not see you type it. That is normal for a saved draft, a link that fills the box for you, or a suggested prompt.',
+        ),
+      );
+      panel.append(notice);
+    }
+
     this.appendGroups(panel, content);
 
     const actions = this.el('div', 'actions');
@@ -472,7 +540,10 @@ export class Surface {
 
     const send = this.el('button', 'primary') as HTMLButtonElement;
     send.type = 'button';
-    send.textContent = 'Mask and send';
+    // The label carries the difference. "Protect and send" is an answer to the
+    // question above it; "Mask and send" would read as the same routine
+    // confirmation as every other send, which is exactly what this is not.
+    send.textContent = content.unwitnessed === true ? 'Protect and send' : 'Mask and send';
     send.addEventListener('click', () => this.callbacks.onConfirm());
 
     actions.append(cancel, send);

@@ -124,6 +124,34 @@ export class InputWitness {
   creditOwnWrite(element: HTMLElement): void {
     this.witnessed.add(element);
   }
+
+  /**
+   * Marks an element as witnessed because THE USER SAID SO.
+   *
+   * D29. A composer filled by a restored draft, a URL prefill or a suggestion
+   * chip raises no editing event, so the witness never sees it and the send is
+   * blocked - correct, and useless, on a path two of the three sites offer on
+   * first run.
+   *
+   * The witness exists to reject an element the user never typed into, because
+   * such an element might be a decoy holding text while the real composer
+   * holds something else. That question is undecidable from the DOM. It is not
+   * undecidable for the PERSON LOOKING AT THE SCREEN, who can see whether the
+   * text in front of them is the message they mean to send. So the block
+   * becomes a question, and this records the answer.
+   *
+   * DELIBERATELY NOT `creditOwnWrite`. That method's contract is that it is
+   * only ever called after a binding check has already passed, which is what
+   * makes it unable to launder an unwitnessed element. This one is called
+   * precisely when that check did NOT pass, so reusing the other would have
+   * made its comment false and its guarantee unenforceable.
+   *
+   * The caller must have shown the user what is about to be sent and received
+   * an explicit confirmation. It is called from exactly one place.
+   */
+  creditUserConfirmation(element: HTMLElement): void {
+    this.witnessed.add(element);
+  }
 }
 
 /** The nearest editable element on an event's composed path, if any. */

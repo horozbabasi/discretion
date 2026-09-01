@@ -48,6 +48,26 @@ export const PANEL_STYLES = `
   position: fixed !important;
   z-index: 2147483000 !important;
   display: block !important;
+
+  /* POSITION ARRIVES AS CUSTOM PROPERTIES, and it has to.
+     all: initial !important above is an INNER-TREE important declaration, and
+     for important declarations the inner tree beats the outer one - which is
+     the rule this file's own header explains, and which was then applied
+     backwards. The consequence: an inline style on the host, even
+     !important, is overruled by that reset, so position: fixed resolved
+     with no offsets and the panel rendered at the top-left corner of every
+     page. Custom properties are the one channel that crosses the boundary,
+     because all does not reset them - the same reason the palette above
+     survives. Measured: with these, an inline --ps-left: 400px resolves to
+     left: 400px; as an inline left: 400px !important it resolved to 0. */
+  left: var(--ps-left, auto) !important;
+  top: var(--ps-top, auto) !important;
+  right: var(--ps-right, auto) !important;
+  bottom: var(--ps-bottom, auto) !important;
+  width: var(--ps-width, auto) !important;
+  transform: var(--ps-transform, none) !important;
+  /* The UA gives [popover] margin: auto to centre it in the top layer. */
+  margin: 0 !important;
   /* The host box is a positioning shell; it must never intercept clicks meant
      for the page underneath. The panel re-enables them for itself. */
   pointer-events: none !important;

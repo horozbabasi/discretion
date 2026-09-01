@@ -4813,6 +4813,101 @@ closed.
 
 M10 (popup, options, i18n, Quick Redact, Local Insights) is untouched and stays
 that way until those close.
+### D47 - D29 closed: the block became a question (M9)
+
+The gate refused a composer the user never typed into. Correct - the input
+witness (D26 construction #3) exists to reject an element that might be a decoy
+holding text while the real composer holds something else - and useless on a
+path two of the three sites offer on first run: a restored draft, a URL
+prefill, a suggestion chip.
+
+**Only ONE binding failure became a question, and the ordering is what makes
+that safe.** `verifyBinding` checks in sequence, so reaching `no-input-witness`
+means everything before it PASSED: the event resolved to exactly one editable,
+that element IS the one detection ran on, and it is still in the document. The
+single unknown is whether the user typed the text - which is undecidable from
+the DOM and perfectly decidable by the person reading the screen.
+
+Every other code still refuses outright, because each means we do not know
+WHICH element is being submitted, and no question to a user can establish that:
+`undecidable`, `identity-mismatch`, `detached`.
+
+The panel gains a notice - "Check this is your message... PrivacyShield did not
+see you type it" - and the primary action is relabelled **"Protect and send"**.
+The label is the answer to the question above it; "Mask and send" would read as
+the same routine confirmation as every other send, which is exactly what this
+is not.
+
+**It asks even when nothing sensitive was found.** "Is this your message" is a
+different question from "is there anything in it", and releasing because the
+answer to the second is no would skip the first entirely - which is the whole
+hole D29 describes.
+
+`InputWitness.creditUserConfirmation` is deliberately NOT `creditOwnWrite`.
+That method's contract is that it is only ever called after a binding check has
+already passed, which is what makes it unable to launder an unwitnessed
+element. This one is called precisely when that check did not pass, so reusing
+the other would have made its comment false and its guarantee unenforceable.
+
+### D48 - The panel was never positioned, for the whole send-gate batch (M9)
+
+Found by looking at a screenshot from a real site, not by a test.
+
+`styles.ts` declares `all: initial !important` on `:host`. For IMPORTANT
+declarations the INNER tree beats the outer one - the rule that file's own
+header explains at length - and an inline style on the host is outer-tree. So
+the stylesheet written to protect the panel was overruling the panel's own
+position. `position: fixed` with no offsets resolves to the static position,
+and the panel rendered at the TOP-LEFT CORNER of every page instead of above
+the composer.
+
+It is in every screenshot taken across the send gate, the write-path fix and
+the first live run. Nobody looked: the assertions were about STATE and TEXT -
+`data-state`, the words in the panel - and none of them asked WHERE.
+
+**The first fix did not work either**, and could not have been caught by the
+unit tests. Setting the inline styles `!important` loses to `:host !important`
+for the same inner-beats-outer reason. jsdom resolves no cascade, so a test
+asserting `style.getPropertyPriority('left') === 'important'` passed while the
+browser computed `left: 0px`. Measured directly, in isolation: with
+`:host { all: initial !important }`, an inline `left: 400px !important`
+computes to `0px`.
+
+**Custom properties are the channel that works**, and for a reason already
+written down in the same file: `all` does not reset them, which is why the
+palette survives. `styles.ts` now consumes `left: var(--ps-left, auto)
+!important` and the surface writes `--ps-left`. Measured: `--ps-left: 400px`
+computes to `left: 400px`, in both the anchored and the fallback branch.
+
+The tests now assert the custom properties AND that the stylesheet consumes
+them - setting a property no rule reads is inert, and would have passed the
+first version of these assertions.
+
+### D43a - CLOSED for one site of three, against a real editor (M9)
+
+gemini.google.com serves a real Quill editor WITHOUT LOGIN, which is what made
+this checkable at all. `scripts/verify-live-site.py`, exit 0:
+
+  - the extension attaches to the real page;
+  - a composer filled without any editing event is INTERCEPTED and asks (D29);
+  - confirming writes the surrogate into real Quill, which ACCEPTS it;
+  - and it SURVIVES 7 s of the editor's own reconciliation - the question a
+    fixture cannot answer, because a fixture has no editor.
+
+Nothing was sent: every POST is aborted at the network layer before the confirm
+step, and the run reports how many it blocked (10).
+
+**claude.ai and chatgpt.com remain unverified live.** claude.ai sits behind a
+challenge; chatgpt.com's logged-out page carries only a marketing textarea, not
+the real ProseMirror composer. Both need credentials. Stated plainly rather
+than presented as three-site coverage.
+
+One thing the live run found in passing, NOT chased: on the logged-out Gemini
+page the SEND CONTROL does not resolve - the composer-anchored search finds
+seven controls in the region and refuses. The send gate does not depend on it
+(it binds through the submit event, not a send selector), so the gate works
+regardless; but healthCheck reports a `send-button` failure. Whether the
+logged-IN page still resolves it is unverified since 2026-08-29.
 
 ## Standing contracts (established in M1)
 

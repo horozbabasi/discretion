@@ -37,8 +37,12 @@ export function readEditableText(element: HTMLElement): string {
   }
 
   const parts: string[] = [];
-  const walk = (node: Node): void => {
+  const walk = (node: Node, parent: HTMLElement | null): void => {
     if (node.nodeType === Node.TEXT_NODE) {
+      // Source indentation is not content. See isFormattingWhitespace: the
+      // read and the write have to agree on this or a verified write can
+      // never match its own readback.
+      if (parent !== null && isFormattingWhitespace(node, parent)) return;
       parts.push(node.nodeValue ?? '');
       return;
     }
@@ -49,10 +53,10 @@ export function readEditableText(element: HTMLElement): string {
     }
     const isBlock = BLOCK_TAGS.has(node.tagName);
     if (isBlock && parts.length > 0 && !parts[parts.length - 1]?.endsWith('\n')) parts.push('\n');
-    for (const child of Array.from(node.childNodes)) walk(child);
+    for (const child of Array.from(node.childNodes)) walk(child, node as HTMLElement);
     if (isBlock && !(parts[parts.length - 1] ?? '').endsWith('\n')) parts.push('\n');
   };
-  walk(element);
+  walk(element, null);
 
   // One trailing newline is an artefact of the final block, not user content.
   return parts.join('').replace(/\n$/u, '');
@@ -111,6 +115,8 @@ export function writeEditableText(element: HTMLElement, text: string): void {
     return;
   }
 
+  stripFormattingWhitespace(element);
+
   element.focus();
   const doc = element.ownerDocument;
   const selection = doc.defaultView?.getSelection();
@@ -122,7 +128,81 @@ export function writeEditableText(element: HTMLElement, text: string): void {
   selection.removeAllRanges();
   selection.addRange(range);
 
+  // Deleting first, as its own command, rather than relying on insertText to
+  // replace the selection. Both work on every shape measured; the explicit
+  // delete makes the intent - REPLACE, not insert - readable at the call site
+  // rather than resting on execCommand's replace-the-selection behaviour.
+  doc.execCommand('delete', false);
   if (!doc.execCommand('insertText', false, text)) {
     throw new Error('InsertTextRejected');
   }
+}
+
+/**
+ * Remove HTML source indentation from inside an editable.
+ *
+ * ─────────────────────────────────────────────────────────────────────────
+ * WHY THIS IS NEEDED, and why no execCommand replaces it.
+ *
+ * A pretty-printed editable holds whitespace-only TEXT NODES between its block
+ * children - the newline and spaces from the HTML source. They render as
+ * nothing, but they are real nodes, and `readEditableText` reads them.
+ *
+ * MEASURED, in a real browser, across the DOM shapes all three adapters
+ * resolve (`scripts/probe-write-strategies.py`): NONE of
+ * selectNodeContents+insertText, +delete, selectAll+insertText, +delete, or
+ * selectAllChildren+delete removes them. Every one leaves 72 characters where
+ * 46 were written. Chrome treats collapsed whitespace as having no editable
+ * position, so a selection over the element's contents does not cover it and
+ * the insert cannot delete it. This is not a case of picking the right
+ * command; there is no command.
+ *
+ * That is what made the send gate refuse with `readback-mismatch` after
+ * masking correctly (D42): the write DID happen, and 26 characters of
+ * indentation survived beside it.
+ *
+ * SCOPE, kept as narrow as the problem. Only whitespace-only text nodes that
+ * are DIRECT CHILDREN of an editable which also has ELEMENT children - that is
+ * inter-block source formatting, and nothing else. An editable whose content is
+ * text alone is left untouched, so a composer legitimately holding spaces is
+ * not silently emptied.
+ *
+ * WHY MUTATING THE DOM HERE IS ACCEPTABLE when the whole point of using
+ * execCommand is to go through the editor's own input pipeline: this removes
+ * nodes that render as nothing and that a rich editor never creates - both
+ * ProseMirror and Quill serialise without indentation, so on the real sites
+ * there is nothing here to remove. The text change itself still goes through
+ * execCommand, so the editor still sees the beforeinput/input it needs.
+ * ─────────────────────────────────────────────────────────────────────────
+ */
+function stripFormattingWhitespace(element: HTMLElement): void {
+  for (const node of Array.from(element.childNodes)) {
+    if (isFormattingWhitespace(node, element)) node.parentNode?.removeChild(node);
+  }
+}
+
+/**
+ * Whether a node is HTML source indentation rather than content.
+ *
+ * ONE PREDICATE, USED BY BOTH THE READ AND THE WRITE, and that is the whole
+ * point of it existing separately.
+ *
+ * The write learned to strip these first (see above) and the send gate still
+ * refused - "wrote 83 characters but read back 83", the same length and not
+ * the same string. The reason was the READ: `getComposerText` reported the
+ * indentation AS CONTENT, so the masked text carried it, and writing that
+ * back inserted literal spaces where structural whitespace had been. The two
+ * sides disagreed about what the composer contained, and a verified write
+ * cannot survive that disagreement - nor should it.
+ *
+ * A whitespace-only text node sitting among ELEMENT children is inter-block
+ * source formatting: it renders as nothing and the user did not type it.
+ * Whitespace inside a block, and an editable whose content is text alone, are
+ * untouched - so a composer legitimately holding spaces still reads as
+ * holding them.
+ */
+function isFormattingWhitespace(node: Node, parent: HTMLElement): boolean {
+  if (node.nodeType !== Node.TEXT_NODE) return false;
+  if ((node.nodeValue ?? '').trim() !== '') return false;
+  return Array.from(parent.childNodes).some((sibling) => sibling.nodeType === Node.ELEMENT_NODE);
 }

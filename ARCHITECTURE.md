@@ -4468,6 +4468,66 @@ which reason, and the lengths involved, never the content. The one screen that
 could explain a failed write was printing the least useful half of what it had.
 Surfacing it is what turned "the write failed" into "83 written, 109 read
 back", which is the whole difference between a symptom and a cause.
+### D43 - The write path: source indentation is not content (M9)
+
+D42 left the send gate masking correctly and then refusing to send, with
+`readback-mismatch`. D42's stated cause was wrong, and finding that out was
+the useful part.
+
+**What the defect actually was.** A pretty-printed editable holds
+whitespace-only TEXT NODES between its block children - the newline and spaces
+from the HTML source. They render as nothing, and they are real nodes.
+
+**FIRST MEASUREMENT, AND WHY IT LIED.** `scripts/probe-write-strategies.py`
+tried five ways of replacing an editable's contents against the DOM shapes all
+three adapters resolve, and reported that every one of them - including the one
+that ships - was already exact. That was a defect in the probe: it built its
+shapes from MINIFIED markup, which has no indentation text nodes, so it could
+not reproduce the thing it was written to measure. Rebuilt with the fixtures'
+actual whitespace, the same probe reports that NONE of
+selectNodeContents+insertText, +delete, selectAll+insertText, +delete, or
+selectAllChildren+delete removes them: every one leaves 72 characters where 46
+were written. Chrome gives collapsed whitespace no editable position, so a
+selection over the contents does not cover it. There is no execCommand that
+does this.
+
+**THE FIX IS ON BOTH SIDES, and the second half is the one worth remembering.**
+Stripping the nodes before the write took the readback from 109 to 83 against
+83 written - the same length, and still not the same string. The read was
+still reporting the indentation AS CONTENT, so the masked text carried it and
+writing it back inserted literal spaces where structural whitespace had been.
+Fixing only the write made the numbers agree while the strings still differed,
+which looks like progress and is not.
+
+`isFormattingWhitespace` is now one predicate used by BOTH `readEditableText`
+and `writeEditableText`. A whitespace-only text node among ELEMENT children is
+inter-block source formatting; whitespace inside a block, and an editable whose
+content is text alone, are untouched, so a composer legitimately holding spaces
+still reads as holding them.
+
+**THE READBACK COMPARISON WAS NOT TOUCHED.** It still forgives only line-ending
+form and trailing whitespace. Loosening it would have made every one of these
+runs pass without the write ever being fixed, which is exactly how a write that
+did not take starts silently passing.
+
+**Verified live, all three adapters** (`scripts/verify-send-gate.py`, exit 0):
+each intercepts a real trusted Enter with the page's own handler firing zero
+times, opens the review panel, and on confirm releases a message whose IBAN is
+a surrogate. `GB33BUKB20201555555555` reached no page.
+
+### D43a - NOTED: the fixtures misrepresent the DOM they snapshot (M9)
+
+The indentation this decision is about does not exist on the real sites.
+ProseMirror and Quill both serialise their own DOM without it. It exists in the
+FIXTURES because they are pretty-printed HTML snapshots, and the formatting
+became content the moment it sat inside a contenteditable.
+
+So the bug the fixtures exposed is one the real sites would probably never have
+produced - and the fixtures are more hostile than the thing they model, which
+is the safe direction for a test to be wrong in. Left as it is: making the
+fixtures faithful would remove a case the shared write path now handles, and
+the handling is cheap. Recorded because a future reader comparing a fixture to
+a real page will otherwise find the difference and wonder which is authoritative.
 
 ## Standing contracts (established in M1)
 

@@ -4668,6 +4668,48 @@ was to trim the slowest rounds before judging steadiness - a more robust
 statistic - and explicitly NOT to loosen the limit. Trimming applies to
 calibration only; the degradation check trims nothing, because there the slow
 readings are the signal.
+### D46 - A fresh clone can build the extension (M9)
+
+The model is ~280 MB and is not in the repository. `build.mjs` warned about
+what was missing, which is the right shape of failure - but there was no
+documented way to satisfy it, so a fresh clone could not produce a working
+extension at all. That is a hard blocker for M11's "production build verified
+loading unpacked in Chrome", and far cheaper to close now than to rediscover
+then.
+
+`npm run ext:fetch-model` fetches it, and the build's warning now NAMES that
+command rather than only describing the problem.
+
+**This does not weaken the zero-network claim.** SPEC's non-negotiable is zero
+RUNTIME network access - nothing outbound after install. This is the build-time
+step that does the bundling; it runs on a developer's machine and never in the
+extension. `packages/core`'s classifier already draws the same line, with
+`allowRemoteModels` documented "build-time tooling ONLY".
+
+**What actually protects the build is the digests, not the pin.** The revision
+is a pinned commit on a content-addressed repo, so the URL cannot quietly serve
+different weights - but every file is additionally verified against a SHA-256
+in `model.manifest.json`, and those were computed FROM THE CACHE the M6 model
+benchmark and every latency figure since were measured against. So the check is
+not "did we get what the repo serves today" but "did we get the bytes this
+project's published numbers describe". A mismatch DELETES the file and exits
+non-zero; leaving it would mean the next build silently packages unverified
+weights, which is exactly what a truncated download looks like.
+
+`--write-manifest` is a separate mode on purpose. One command that both
+downloaded and rewrote the digests it verifies against could only ever agree
+with itself.
+
+**Verified by varying the condition, three ways**: all files present reports
+4 verified and exits 0; a deleted file is downloaded, verified and reported as
+fetched; a manifest digest the real file cannot match deletes the download and
+exits 1.
+
+One self-inflicted note worth keeping: the first attempt to add the "Run: npm
+run ext:fetch-model" line wrote a literal newline into a JS string and broke
+`build.mjs` outright. It was caught immediately because the very next thing run
+was the build - which is the argument for running the thing you just edited
+rather than the thing you think you edited.
 
 ## Standing contracts (established in M1)
 

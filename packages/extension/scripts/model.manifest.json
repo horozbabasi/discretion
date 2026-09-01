@@ -1,0 +1,36 @@
+{
+  "_comment": [
+    "The exact model bytes this project measured against, and the only bytes",
+    "the extension build will accept. See ARCHITECTURE.md D46.",
+    "",
+    "The revision is a git commit on the Hugging Face repo, which is",
+    "content-addressed, so pinning it pins the tree. The per-file SHA-256",
+    "digests are the part that actually protects the build: they were computed",
+    "from the local cache the M6 benchmark and every latency figure since were",
+    "taken against, so a fetch that verifies against them is checking the",
+    "download matches what was MEASURED, not merely what the repo serves today.",
+    "",
+    "Regenerate with: node packages/extension/scripts/fetch-model.mjs --write-manifest"
+  ],
+  "modelId": "jiting/xlm-roberta-base-ner-hrl_onnx",
+  "revision": "478a2a3e99ef680e4a107c80a7d0c59d51f185ae",
+  "dtype": "q8",
+  "files": {
+    "config.json": {
+      "bytes": 1132,
+      "sha256": "d878607f5e405bee406bee75928e291958493871ec3e1c22bba040bea9d2afff"
+    },
+    "tokenizer.json": {
+      "bytes": 17098251,
+      "sha256": "b74659c780d49afad7a7b9799868f75cbd3014fb6c34956e85a793028d38094a"
+    },
+    "tokenizer_config.json": {
+      "bytes": 1227,
+      "sha256": "55bf3758627065c7064b6ca48ab2d488448228e0d41f241739f1549ebf0e80d7"
+    },
+    "onnx/model_quantized.onnx": {
+      "bytes": 278709677,
+      "sha256": "d97008ae8849af960154ea16fc41c610ad178569d13bf00586f1adfe72871220"
+    }
+  }
+}

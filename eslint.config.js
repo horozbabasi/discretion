@@ -39,6 +39,18 @@ export default tseslint.config(
     },
   },
   {
+    // `fetch` for ONE file, not for every build script.
+    //
+    // The model fetcher is the only place in this repository that may make a
+    // network request, and it is build-time by definition (ARCHITECTURE.md
+    // D46). Granting the global to `packages/*/scripts/**` would quietly
+    // license every future script to reach the network in a project whose
+    // first non-negotiable is that nothing does - so the exemption is scoped
+    // to the check it excuses and no wider.
+    files: ['packages/extension/scripts/fetch-model.mjs'],
+    languageOptions: { globals: { fetch: 'readonly' } },
+  },
+  {
     // Build-time generator scripts run in Node and are never bundled, so the
     // environment-agnostic rules that govern packages/core do not apply.
     files: ['packages/*/scripts/**'],

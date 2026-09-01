@@ -228,6 +228,11 @@ console.log(`  TOTAL ${total.toLocaleString()} bytes across ${listing.length} fi
 if (missingAssets.length > 0) {
   console.warn(
     `\nWARNING: ${missingAssets.length} asset(s) were not bundled:\n  ${missingAssets.join('\n  ')}\n` +
-      `The extension will load, but Stage 2 will fail closed at runtime.`,
+      'The extension will load, but Stage 2 will fail closed at runtime.\n' +
+      // Naming the fix, not just the problem. The model is ~280 MB and is not
+      // in the repository, so a fresh clone lands here and had no documented
+      // way out - which is a hard blocker for M11's "production build verified
+      // loading unpacked in Chrome".
+      'Run: npm run ext:fetch-model',
   );
 }

@@ -61,6 +61,9 @@ Commands, from repo root:
 - Typecheck: `npm.cmd run typecheck` (`tsc -b --force`)
 - Test: `npm.cmd test` (`vitest run`); watch: `npm.cmd run test:watch`
 - Lint: `npm.cmd run lint` (`eslint .`)
+- Fetch the NER model (REQUIRED before the first extension build; ~280 MB into
+  gitignored `.hf-cache/`, pinned revision, SHA-256 verified):
+  `npm.cmd run ext:fetch-model`
 - Bench: `npm.cmd run bench` (builds, then runs `packages/core/dist/bench/normalization.bench.js`)
 
 ## Non-negotiables (SPEC.md — never violate)

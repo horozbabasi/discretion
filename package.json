@@ -25,7 +25,8 @@
     "web:build": "npm run build --workspace @privacyshield/web",
     "web:preview": "npm run preview --workspace @privacyshield/web",
     "ext:build": "npm run build --workspace @privacyshield/extension",
-    "typecheck:tests": "tsc -p tsconfig.test.json"
+    "typecheck:tests": "tsc -p tsconfig.test.json",
+    "ext:fetch-model": "node packages/extension/scripts/fetch-model.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",

@@ -1,0 +1,22 @@
+{
+  "baselineMs": 2.2989,
+  "calibratedAt": "2026-09-01T22:27:38.533Z",
+  "host": "WIN-HKFVMHJL06Q",
+  "platform": "win32 10.0.26200",
+  "cpu": "Intel(R) Core(TM) Ultra 7 258V",
+  "cores": 8,
+  "rounds": [
+    2.2678,
+    2.2768,
+    2.2782,
+    2.2989,
+    2.3319,
+    2.5356,
+    2.543,
+    2.8851,
+    3.3939
+  ],
+  "trimmedSlowest": 2,
+  "spread": 1.1214,
+  "note": "Machine-specific. See ARCHITECTURE.md D27a. A canary reading at or above DEGRADED_RATIO times baselineMs means the machine was slow when the measurement was taken, and that measurement is not comparable to one that was not."
+}

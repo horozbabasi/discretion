@@ -4620,6 +4620,54 @@ user has not answered must not be overwritten by the debounced findings list
 ~180 ms later, which is the same defect the gate hit in D42a. A late-arriving
 paste summary also yields to a gate already in progress, so an early warning
 can never push a blocking decision off the screen.
+### D27b - D27a is FLAGGED, not resolved, and the flag says which (M9)
+
+D27a records a state this machine enters in which inference is 4-5x slower,
+cause unknown. Its candidate list is all HOST instrumentation - OEM power
+profiles, Defender scans, thermal limits - and every one of them needs the
+anomaly to recur on demand, which it has not since. Waiting for that before
+taking any further measurement was the wrong trade, and so was continuing to
+take measurements that cannot say which state produced them.
+
+**A machine-speed canary** (`bench/machine-canary.mjs`) now runs before and
+after every latency run and is recorded ON the result. It is a deterministic
+integer-mixing loop: no allocation, no I/O, no WASM, no model. It shares
+nothing with what the benchmarks measure except the CPU, so a canary that slows
+when the benchmark slows points at the MACHINE rather than at the code under
+test.
+
+  - `bench/calibrate-canary.mjs` establishes this machine's healthy cost.
+    Baseline 2.2989 ms, 1.12x spread across kept rounds.
+  - `bench/check-canary.mjs` scores a reading and exits 1 when degraded.
+  - Threshold: 2.0x baseline - above ordinary variance, below the 4-5x D27a
+    recorded, so it catches the state with room on both sides.
+
+**Three things it deliberately does NOT do.**
+
+It does not stop a run. A degraded measurement is still worth having; what must
+not happen is comparing it against a healthy one without that being visible, so
+the verdict travels with the number instead of gating it.
+
+It does not report a missing calibration as healthy. An uncalibrated machine
+scores `unknown`, because a baseline nobody has taken must not read as one that
+passed.
+
+**And it does not claim to be a diagnosis.** The canary detects "this machine
+is slower than its own calibrated baseline". Whether that is the SAME condition
+as D27a's inference slowdown is UNCONFIRMED and stays so until the anomaly
+recurs and the canary is observed firing during it. It is a necessary condition
+being tested, not an explanation. D27a remains open.
+
+**Verified by varying the condition, not asserted**: with the baseline set to a
+value the machine cannot meet, the check reports `degraded` at ratio 4.465 and
+exits 1; restored, it reports `healthy` at 1.012 and exits 0.
+
+One thing the calibration itself taught: its first run REFUSED, on a 1.38x
+spread against a 1.35x limit, carried entirely by one preempted round. The fix
+was to trim the slowest rounds before judging steadiness - a more robust
+statistic - and explicitly NOT to loosen the limit. Trimming applies to
+calibration only; the degradation check trims nothing, because there the slow
+readings are the signal.
 
 ## Standing contracts (established in M1)
 

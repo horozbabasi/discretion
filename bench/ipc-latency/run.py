@@ -113,6 +113,31 @@ def measure_ipc():
             ctx.close()
 
 
+def canary(label):
+    """Machine-speed reading, so a figure says which state it was taken in.
+
+    D27a: this machine enters a state where inference is 4-5x slower, and
+    nothing in the numbers says which state produced them. See
+    bench/machine-canary.mjs. A degraded verdict does not stop the run - the
+    measurement is still worth having - but it is recorded ON the result so it
+    cannot later be compared against a healthy one without that being visible.
+    """
+    import json as _json
+    import subprocess as _sp
+    out = _sp.run(['node', str(REPO / 'bench' / 'check-canary.mjs')],
+                  capture_output=True, text=True, cwd=str(REPO))
+    try:
+        reading = _json.loads(out.stdout)
+    except Exception:
+        reading = {'verdict': 'unavailable', 'stderr': out.stderr[:200]}
+    print(f'canary ({label}): {reading.get("verdict")} '
+          f'ratio={reading.get("ratio")} ms={reading.get("canaryMs")}')
+    if reading.get('verdict') == 'degraded':
+        print('  *** MACHINE DEGRADED - this figure is NOT comparable to one '
+              'taken in the healthy state (ARCHITECTURE.md D27a) ***')
+    return reading
+
+
 def measure_baseline():
     """Re-runs bench/wasm-latency at window 400, with no bundler in the path."""
     httpd = baseline_server.serve(BASELINE_PORT)
@@ -132,6 +157,7 @@ def measure_baseline():
         httpd.server_close()
 
 
+RESULTS['canaryBefore'] = canary('before')
 RESULTS['machine'] = machine_state()
 print(f'machine: {json.dumps(RESULTS["machine"])}')
 
@@ -147,5 +173,9 @@ for which in order:
         print(json.dumps(RESULTS['ipc'], indent=2)[:2000])
 
 out = Path(__file__).resolve().parent / 'result.json'
+# Taken BEFORE the file is written, or it would not be in it.
+RESULTS['canaryAfter'] = canary('after')
+
 out.write_text(json.dumps(RESULTS, indent=2), encoding='utf-8')
 print(f'\nwrote {out}')
+

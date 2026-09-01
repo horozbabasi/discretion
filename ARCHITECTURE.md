@@ -3560,6 +3560,14 @@ internally consistent when it is wrong.
 
 ## Status after M9 adapters
 
+> **SUPERSEDED IN PART - read "Status after the M9 content-script batches"
+> below for the current picture.** This section was written when the adapter
+> layer closed and the content-script batch had not started. Its account of the
+> adapters still stands. Its BLOCKER TABLE does not: D34i, D34v and D36 have
+> since been closed or half-closed, and the "build order" it prescribes has
+> been carried out. It is kept unedited because the reasoning that chose that
+> build order is worth reading in the state it was decided in.
+
 **Not the milestone close.** M9's content-script batch is still open. The
 adapter layer is done and is summarised here while it is fresh.
 
@@ -4710,6 +4718,101 @@ run ext:fetch-model" line wrote a literal newline into a JS string and broke
 `build.mjs` outright. It was caught immediately because the very next thing run
 was the build - which is the argument for running the thing you just edited
 rather than the thing you think you edited.
+## Status after the M9 content-script batches
+
+**Not the milestone close either, and the gap is named below.** Everything
+SPEC lists for M9 is built; two things stand between that and calling M9 done.
+
+**1,144 tests.** Typecheck covers source and test files; lint clean. Every
+figure below was taken with its own exit code checked.
+
+### What the content script now does
+
+The whole of SPEC's content-script flow, steps 1-8:
+
+| step | where it lives |
+| --- | --- |
+| 1. identify site, load adapter, healthCheck, warm the recognizer | `content.ts`, `adapters/` |
+| 2. intercept the submit before the page acts | `controller.onSubmit` |
+| 3. run detection on what is about to be sent | `analyze.ts`, offscreen NER |
+| 4. mask, certify, write, release | `sendGate.ts`, `controller.applyAndRelease` |
+| 5. the review panel, grouped by type | `ui/surface.ts` |
+| 8. restore surrogates in the response | `detection/restore.ts` |
+| paste guard (SPEC line 288) | `controller.onPaste` |
+
+**The surface is one host with five contents**: hidden, findings, paste,
+review, degraded. Closed shadow root, top layer, theme sampled from the page,
+anchor treated as borrowed because all three sites replace the composer
+mid-session.
+
+**Stage 2 runs in an offscreen document** with the gazetteers beside it, which
+took `content.js` from 4,613,033 to 1,230,588 bytes. One IPC crossing per
+analysis at 0.4-0.5 ms p50; the incremental path went 97 to ~104 ms.
+
+### The blocker set, closed out
+
+| | state |
+| --- | --- |
+| **D34i** ChatGPT mid-generation | **CLOSED** at the health model. A disabled composer is positive evidence of by-design absence, bound to the element the resolution actually rejected. Its detached-node half arrived at the surface layer and was fixed there (D38a). |
+| **D34v** Gemini empty composer | **CLOSED** at the health model. `sendControlNotExpected` reads the composer's text itself rather than trusting a caller's claim about it. |
+| **D36** no visible degraded state | **HALF, now fully.** The state exists and renders, and since the gate landed it also blocks. What remains is D29, below. |
+| **D29** programmatic fills | **OPEN, AND NOW USER-VISIBLE.** See below. |
+
+### D29 became live the moment the gate did
+
+D29 was a prediction while nothing intercepted sends. It is now behaviour: a
+composer filled by a restored draft, a URL prefill or a SUGGESTION CHIP raises
+no editing event, the input witness never sees the element, `verifyBinding`
+returns `no-input-witness`, and the gate REFUSES THE SEND.
+
+That is fail-closed working exactly as designed, and it is a bad first-run
+experience on a path two of the three sites offer prominently. The user is told
+"This element has never received input during this page session", which is true
+and unhelpful.
+
+The candidate fix was chosen long before it was needed (D28, option d): when
+the witness is missing, convert the silent block into a VISIBLE confirmation -
+a "protect and send" step in the review panel. It fails closed without failing
+useless, and it needs the review panel, which now exists. Nothing else in the
+list is blocked behind it.
+
+### The other thing standing between this and M9's close
+
+**No live-site verification of the write-back.** D43's fix is confirmed
+end-to-end on all three adapters against committed fixtures, in a real browser,
+with the real model: intercepted, masked, released, original never reaching the
+page. What that does NOT establish is that each site's real editor -
+ProseMirror, Quill - accepts the write and does not revert it on its next
+reconciliation. The fixtures are snapshots of DOM, not of editors. It needs a
+logged-in session on each site, and it is flagged for M11 acceptance if it has
+not happened before then (D43a).
+
+### Open, carried forward, unresolved
+
+Nothing here is closed by this batch; it is listed so it is not mistaken for
+closed.
+
+- **D27a** - the unexplained 4-5x machine slow state. Now FLAGGED rather than
+  resolved: a machine-speed canary records the machine's state on every latency
+  measurement (D27b). Whether a slow canary is the same condition is still
+  unconfirmed.
+- **D41f** - the extension's cold path measures 3x FASTER than the in-page
+  harness under matched conditions, with six candidate causes refuted and none
+  named. BENCHMARKS.md's cold figures are pessimistic by roughly that much.
+- **GENERIC_SECRET recall 55.4%**, TAX_ID recall 91.2%, one over-confident
+  calibration bucket, thin mid-range calibration, p50 latency 255.8 ms against
+  a 250 ms budget - all carried from M8, none touched here.
+- **D40a** - known-test-value suppression is scoped to the detector that
+  recognises it, so a test card stays claimable by another detector. Noted, not
+  chased.
+
+### What M9 still owes
+
+1. D29's confirm-and-send path.
+2. Live-site verification of the write-back on all three sites.
+
+M10 (popup, options, i18n, Quick Redact, Local Insights) is untouched and stays
+that way until those close.
 
 ## Standing contracts (established in M1)
 

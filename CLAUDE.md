@@ -8,7 +8,7 @@ privacyshield is a browser extension that detects and redacts sensitive informat
 - **ARCHITECTURE.md** records decisions made while implementing SPEC.md and the reasoning behind them — append to it, don't just read it.
 - **CLAUDE.md** (this file) is working conventions only. It does not restate SPEC.md.
 
-**Milestones are built strictly one at a time**, tests passing, before the next starts. **M1-M8 complete; M9 in progress.** Verified 2026-09-02: **1,091 tests across 67 files**, typecheck (source AND test files) and lint all clean, each confirmed by its own exit code.
+**Milestones are built strictly one at a time**, tests passing, before the next starts. **M1-M8 complete; M9 nearly complete.** Verified 2026-09-02: **1,144 tests**, typecheck (source AND test files) and lint all clean, each confirmed by its own exit code.
 
 ### Complete
 
@@ -28,22 +28,23 @@ privacyshield is a browser extension that detects and redacts sensitive informat
 - Detection wired to the surface, **READ-ONLY** (D39). Stages 0-4 composed for the extension; detections grouped by type with calibrated confidence, an explanation, and per-item reverts. Nothing is written to the composer.
 - NER runs in an **offscreen document**, and the gazetteers moved with it (D41). `content.js` 4,613,033 -> 1,230,588 bytes. The IPC crossing is 0.4-0.5 ms p50, one per analysis, and the incremental path went 97 -> ~104 ms.
 
-**Remaining:**
-- **Submit interception, the masked write-back, and the SEND GATE** - SPEC's content-script steps 2-4. All three adapters expose `onSubmitIntent`; nothing calls it. Absent rather than stubbed, deliberately: an interceptor with no gate behind it can only block every send or wave sends through while looking like protection.
-- **Streaming restoration in the DOM.** `observeResponseStream` exists on all three adapters; nothing consumes it.
-- **The paste guard.** Not started.
-- The `review` state is built and tested but has no driver - only the send gate can raise it. Until then the surface shows `findings`, which says in the panel that sends are not intercepted.
+- **The SEND GATE** (D42, D43): intercept before the page acts, `verifyBinding`, fresh analysis, required-stages refusal, review, mask, certify, verified write, then a one-shot replay of the user's own action. Confirmed live on all three adapters - intercepted, masked, released, original never reaching the page.
+- **Streaming restoration** in the response (D44), and the **paste guard** (D45) as early warning with a one-tap "Mask now".
+
+**Remaining before M9 closes:**
+- **D29's confirm-and-send path.** The gate now refuses a composer the user never typed into, which is correct and is a bad first-run experience. See the blocker set below.
+- **Live-site verification of the write-back.** Confirmed against committed fixtures; not yet against the real ProseMirror/Quill instances (D43a).
 
 Read `src/adapters/types.ts`'s header before touching any adapter — the four constructions (D26) are what make it safe for selectors to be wrong. They were breached ONCE, by their own repair (D34k), so a change that widens what a strategy may match is a wrong-element-surface change even when aimed at a different element.
 
-**THE M9 BLOCKER SET.** Stated in full in ARCHITECTURE.md "Status after M9 adapters", which still describes all four as open - it predates the content-script batch. Current state:
-- **D29** - **OPEN.** Programmatic fills (restored drafts, URL prefills, SUGGESTION CHIPS) raise no editing event, so the input witness never sees them and the send would be blocked. A first-run path on two sites. The candidate fix is the confirm-and-send path in the review panel, which needs the send gate; it closes with the gate, not before.
+**THE M9 BLOCKER SET.** Closed out in ARCHITECTURE.md "Status after the M9 content-script batches". Current state:
+- **D29** - **OPEN, AND NOW USER-VISIBLE.** It was a prediction while nothing intercepted sends; since the gate landed it is behaviour. A composer filled by a restored draft, a URL prefill or a SUGGESTION CHIP raises no editing event, `verifyBinding` returns `no-input-witness`, and the send is REFUSED - fail-closed working as designed, and a bad first-run experience on a path two of three sites offer prominently. The fix was chosen before it was needed (D28 option d): convert the silent block into a visible "protect and send" confirmation in the review panel, which now exists.
 - **D34i** - **CLOSED at the health model.** ChatGPT's disabled mid-generation composer is now positive evidence of by-design absence (`composerTemporarilyDisabled`), bound to the element the resolution actually rejected. Its detached-node half arrived at the surface layer and was fixed there (D38a).
 - **D34v** - **CLOSED at the health model.** Gemini's empty-composer case is `sendControlNotExpected`, which reads the composer's text itself rather than trusting a caller's claim about it.
-- **D36** - **HALF.** SPEC's visible degraded state now exists and is what a detection or adapter failure renders. Nothing blocks sends, because there is no send gate; that half closes with it.
+- **D36** - **CLOSED.** The visible degraded state exists and renders, and since the send gate landed it also blocks.
 The distinction all three rest on - **"cannot find this element" versus "not applicable in this state"** - is BUILT, in `src/ui/surfaceState.ts`. INACTIVE is entered only on positive evidence that an element is absent by design, never on a bare `not-found`; the evidence is a branded type with no public constructor, each observer must hold a live connected element, each reason whitelists the failure KINDS it may explain, and evidence must be contemporaneous with the health check it explains. Adversarial review found four ways round it and all four are closed (D38).
 
-**NEXT: the send gate.** It is what closes D29 and D36's remaining half, and it is the last thing standing between detection and protection. Two constraints on it, both load-bearing: it must refuse to ship while `analyzeText`'s `ner` argument can be null - `stagesRun` is DERIVED from that argument, which is what makes "Stage 2 ran" a claim the code can support - and node-identity binding (`verifyBinding`) is already built and tested, waiting for its caller. Still to do in M9 after that: streaming restoration in the DOM, and the paste guard.
+**NEXT: D29's confirm-and-send path**, which is what M9 still owes along with live-site verification of the write-back on all three sites (D43a). Everything SPEC lists for M9 is otherwise built: the send gate, streaming restoration, and the paste guard all landed. Two constraints on the gate remain load-bearing - it refuses to release while `stagesRun` is missing a required stage, and `verifyBinding` is called rather than bypassed. Do not touch M10 until those two close.
 
 Diagnostic: **Ctrl+Alt+Shift+P** re-runs it in a state that does not survive a reload — typed composer, mid-generation, post-paste, which is where the remaining findings live. Before diagnosing an ABSENT element, establish it should be present in the state you are looking at: four confident Gemini diagnoses were wrong because every reading was taken on an empty composer (D34u).
 

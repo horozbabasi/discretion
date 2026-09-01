@@ -68,7 +68,7 @@
  */
 
 import type { NerRecognizer, SensitivityProfile } from '@privacyshield/core';
-import { PROFILES } from '@privacyshield/core';
+import { PROFILES, Vault } from '@privacyshield/core';
 
 import type {
   ComposerHandle,
@@ -152,15 +152,20 @@ export class DetectionController {
   /** One-shot permission for the gate to replay a send it just approved. */
   private readonly passThrough = new PassThrough();
   /**
-   * The exact text the gate last wrote and released.
+   * The exact text this extension last wrote into the composer.
    *
-   * Guards the recovery path. If a replay does not take - the site ignored the
-   * synthetic event, the button moved - the user presses send again, and
-   * without this the gate would re-analyse text that is ALREADY masked and
-   * mask the surrogates a second time, since a format-preserving surrogate is
-   * by construction a valid identifier.
+   * Set by BOTH paths that write - the gate's confirm, and the paste guard's
+   * "Mask now" - because the hazard is the same either way: a
+   * format-preserving surrogate is by construction a VALID identifier, so
+   * re-analysing text we already masked detects the surrogates and masks them
+   * again, producing a surrogate for a surrogate.
+   *
+   * It also carries the gate's recovery path. If a replay does not take - the
+   * site ignored the synthetic event, the button moved - the user presses send
+   * again, and this is what makes the second attempt release what they already
+   * approved instead of re-masking it.
    */
-  private lastReleasedText: string | null = null;
+  private lastMaskedText: string | null = null;
   private unsubscribeSubmit: (() => void) | null = null;
   private unsubscribeStream: (() => void) | null = null;
   /**
@@ -188,7 +193,7 @@ export class DetectionController {
    * surface. Background analysis may not write over them. Ownership returns on
    * the next edit, because an edit is the user saying they have seen it.
    */
-  private surfaceOwner: 'idle' | 'gate' = 'idle';
+  private surfaceOwner: 'idle' | 'gate' | 'paste' = 'idle';
 
   constructor(options: ControllerOptions) {
     this.options = options;
@@ -198,6 +203,8 @@ export class DetectionController {
       onConfirm: () => this.resolveDecision(true),
       onCancel: () => this.resolveDecision(false),
       onToggleItem: (id) => this.toggleRevert(id),
+      onMaskNow: () => this.maskNow(),
+      onDismiss: () => this.dismissPaste(),
       onAnchorLost: () => this.refresh(),
       onSurfaceLost: () => this.options.onError(new Error('the surface could not stay attached')),
     });
@@ -243,7 +250,7 @@ export class DetectionController {
         this.surface.setAnchor(node);
       }
 
-      if (this.surfaceOwner !== 'gate') {
+      if (this.surfaceOwner === 'idle') {
         this.surface.setState(this.stateForHealth(composer.ok ? composer.value : null));
       }
       if (composer.ok) this.scheduleAnalysis();
@@ -264,7 +271,7 @@ export class DetectionController {
     this.resolveDecision(false);
     this.passThrough.disarm();
     this.surfaceOwner = 'idle';
-    this.lastReleasedText = null;
+    this.lastMaskedText = null;
     this.cancelDebounce();
     this.bindInput(null);
     this.session.clear();
@@ -282,6 +289,122 @@ export class DetectionController {
    */
   panelRootForTesting(): ShadowRoot | null {
     return this.surface.shadowRootForTesting();
+  }
+
+  // ── the paste guard (SPEC line 288) ───────────────────────────────────
+
+  /**
+   * Detection at paste time, as early warning.
+   *
+   * SPEC: "Submit-time remains the enforcement gate; paste guard is early
+   * warning layered on top." So this does NOT preventDefault and does NOT
+   * block: the paste happens exactly as the user asked, and if they ignore
+   * the notice completely the send gate still catches everything in it.
+   *
+   * The text comes from the CLIPBOARD EVENT rather than from the composer
+   * afterwards, because "in what you just pasted" is a claim about the pasted
+   * content specifically - reading the composer would count what was already
+   * there and report it as newly pasted.
+   */
+  private onPaste(event: ClipboardEvent): void {
+    const pasted = event.clipboardData?.getData('text/plain') ?? '';
+    if (pasted.length === 0) return;
+
+    void this.summarisePaste(pasted).catch((error: unknown) => {
+      // A failed paste summary is NOT escalated. It is an early warning whose
+      // absence costs the user nothing that the send gate will not catch, and
+      // blocking the surface over it would turn a convenience into an
+      // obstacle. The gate's own failures still fail closed.
+      this.options.onError(error);
+    });
+  }
+
+  private async summarisePaste(pasted: string): Promise<void> {
+    const analysis = await analyzeText(pasted, {
+      ner: this.options.ner,
+      profile: this.profile,
+      mode: this.session.mode,
+      seed: this.session.seed,
+      // A SEPARATE vault: this analysis exists only to count what was pasted,
+      // and registering its surrogates in the session vault would mint
+      // entries for values that may not survive into the composer at all -
+      // leaving the restorer looking for surrogates nobody ever sent.
+      vault: new Vault(),
+    });
+    if (analysis.entities.length === 0) return;
+    // The gate owns the surface once it starts; a notice arriving late must
+    // not push a blocking decision off the screen.
+    if (this.surfaceOwner === 'gate') return;
+
+    const byLabel = new Map<string, number>();
+    for (const entity of analysis.entities) {
+      byLabel.set(entity.label, (byLabel.get(entity.label) ?? 0) + 1);
+    }
+    this.surfaceOwner = 'paste';
+    this.surface.setState({
+      kind: 'paste',
+      summary: { counts: [...byLabel].map(([label, count]) => ({ label, count })) },
+    });
+  }
+
+  /** SPEC's "one-tap mask now". Masks the composer; does NOT send. */
+  private maskNow(): void {
+    this.surfaceOwner = 'idle';
+    const composer = this.options.adapter.getComposer();
+    if (!composer.ok) {
+      this.refuse('The composer could not be located, so nothing was masked.');
+      return;
+    }
+    try {
+      const text = this.options.adapter.getComposerText(composer.value);
+      void this.analyseNow(text).then((analysis) => {
+        this.applyMaskOnly(composer.value, text, analysis);
+      }).catch((error: unknown) => {
+        this.failClosed(error, 'Nothing was masked: the message could not be checked.');
+      });
+    } catch (error) {
+      this.failClosed(error, 'Nothing was masked: the message could not be checked.');
+    }
+  }
+
+  /**
+   * Mask the composer in place, without releasing anything.
+   *
+   * The same apply-certify-write sequence the gate uses, minus the release -
+   * so a value masked here is masked under exactly the checks a sent message
+   * gets, and `lastMaskedText` is set so the eventual send does not mask the
+   * surrogates a second time.
+   */
+  private applyMaskOnly(handle: ComposerHandle, original: string, analysis: Analysis): void {
+    const isReverted = (id: string): boolean => this.session.isReverted(id);
+    const plan = applyMasking(original, analysis.entities, isReverted);
+    if (plan.applied.length === 0) {
+      this.surface.setState({ kind: 'hidden' });
+      return;
+    }
+
+    const certified = certifyForRelease(plan.maskedText, this.session.vault, isReverted);
+    if (!certified.ok) {
+      const types = [...new Set(certified.unaccountedLeaks.map((leak) => leak.type))];
+      this.refuse(`Nothing was masked: the masking did not remove ${types.join(', ')}.`);
+      return;
+    }
+
+    const write = this.options.adapter.setComposerText(handle, plan.maskedText);
+    if (!write.ok) {
+      this.refuse(`Nothing was masked: the text could not be written back. ${write.detail}`);
+      return;
+    }
+    this.lastMaskedText = plan.maskedText;
+    this.lastEntities = analysis.entities;
+    this.lastExposure = analysis.exposure.score;
+    this.surface.setState({ kind: 'hidden' });
+  }
+
+  /** SPEC requires the notice be dismissible. */
+  private dismissPaste(): void {
+    this.surfaceOwner = 'idle';
+    this.surface.setState({ kind: 'hidden' });
   }
 
   // ── streaming restoration (SPEC step 8) ───────────────────────────────
@@ -434,7 +557,7 @@ export class DetectionController {
     // Already masked and approved, and the replay did not take. Re-analysing
     // would mask the surrogates again - they are valid identifiers by
     // construction - so this releases what the user already approved.
-    if (this.lastReleasedText !== null && text === this.lastReleasedText) {
+    if (this.lastMaskedText !== null && text === this.lastMaskedText) {
       this.release(replay);
       return;
     }
@@ -511,7 +634,7 @@ export class DetectionController {
       }
     }
 
-    this.lastReleasedText = plan.maskedText;
+    this.lastMaskedText = plan.maskedText;
     this.release(replay);
   }
 
@@ -620,16 +743,23 @@ export class DetectionController {
     if (node === null) return;
 
     const onInput = (): void => {
-      // The user has moved on from whatever the gate last said, so the
-      // findings list may take the surface back.
+      // The user has moved on from whatever the gate or the paste notice last
+      // said, so the findings list may take the surface back.
       this.surfaceOwner = 'idle';
       this.scheduleAnalysis();
+    };
+    const onPaste = (event: Event): void => {
+      this.onPaste(event as ClipboardEvent);
     };
     // Bound to the composer rather than the document: a document-wide listener
     // would re-run analysis for every input on the page, including the site's
     // own search box.
     node.addEventListener('input', onInput);
-    this.unbindInput = () => node.removeEventListener('input', onInput);
+    node.addEventListener('paste', onPaste);
+    this.unbindInput = () => {
+      node.removeEventListener('input', onInput);
+      node.removeEventListener('paste', onPaste);
+    };
   }
 
   private cancelDebounce(): void {
@@ -660,9 +790,9 @@ export class DetectionController {
   }
 
   private async analyse(): Promise<void> {
-    // A gate in progress, or a refusal standing, owns the surface. See
-    // `surfaceOwner`.
-    if (this.surfaceOwner === 'gate') return;
+    // A gate in progress, a refusal standing, or a paste notice the user has
+    // not answered, owns the surface. See `surfaceOwner`.
+    if (this.surfaceOwner !== 'idle') return;
 
     // EVERY adapter call is inside the try, including the ones that merely
     // read. The first version resolved and read the composer above it, so an

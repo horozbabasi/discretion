@@ -312,3 +312,95 @@ describe('the decision the panel exists to take', () => {
     h.controller.destroy();
   });
 });
+
+describe('the paste guard: early warning, not a gate', () => {
+  // SPEC line 288: "Submit-time remains the enforcement gate; paste guard is
+  // early warning layered on top."
+
+  function paste(node: HTMLElement, text: string): Event {
+    // jsdom implements neither DataTransfer nor ClipboardEvent's
+    // clipboardData, so the smallest thing the guard actually reads is
+    // supplied: an object with getData. Simulating the platform rather than
+    // reshaping the production code to suit the test environment - the same
+    // rule the layout and insertText helpers follow.
+    const event = new Event('paste', { bubbles: true, cancelable: true });
+    Object.defineProperty(event, 'clipboardData', {
+      value: { getData: (type: string) => (type === 'text/plain' ? text : '') },
+    });
+    node.dispatchEvent(event);
+    // The paste itself still happens: the guard does not preventDefault.
+    node.textContent = (node.textContent ?? '') + text;
+    node.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true }));
+    return event;
+  }
+
+  it('does NOT cancel the paste', async () => {
+    const h = harness();
+    const event = paste(h.composer, `my iban is ${IBAN}`);
+    expect(event.defaultPrevented).toBe(false);
+    await settle();
+    h.controller.destroy();
+  });
+
+  it('warns with a count of what was pasted', async () => {
+    const h = harness();
+    paste(h.composer, `my iban is ${IBAN}`);
+    await settle();
+
+    expect(h.state()).toBe('paste');
+    const root = h.controller.panelRootForTesting();
+    expect(root?.textContent).toContain('in what you just pasted');
+    expect(root?.textContent).toContain('1 IBAN');
+    h.controller.destroy();
+  });
+
+  it('is dismissible, and the send gate still catches what it warned about', async () => {
+    // The point of the notice being dismissible is that ignoring it is safe.
+    const h = harness();
+    paste(h.composer, `my iban is ${IBAN}`);
+    await settle();
+    press(h.controller, 'Dismiss');
+    await settle();
+    expect(h.state()).not.toBe('paste');
+
+    pressEnter(h.composer);
+    await settle();
+    expect(h.state()).toBe('review');
+    expect(h.pageSends).toEqual([]);
+    h.controller.destroy();
+  });
+
+  it('MASK NOW masks the composer without sending it', async () => {
+    const h = harness();
+    paste(h.composer, `my iban is ${IBAN}`);
+    await settle();
+
+    press(h.controller, 'Mask now');
+    await settle();
+
+    expect(h.composer.textContent).not.toContain(IBAN);
+    expect(h.composer.textContent).toContain('my iban is');
+    // Masked, NOT sent: that is the whole distinction from the send gate.
+    expect(h.pageSends).toEqual([]);
+    h.controller.destroy();
+  });
+
+  it('does not mask the surrogates again when the masked text is then sent', async () => {
+    // Mask now writes surrogates, which are valid identifiers by construction.
+    // Without the already-masked guard the send would mask them a second time.
+    const h = harness();
+    paste(h.composer, `my iban is ${IBAN}`);
+    await settle();
+    press(h.controller, 'Mask now');
+    await settle();
+    const masked = h.composer.textContent ?? '';
+
+    pressEnter(h.composer);
+    await settle();
+
+    expect(h.composer.textContent).toBe(masked);
+    expect(h.pageSends.length).toBeGreaterThan(0);
+    for (const sent of h.pageSends) expect(sent).not.toContain(IBAN);
+    h.controller.destroy();
+  });
+});

@@ -4576,6 +4576,50 @@ catches the transient splits that markdown re-rendering merges anyway.
 The restorer is rebuilt whenever the session's vault is replaced. A restorer
 built once would go on holding a vault nobody else uses - wrong, and a way to
 keep cleared originals alive.
+### D45 - The paste guard is early warning, and everything about it follows from that (M9)
+
+SPEC line 288: "Submit-time remains the enforcement gate; paste guard is early
+warning layered on top." Every decision here is that sentence applied.
+
+  - **It does not preventDefault.** The paste happens exactly as asked. A guard
+    that swallowed the paste to inspect it would be a gate, and there already
+    is one.
+  - **It is dismissible**, because ignoring it has to be safe - and it is, since
+    the send gate catches everything the notice mentioned. A test dismisses the
+    notice and then asserts the gate still blocks.
+  - **Its failures are NOT escalated.** A failed paste summary reports and
+    stops. Blocking the surface over a missing early warning would turn a
+    convenience into an obstacle, and costs the user nothing the gate will not
+    catch. This is the second deliberate exception to fail-closed, alongside
+    restoration (D44), and for the same reason: neither is on the path where
+    failure means a leak.
+  - **`role="status"`, polite**, not an alert. It appears immediately after an
+    action the user took; an assertive region interrupts a screen reader
+    mid-word to announce something they are already expecting.
+
+**The counts come from the PASTED TEXT, analysed separately, INTO ITS OWN
+VAULT.** Reading the composer afterwards would count what was already there and
+report it as newly pasted, which is not what "in what you just pasted" claims.
+The separate vault matters more: registering these surrogates in the session
+vault would mint entries for values that may never survive into a sent message,
+leaving the restorer hunting for surrogates nobody ever sent.
+
+**"Mask now" runs the gate's own apply-certify-write, minus the release.** A
+value masked from the notice is masked under exactly the checks a sent message
+gets. It does not send - that is the whole distinction from the gate.
+
+**`lastReleasedText` became `lastMaskedText`, and now covers both writers.**
+The hazard is not about releasing; it is about having written. A
+format-preserving surrogate is by construction a VALID identifier, so
+re-analysing text we masked detects the surrogates and masks them again -
+a surrogate for a surrogate. Both the gate's confirm and "Mask now" set it, and
+a test sends after "Mask now" to pin that the second pass leaves the text alone.
+
+**Surface ownership gained a third owner.** `idle | gate | paste`: a notice the
+user has not answered must not be overwritten by the debounced findings list
+~180 ms later, which is the same defect the gate hit in D42a. A late-arriving
+paste summary also yields to a gate already in progress, so an early warning
+can never push a blocking decision off the screen.
 
 ## Standing contracts (established in M1)
 

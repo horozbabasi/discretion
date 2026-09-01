@@ -200,6 +200,23 @@ export function itemCount(content: ReviewContent): number {
   return content.groups.reduce((total, group) => total + group.items.length, 0);
 }
 
+/**
+ * What was found in something the user just pasted.
+ *
+ * SPEC.md: "show an immediate, dismissible inline notice (e.g. '3 API keys, 1
+ * IBAN in what you just pasted')". Counts BY TYPE, because that is the
+ * sentence SPEC asks for and because a bare total ("6 things") tells a user
+ * nothing about whether to care.
+ */
+export interface PasteSummary {
+  /** Ordered as they will be read out; label is already human-readable. */
+  readonly counts: readonly { readonly label: string; readonly count: number }[];
+}
+
+export function pasteTotal(summary: PasteSummary): number {
+  return summary.counts.reduce((total, entry) => total + entry.count, 0);
+}
+
 export type SurfaceState =
   | { readonly kind: 'hidden' }
   /**
@@ -212,6 +229,16 @@ export type SurfaceState =
    * a protection that is not running. SPEC's no-stubs rule applies to UI as
    * much as to functions.
    */
+  /**
+   * The paste guard's early warning.
+   *
+   * NOT a gate, and the distinction is SPEC's: "Submit-time remains the
+   * enforcement gate; paste guard is early warning layered on top." So it is
+   * dismissible, it blocks nothing, and it offers to act rather than
+   * demanding a decision. If the user ignores it entirely, the send gate still
+   * catches everything in it.
+   */
+  | { readonly kind: 'paste'; readonly summary: PasteSummary }
   | { readonly kind: 'findings'; readonly content: ReviewContent }
   | { readonly kind: 'review'; readonly content: ReviewContent }
   | { readonly kind: 'degraded'; readonly failures: readonly ResolutionFailure[] }

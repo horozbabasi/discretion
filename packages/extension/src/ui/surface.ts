@@ -41,8 +41,8 @@
  */
 
 import type { ResolutionFailure } from '../adapters/index.js';
-import type { ReviewContent, ReviewGroup, SurfaceState } from './surfaceState.js';
-import { itemCount } from './surfaceState.js';
+import type { PasteSummary, ReviewContent, ReviewGroup, SurfaceState } from './surfaceState.js';
+import { itemCount, pasteTotal } from './surfaceState.js';
 import { PANEL_STYLES } from './styles.js';
 import { detectTheme, onSystemThemeChange } from './theme.js';
 
@@ -76,6 +76,10 @@ export interface SurfaceCallbacks {
   readonly onCancel: () => void;
   /** One detection was reverted or un-reverted. */
   readonly onToggleItem: (id: string) => void;
+  /** The paste notice's "Mask now". Masks the composer without sending. */
+  readonly onMaskNow?: () => void;
+  /** The paste notice's dismiss. SPEC requires the notice be dismissible. */
+  readonly onDismiss?: () => void;
   /**
    * The anchor element left the document.
    *
@@ -248,7 +252,7 @@ export class Surface {
 
   private isVisible(): boolean {
     const kind = this.state.kind;
-    return kind === 'review' || kind === 'degraded' || kind === 'findings';
+    return kind === 'review' || kind === 'degraded' || kind === 'findings' || kind === 'paste';
   }
 
   private applyTheme(): void {
@@ -383,6 +387,7 @@ export class Surface {
 
     this.applyTheme();
     if (state.kind === 'review') this.renderReview(panel, state.content);
+    else if (state.kind === 'paste') this.renderPaste(panel, state.summary);
     else if (state.kind === 'findings') this.renderFindings(panel, state.content);
     else if (state.kind === 'degraded') this.renderDegraded(panel, state.failures);
     this.showInTopLayer();
@@ -516,6 +521,59 @@ export class Surface {
       ),
     );
     panel.append(note);
+  }
+
+  /**
+   * The paste guard's notice.
+   *
+   * `role="status"` with a POLITE live region, not an alert. It appears
+   * immediately after an action the user themselves took, and an assertive
+   * region interrupts a screen reader mid-word to say something the user is
+   * already expecting to hear about. Polite says it at the next natural break,
+   * which is what "immediate" means for someone listening rather than looking.
+   *
+   * It takes no focus for the same reason the findings panel does not: the
+   * user has just pasted and is still typing.
+   */
+  private renderPaste(panel: HTMLElement, summary: PasteSummary): void {
+    const total = pasteTotal(summary);
+    panel.setAttribute('role', 'status');
+    panel.setAttribute('aria-live', 'polite');
+    panel.setAttribute('aria-atomic', 'true');
+
+    // "3 API keys, 1 IBAN" - SPEC's own example sentence. Plurality is per
+    // entry rather than for the whole phrase, because "1 API keys" is the kind
+    // of detail that makes a user trust the rest of the panel less.
+    const phrase = summary.counts
+      .map((entry) => `${String(entry.count)} ${entry.label}${entry.count === 1 ? '' : 's'}`)
+      .join(', ');
+
+    const box = this.el('div', 'degraded');
+    box.append(
+      this.text('div', 'title', `${phrase} in what you just pasted`),
+      this.text(
+        'div',
+        'why',
+        total === 0
+          ? 'Nothing sensitive was found in it.'
+          : 'These will be masked when you send. You can mask them now instead.',
+      ),
+    );
+    panel.append(box);
+
+    const actions = this.el('div', 'actions');
+    const dismiss = this.el('button', '') as HTMLButtonElement;
+    dismiss.type = 'button';
+    dismiss.textContent = 'Dismiss';
+    dismiss.addEventListener('click', () => this.callbacks.onDismiss?.());
+
+    const maskNow = this.el('button', 'primary') as HTMLButtonElement;
+    maskNow.type = 'button';
+    maskNow.textContent = 'Mask now';
+    maskNow.addEventListener('click', () => this.callbacks.onMaskNow?.());
+
+    actions.append(dismiss, maskNow);
+    panel.append(actions);
   }
 
   private head(title: string, sub: string): HTMLElement {

@@ -145,6 +145,9 @@ function start(): void {
   const detection = new DetectionController({
     adapter,
     document,
+    // The same witness the adapter was built with. verifyBinding needs it, and
+    // a second witness would have seen none of this session's typing.
+    witness,
     ner: recognizer,
     onError: (error) => {
       // Never the error's data, only its type and message: a detection error

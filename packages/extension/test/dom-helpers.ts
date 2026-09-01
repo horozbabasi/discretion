@@ -86,3 +86,47 @@ export function moveIntoShadowRoot(element: Element): ShadowRoot {
 export function witnessTyping(element: Element): void {
   element.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
 }
+
+/**
+ * jsdom implements no `document.execCommand`, so every write into a
+ * contenteditable throws and the send gate correctly refuses.
+ *
+ * That refusal is the RIGHT behaviour - it is fail-closed doing its job - but
+ * it means the confirm path cannot be exercised offline at all, and the
+ * masked write-back is the single most important thing the gate does.
+ *
+ * So `insertText` is emulated, in the same spirit as `giveEverythingLayout`:
+ * simulate what a browser would do rather than weaken the production code to
+ * suit the test environment. `execCommand('insertText', false, text)` replaces
+ * the current selection, and the selection the writer sets is the element's
+ * whole contents - so replacing all of it with one text node is what a browser
+ * produces here.
+ *
+ * WHAT THIS DOES NOT ESTABLISH, stated because it would otherwise be assumed:
+ * that a real browser's `insertText` produces the `beforeinput`/`input` events
+ * ProseMirror, Quill and Lexical need in order to accept the change, and that
+ * those editors do not revert it on their next reconciliation. Nothing offline
+ * can establish that. It is what the live verification is for, and
+ * ADAPTER-VERIFICATION.md records the result.
+ */
+export function installInsertTextEmulation(): void {
+  const doc = document as Document & {
+    execCommand?: (command: string, showUi?: boolean, value?: string) => boolean;
+  };
+  doc.execCommand = (command, _showUi, value) => {
+    if (command !== 'insertText') return false;
+    const selection = document.defaultView?.getSelection();
+    const range = selection?.rangeCount === 1 ? selection.getRangeAt(0) : null;
+    const host = range?.commonAncestorContainer;
+    const element =
+      host instanceof HTMLElement ? host : (host?.parentElement ?? null);
+    if (element === null) return false;
+    element.textContent = value ?? '';
+    // A real insertText raises input on the editing host, which is what the
+    // input witness and every framework listener key on.
+    element.dispatchEvent(
+      new InputEvent('input', { bubbles: true, composed: true, inputType: 'insertText' }),
+    );
+    return true;
+  };
+}

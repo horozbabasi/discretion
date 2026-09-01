@@ -2,14 +2,39 @@
  * What runs detection, and what it does with the answer.
  *
  * ─────────────────────────────────────────────────────────────────────────
- * SPEC.md's content-script flow, steps 1-5:
- *   1. Identify site, load adapter, run healthCheck, warm the NER worker
- *   2-4. (submit interception, masking, the send gate) - NOT here
- *   5. Show the review panel: detections grouped by type, each with
- *      calibrated confidence and explanation, each individually revertible
+ * SPEC.md's content-script flow, steps 1-5, all of them:
+ *   1. Identify site, load adapter, run healthCheck, warm the recognizer
+ *   2. Intercept the submit BEFORE the page acts on it
+ *   3. Run detection on what is about to be sent
+ *   4. Mask, verify, and only then release
+ *   5. The review panel: detections grouped by type, each with calibrated
+ *      confidence and explanation, each individually revertible
  *
- * This controller owns 1 and 5. It is READ-ONLY: it reads the composer, it
- * never writes to it, it never listens for a submit, and it blocks nothing.
+ * The controller SEQUENCES these. It decides nothing: every decision the gate
+ * makes lives in sendGate.ts, where each has its own counterexamples.
+ *
+ * ─────────────────────────────────────────────────────────────────────────
+ * THE ORDER OF THE GATE, AND WHY EACH STEP PRECEDES THE NEXT
+ *
+ *   suppress            FIRST, synchronously, before anything can await. An
+ *                       await before preventDefault is a sent message.
+ *   verifyBinding       the element detection ran on must BE the element this
+ *                       event submits (D26 construction #2). Called, never
+ *                       bypassed - a wrong getComposer() is caught here and
+ *                       nowhere else.
+ *   analyse             fresh, on the text as it is now. The debounced
+ *                       findings may describe an older keystroke.
+ *   required stages     a scan missing Stage 2 is not a scan. See
+ *                       REQUIRED_STAGES.
+ *   review              only if something was found, and only the user ends it
+ *   apply + certify     splice the surrogates the PANEL SHOWED, then scan the
+ *                       result for anything the user did not choose to keep
+ *   write + verify      setComposerText re-reads what it wrote
+ *   replay              the user's own action, once, under a one-shot token
+ *
+ * Every one of those steps can refuse. None of them can fall through: the
+ * catch-all sets a blocking state, and the send is simply never replayed.
+ * ─────────────────────────────────────────────────────────────────────────
  *
  * ─────────────────────────────────────────────────────────────────────────
  * THE COMPOSER IS RE-RESOLVED, NOT REMEMBERED
@@ -27,23 +52,27 @@
  * a decision about this one.
  *
  * ─────────────────────────────────────────────────────────────────────────
- * FAIL-CLOSED, WITH NOTHING TO CLOSE YET
+ * FAIL-CLOSED, NOW WITH SOMETHING TO CLOSE
  *
  * SPEC: "Any detection error, timeout, or adapter failure blocks the send."
- * There is no send gate in this batch, so nothing here can block. What it can
- * do - and must - is refuse to look successful. A detection error puts the
- * surface into DEGRADED, which is the same state an adapter failure produces
- * and the state the gate will read when it exists. The one thing that must
- * never happen is an error resolving to an empty panel, because "found
- * nothing" and "could not look" are indistinguishable to a user and only one
- * of them is safe.
+ * A failure anywhere in the gate leaves the message in the composer, unsent
+ * and unmodified, and puts the surface into DEGRADED. The user loses a
+ * keystroke; they do not lose the value.
+ *
+ * The failure that must never happen is the opposite one, and it has a
+ * specific shape: an error resolving to "nothing found" and the send going
+ * through. "Found nothing" and "could not look" are indistinguishable to a
+ * user, and only one of them is safe - so nothing in this file releases a
+ * message on any path other than a completed, certified gate.
  * ─────────────────────────────────────────────────────────────────────────
  */
 
 import type { NerRecognizer, SensitivityProfile } from '@privacyshield/core';
 import { PROFILES } from '@privacyshield/core';
 
-import type { ComposerHandle, SiteAdapter } from '../adapters/index.js';
+import type { ComposerHandle, SiteAdapter, SubmitIntent } from '../adapters/index.js';
+import { verifyBinding } from '../adapters/index.js';
+import type { InputWitness } from '../adapters/index.js';
 import { Surface } from '../ui/surface.js';
 import type { ReviewGroup, ReviewItem, SurfaceState } from '../ui/surfaceState.js';
 import {
@@ -52,8 +81,9 @@ import {
   surfaceStateFor,
 } from '../ui/surfaceState.js';
 import { analyzeText } from './analyze.js';
-import type { AnalyzedEntity } from './analyze.js';
+import type { AnalyzedEntity, Analysis } from './analyze.js';
 import { DetectionSession } from './session.js';
+import { applyMasking, certifyForRelease, missingStages, PassThrough } from './sendGate.js';
 
 /**
  * How long after the last keystroke analysis runs.
@@ -68,6 +98,14 @@ const DEBOUNCE_MS = 180;
 export interface ControllerOptions {
   readonly adapter: SiteAdapter;
   readonly document: Document;
+  /**
+   * The same witness the adapter was built with.
+   *
+   * Required rather than optional: `verifyBinding` cannot run without it, and
+   * a gate that skipped the witness check would accept a composer-shaped
+   * element the user never typed into (D26 construction #3).
+   */
+  readonly witness: InputWitness;
   /**
    * Stage 2. Required so it cannot be forgotten, null while the model is not
    * bundled - see analyze.ts.
@@ -91,16 +129,43 @@ export class DetectionController {
   private lastEntities: readonly AnalyzedEntity[] = [];
   private lastExposure = 0;
 
+  /** Resolves when the user answers the review panel. Null when none is open. */
+  private pendingDecision: ((released: boolean) => void) | null = null;
+  /** One-shot permission for the gate to replay a send it just approved. */
+  private readonly passThrough = new PassThrough();
+  /**
+   * The exact text the gate last wrote and released.
+   *
+   * Guards the recovery path. If a replay does not take - the site ignored the
+   * synthetic event, the button moved - the user presses send again, and
+   * without this the gate would re-analyse text that is ALREADY masked and
+   * mask the surrogates a second time, since a format-preserving surrogate is
+   * by construction a valid identifier.
+   */
+  private lastReleasedText: string | null = null;
+  private unsubscribeSubmit: (() => void) | null = null;
+  /**
+   * Who the surface currently belongs to.
+   *
+   * FOUND BY TEST, and it was a real defect rather than a test artefact: the
+   * gate would refuse a send, and ~180 ms later the debounced analysis that
+   * had been scheduled by the user's last keystroke would finish and overwrite
+   * the refusal with the findings list. The user is told "not sent, here is
+   * why", and then the explanation quietly disappears - which is the same
+   * failure as never showing it.
+   *
+   * So a gate in progress, and a refusal it has left standing, OWN the
+   * surface. Background analysis may not write over them. Ownership returns on
+   * the next edit, because an edit is the user saying they have seen it.
+   */
+  private surfaceOwner: 'idle' | 'gate' = 'idle';
+
   constructor(options: ControllerOptions) {
     this.options = options;
     this.profile = options.profile ?? PROFILES.balanced;
     this.surface = new Surface(options.document, {
-      // Neither exists yet: both belong to the send gate, and a button that
-      // silently does nothing is worse than an absent one. The `findings`
-      // state renders no Cancel and no "Mask and send" for exactly this
-      // reason, so these are unreachable rather than inert.
-      onConfirm: () => undefined,
-      onCancel: () => undefined,
+      onConfirm: () => this.resolveDecision(true),
+      onCancel: () => this.resolveDecision(false),
       onToggleItem: (id) => this.toggleRevert(id),
       onAnchorLost: () => this.refresh(),
       onSurfaceLost: () => this.options.onError(new Error('the surface could not stay attached')),
@@ -109,6 +174,9 @@ export class DetectionController {
 
   start(): void {
     this.surface.mount();
+    this.unsubscribeSubmit = this.options.adapter.onSubmitIntent((intent) => {
+      this.onSubmit(intent);
+    });
     this.refresh();
   }
 
@@ -137,7 +205,9 @@ export class DetectionController {
         this.surface.setAnchor(node);
       }
 
-      this.surface.setState(this.stateForHealth(composer.ok ? composer.value : null));
+      if (this.surfaceOwner !== 'gate') {
+        this.surface.setState(this.stateForHealth(composer.ok ? composer.value : null));
+      }
       if (composer.ok) this.scheduleAnalysis();
     } catch (error) {
       this.failClosed(error, 'The page could not be checked. This message has not been reviewed.');
@@ -146,10 +216,275 @@ export class DetectionController {
 
   /** Clears everything a session may hold. SPEC: no plaintext survives. */
   destroy(): void {
+    this.unsubscribeSubmit?.();
+    this.unsubscribeSubmit = null;
+    // A panel awaiting an answer must not be left with a promise nobody will
+    // settle. Resolving it as NOT released is the only safe direction.
+    this.resolveDecision(false);
+    this.passThrough.disarm();
+    this.surfaceOwner = 'idle';
+    this.lastReleasedText = null;
     this.cancelDebounce();
     this.bindInput(null);
     this.session.clear();
     this.surface.destroy();
+  }
+
+  /**
+   * Test seam: the panel's root, which is otherwise a closed shadow root
+   * behind a private field.
+   *
+   * The same seam `Surface` already exposes, forwarded one level. The gate's
+   * decisions are reachable only through the panel's buttons, and a test that
+   * called `resolveDecision` directly would be testing the controller's
+   * internals rather than the thing the user actually operates.
+   */
+  panelRootForTesting(): ShadowRoot | null {
+    return this.surface.shadowRootForTesting();
+  }
+
+  // ── the send gate ──────────────────────────────────────────────────────
+
+  /**
+   * A user action that would send the composer's contents.
+   *
+   * SYNCHRONOUS UP TO `suppress()`, and that is not a style choice. Between
+   * the event being dispatched and `preventDefault` being called there must be
+   * no `await`: the microtask boundary is enough for the page's own handler to
+   * run, and once it has run the message is gone. Everything asynchronous
+   * happens after the event is already dead.
+   */
+  private onSubmit(intent: SubmitIntent): void {
+    // Our own replay of a send the gate already approved. Consuming disarms,
+    // so a second event cannot ride the same token.
+    if (this.passThrough.consume()) return;
+
+    intent.suppress();
+    this.surfaceOwner = 'gate';
+
+    // The replay target has to be captured NOW. `composedPath()` returns an
+    // empty array once dispatch finishes, so reading it after the gate's first
+    // await would silently yield nothing to replay.
+    const replay = this.captureReplay(intent);
+
+    void this.runGate(intent, replay).catch((error: unknown) => {
+      // runGate handles its own failures; a rejection here means the handler
+      // itself failed, and the message stays unsent either way.
+      this.failClosed(error, 'The send could not be checked, so it was not sent.');
+    });
+  }
+
+  /**
+   * How to re-perform the user's action once the gate approves it.
+   *
+   * The user's OWN action on the SAME element, never a send control located by
+   * a fresh document-wide search. That independence is the point of D26
+   * construction #2, and a gate that re-acquired the send button by selector
+   * would hand it back.
+   */
+  private captureReplay(intent: SubmitIntent): (() => void) | null {
+    if (intent.kind === 'button') {
+      const path = intent.event.composedPath();
+      const target = path.find((node): node is HTMLElement => node instanceof HTMLElement);
+      const button = target?.closest('button') ?? target ?? null;
+      return button === null ? null : () => button.click();
+    }
+    const composer = intent.originComposer;
+    if (composer === null) return null;
+    const source = intent.event as KeyboardEvent;
+    return () => {
+      composer.focus();
+      for (const type of ['keydown', 'keypress', 'keyup'] as const) {
+        composer.dispatchEvent(
+          new KeyboardEvent(type, {
+            key: 'Enter',
+            code: 'Enter',
+            keyCode: 13,
+            which: 13,
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            ctrlKey: source.ctrlKey,
+            metaKey: source.metaKey,
+          }),
+        );
+      }
+    };
+  }
+
+  private async runGate(intent: SubmitIntent, replay: (() => void) | null): Promise<void> {
+    const composer = this.options.adapter.getComposer();
+    if (!composer.ok) {
+      this.refuse('The composer could not be located, so this message was not checked or sent.');
+      return;
+    }
+
+    // D26 construction #2 and #3, and the only check that does not depend on a
+    // selector being right. A wrong getComposer() means detection ran on the
+    // wrong text, and this equality is what catches it.
+    const binding = verifyBinding(composer.value, intent, this.options.witness);
+    if (!binding.ok) {
+      this.refuse(`This message was not sent. ${binding.detail}`);
+      return;
+    }
+
+    const text = this.options.adapter.getComposerText(composer.value);
+    if (text.length === 0) {
+      // Nothing to protect. Release without a panel: a gate that interrupted
+      // an empty send would be noise, and there is no value at risk.
+      this.release(replay);
+      return;
+    }
+
+    // Already masked and approved, and the replay did not take. Re-analysing
+    // would mask the surrogates again - they are valid identifiers by
+    // construction - so this releases what the user already approved.
+    if (this.lastReleasedText !== null && text === this.lastReleasedText) {
+      this.release(replay);
+      return;
+    }
+
+    let analysis: Analysis;
+    try {
+      analysis = await this.analyseNow(text);
+    } catch (error) {
+      this.failClosed(error, 'This message was not checked, so it was not sent.');
+      return;
+    }
+
+    // The null-NER refusal, enforced rather than remembered. `stagesRun` is
+    // derived from the recognizer argument, so a missing stage here is a fact
+    // about what ran, not a claim about what was configured.
+    const missing = missingStages(analysis.stagesRun);
+    if (missing.length > 0) {
+      this.refuse(
+        `This message was not sent: it could not be fully checked (${missing.join(', ')} did not run).`,
+      );
+      return;
+    }
+
+    if (analysis.entities.length === 0) {
+      this.release(replay);
+      return;
+    }
+
+    this.lastEntities = analysis.entities;
+    this.lastExposure = analysis.exposure.score;
+    const approved = await this.askForReview(analysis);
+    if (!approved) {
+      // Cancelled. The composer is untouched and nothing was sent; the user is
+      // back where they were, with their text intact.
+      this.surface.setState({ kind: 'hidden' });
+      return;
+    }
+
+    this.applyAndRelease(composer.value, text, analysis, replay);
+  }
+
+  /** Mask, certify, write, verify, release. Any refusal stops the send. */
+  private applyAndRelease(
+    handle: ComposerHandle,
+    original: string,
+    analysis: Analysis,
+    replay: (() => void) | null,
+  ): void {
+    const isReverted = (id: string): boolean => this.session.isReverted(id);
+    const plan = applyMasking(original, analysis.entities, isReverted);
+
+    // The last look before release. `guardEgress` scans for every original the
+    // vault holds, including the ones a revert deliberately kept, so the leaks
+    // are reconciled against the reverts: anything left over is a masking
+    // defect - a missed span, a bad offset - and must not reach the network.
+    const certified = certifyForRelease(plan.maskedText, this.session.vault, isReverted);
+    if (!certified.ok) {
+      const types = [...new Set(certified.unaccountedLeaks.map((leak) => leak.type))];
+      this.refuse(
+        `This message was NOT sent: masking did not remove ${types.join(', ')}. This is a bug in the extension, not in your message.`,
+      );
+      return;
+    }
+
+    if (plan.applied.length > 0) {
+      const write = this.options.adapter.setComposerText(handle, plan.maskedText);
+      if (!write.ok) {
+        this.refuse(`This message was not sent: the masked text could not be written back (${write.reason}).`);
+        return;
+      }
+    }
+
+    this.lastReleasedText = plan.maskedText;
+    this.release(replay);
+  }
+
+  /**
+   * Hand the send back to the page.
+   *
+   * Arming and replaying is the whole of it, and the token is disarmed in a
+   * `finally` so a throwing replay cannot leave one live for a later send to
+   * consume.
+   */
+  private release(replay: (() => void) | null): void {
+    this.surfaceOwner = 'idle';
+    this.surface.setState({ kind: 'hidden' });
+    if (replay === null) {
+      // Nothing to replay: the action could not be reconstructed. The text is
+      // masked and safe, but the user has to press send themselves, and being
+      // told that is better than a message that silently never goes.
+      this.refuse('Your message is masked and ready. Press send again to send it.');
+      return;
+    }
+    this.passThrough.arm();
+    try {
+      replay();
+    } finally {
+      this.passThrough.disarm();
+    }
+  }
+
+  /** Opens the review panel and waits for the user. */
+  private askForReview(analysis: Analysis): Promise<boolean> {
+    this.resolveDecision(false);
+    this.surface.setState({
+      kind: 'review',
+      content: {
+        groups: this.group(analysis.entities),
+        exposureScore: analysis.exposure.score,
+      },
+    });
+    return new Promise<boolean>((resolve) => {
+      this.pendingDecision = resolve;
+    });
+  }
+
+  private resolveDecision(released: boolean): void {
+    const pending = this.pendingDecision;
+    this.pendingDecision = null;
+    pending?.(released);
+  }
+
+  /**
+   * A refusal with a reason the user can read. Never releases.
+   *
+   * Keeps surface ownership: the refusal must stand until the user has had a
+   * chance to read it, and the next thing they do to the composer is what
+   * hands the surface back.
+   */
+  private refuse(detail: string): void {
+    this.surfaceOwner = 'gate';
+    this.surface.setState({
+      kind: 'degraded',
+      failures: [{ kind: 'invariant', target: 'send', detail, triedStrategies: [] }],
+    });
+  }
+
+  private analyseNow(text: string): Promise<Analysis> {
+    return analyzeText(text, {
+      ner: this.options.ner,
+      profile: this.profile,
+      mode: this.session.mode,
+      seed: this.session.seed,
+      vault: this.session.vault,
+    });
   }
 
   // ── internals ──────────────────────────────────────────────────────────
@@ -185,7 +520,12 @@ export class DetectionController {
     this.boundComposer = node;
     if (node === null) return;
 
-    const onInput = (): void => this.scheduleAnalysis();
+    const onInput = (): void => {
+      // The user has moved on from whatever the gate last said, so the
+      // findings list may take the surface back.
+      this.surfaceOwner = 'idle';
+      this.scheduleAnalysis();
+    };
     // Bound to the composer rather than the document: a document-wide listener
     // would re-run analysis for every input on the page, including the site's
     // own search box.
@@ -221,6 +561,10 @@ export class DetectionController {
   }
 
   private async analyse(): Promise<void> {
+    // A gate in progress, or a refusal standing, owns the surface. See
+    // `surfaceOwner`.
+    if (this.surfaceOwner === 'gate') return;
+
     // EVERY adapter call is inside the try, including the ones that merely
     // read. The first version resolved and read the composer above it, so an
     // adapter that threw on read produced an unhandled rejection and left the
@@ -339,8 +683,14 @@ export class DetectionController {
     // the text has not changed, and re-running the pipeline to redraw a label
     // would be a detection pass the user's edit did not ask for.
     if (this.lastEntities.length === 0) return;
+    // The SAME kind it was, not always `findings`. Toggling an item inside the
+    // blocking review panel used to re-render it as the non-blocking findings
+    // list, which removed Cancel and "Mask and send" - so the user could no
+    // longer answer the question, and the send stayed suppressed with no way
+    // to release it. Found by test.
+    const kind = this.surfaceOwner === 'gate' ? 'review' : 'findings';
     this.surface.setState({
-      kind: 'findings',
+      kind,
       content: {
         groups: this.group(this.lastEntities),
         // The same score the analysis produced. Exposure measures what is AT

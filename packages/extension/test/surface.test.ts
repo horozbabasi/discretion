@@ -674,13 +674,16 @@ describe('findings: what was detected, not a decision', () => {
     expect(labels.filter((l) => l === 'Keep original' || l === 'Mask this')).toHaveLength(3);
   });
 
-  it('says plainly that nothing is being intercepted', () => {
-    // The alternative is a panel implying a protection that is not running,
-    // which is the failure this project treats as critical, arriving as a UI
-    // string.
+  it('says what will actually happen when the user sends', () => {
+    // This assertion moved WITH the send gate rather than after it. Before the
+    // gate it read "does not yet intercept sends", which was the honest thing
+    // while that was true; leaving it once the gate landed would have been the
+    // same failure in the opposite direction - a panel whose text no longer
+    // describes what the software does.
     const { surface, root } = makeSurface();
     surface.setState({ kind: 'findings', content: REVIEW });
-    expect(root.textContent).toContain('does not yet intercept sends');
+    expect(root.textContent).toContain('asked to confirm');
+    expect(root.textContent).not.toContain('does not yet intercept');
   });
 });
 

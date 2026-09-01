@@ -188,6 +188,17 @@ button.link { border-color: transparent; padding: 2px 6px; color: var(--ps-accen
 button:focus-visible,
 [tabindex]:focus-visible { outline: 2px solid var(--ps-focus); outline-offset: 2px; }
 
+/* The findings note: informational, not a warning. The degraded box's amber
+   is reserved for the state where protection is NOT running, and reusing it
+   here would spend the one visual signal that has to keep meaning that. */
+.note {
+  padding: 8px 12px;
+  border-top: 1px solid var(--ps-border);
+  color: var(--ps-muted);
+  font-size: 12px;
+}
+.note .why { color: inherit; }
+
 .degraded {
   padding: 10px 12px;
   background: var(--ps-warn-bg);

@@ -502,17 +502,18 @@ export class Surface {
     );
     this.appendGroups(panel, content);
 
-    // Said plainly, because the alternative is a panel that implies a
-    // protection which is not running. Detection is wired; the send gate is
-    // not, so nothing here is stopping or changing what gets sent. A panel
-    // listing what "will be masked" while sends go out untouched is the
-    // failure this project treats as critical, arriving as a UI string.
-    const note = this.el('div', 'degraded');
+    // What this panel promises is now true, and the wording changed with the
+    // gate rather than after it. It previously said sends were NOT
+    // intercepted, which was the honest thing to say while that was the case;
+    // leaving it there once the gate landed would have been the same failure
+    // in the opposite direction - a panel whose text no longer describes what
+    // the software does.
+    const note = this.el('div', 'note');
     note.append(
       this.text(
         'div',
         'why',
-        'Detection only: this build does not yet intercept sends, so nothing here changes the message you send.',
+        'When you send, these will be replaced and you will be asked to confirm first.',
       ),
     );
     panel.append(note);

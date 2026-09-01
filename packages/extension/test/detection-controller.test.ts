@@ -7,10 +7,13 @@
  * fake would define away — that the composer is re-resolved rather than
  * remembered, and that the panel's state follows the adapter's health.
  *
- * READ-ONLY is asserted rather than asserted-about: the composer's text is
- * captured before and after and must be identical. SPEC's step 3 (write the
- * masked text back) does not exist yet, and a controller that quietly gained
- * it would be a send-altering change nobody reviewed.
+ * These cover the LIVE-TYPING path, which stays read-only: analysis runs as
+ * the user writes and never touches the composer. The write-back happens only
+ * behind the send gate, on an explicit confirmation, and is covered in
+ * `send-gate-flow.test.ts`. The byte-identity assertion below is therefore
+ * still exactly the right claim for this file - a controller that started
+ * writing while someone was typing would be a send-altering change nobody
+ * reviewed.
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -52,6 +55,7 @@ function makeController(): {
   const controller = new DetectionController({
     adapter,
     document,
+    witness,
     ner: null,
     onError: (error) => errors.push(error),
   });

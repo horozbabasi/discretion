@@ -61,3 +61,4 @@ probe*.log
 # Live-verification browser profile: holds session cookies for the logged-in
 # write-back check (ARCHITECTURE.md D43a). Never committed.
 packages/extension/.live-profile/
+live.log

@@ -40,6 +40,7 @@
  * ─────────────────────────────────────────────────────────────────────────
  */
 
+import type { ResolutionFailure } from '../adapters/index.js';
 import type { ReviewContent, ReviewGroup, SurfaceState } from './surfaceState.js';
 import { itemCount } from './surfaceState.js';
 import { PANEL_STYLES } from './styles.js';
@@ -383,9 +384,7 @@ export class Surface {
     this.applyTheme();
     if (state.kind === 'review') this.renderReview(panel, state.content);
     else if (state.kind === 'findings') this.renderFindings(panel, state.content);
-    else if (state.kind === 'degraded') {
-      this.renderDegraded(panel, state.failures.map((failure) => failure.target));
-    }
+    else if (state.kind === 'degraded') this.renderDegraded(panel, state.failures);
     this.showInTopLayer();
     this.reposition();
     // Only on the transition INTO review. Re-rendering after a toggle would
@@ -587,26 +586,69 @@ export class Surface {
     return section;
   }
 
-  private renderDegraded(panel: HTMLElement, targets: readonly string[]): void {
+  /**
+   * The blocking state, in the words of whoever blocked.
+   *
+   * WHAT THIS USED TO DO, and why it was wrong. It took only the failure
+   * TARGETS and printed one fixed sentence - "This site's layout changed, so
+   * the extension can no longer find the parts of the page it needs" - plus
+   * "Could not find: <targets>". That was true of the one caller it was
+   * written for, the adapter health check.
+   *
+   * The send gate then became a second caller, with refusals like "your
+   * message is masked and ready, press send again" and "masking did not remove
+   * an IBAN". Every one of them rendered as "this site's layout changed",
+   * which is not a vaguer version of the truth - it is a different and false
+   * claim, and it tells the user to do nothing when there is something they
+   * can do. Found by reading a screenshot of the live run, which is the only
+   * place it was visible.
+   *
+   * So the detail travels. `ResolutionFailure.detail` is already required to
+   * be operator-facing and free of page text; this renders it.
+   */
+  private renderDegraded(panel: HTMLElement, failures: readonly ResolutionFailure[]): void {
     // Not a dialog: there is nothing to answer. It is a live region so a
     // screen reader announces it when it appears without the user having to go
-    // looking. `aria-atomic` because the message only makes sense whole —
-    // announcing just the changed sentence would read out a list of element
-    // names with no statement of what happened.
+    // looking. `aria-atomic` because the message only makes sense whole.
     panel.setAttribute('role', 'alert');
     panel.setAttribute('aria-live', 'assertive');
     panel.setAttribute('aria-atomic', 'true');
 
+    // A refusal about THIS MESSAGE reads differently from the page being
+    // broken, and conflating them costs the user the difference between "try
+    // again" and "nothing you do will help".
+    const aboutThisSend = failures.some(
+      (failure) => failure.target === 'send' || failure.target === 'detection',
+    );
+
     const box = this.el('div', 'degraded');
     box.append(
-      this.text('div', 'title', 'PrivacyShield is not protecting this page'),
       this.text(
         'div',
-        'why',
-        "This site's layout changed, so the extension can no longer find the parts of the page it needs. Sends are blocked until it can.",
+        'title',
+        aboutThisSend
+          ? 'PrivacyShield did not send this message'
+          : 'PrivacyShield is not protecting this page',
       ),
-      this.text('div', 'why', `Could not find: ${targets.join(', ')}.`),
     );
+
+    if (failures.length === 0) {
+      box.append(
+        this.text('div', 'why', 'The extension reported a problem without saying what it was.'),
+      );
+    }
+    for (const failure of failures) {
+      box.append(this.text('div', 'why', failure.detail));
+    }
+    if (!aboutThisSend && failures.length > 0) {
+      box.append(
+        this.text(
+          'div',
+          'why',
+          `Could not find: ${failures.map((failure) => failure.target).join(', ')}.`,
+        ),
+      );
+    }
     panel.append(box);
   }
 

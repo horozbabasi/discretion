@@ -730,3 +730,44 @@ describe('detections are grouped by type', () => {
     expect(names[2]).toBe('Mask this: IBAN, item 3 of 3');
   });
 });
+
+describe('the degraded panel says what actually went wrong', () => {
+  // Found by reading a screenshot of the live run. The panel took only the
+  // failure TARGETS and printed one fixed sentence - "this site's layout
+  // changed" - so every send-gate refusal rendered as a claim about the site
+  // being broken. That is not a vaguer truth, it is a different and false one,
+  // and it tells the user to do nothing when there is something they can do.
+  const failure = (target: string, detail: string) =>
+    ({ kind: 'invariant', target, detail, triedStrategies: [] }) as const;
+
+  it('renders the reason the caller gave', () => {
+    const { surface, root } = makeSurface();
+    surface.setState({
+      kind: 'degraded',
+      failures: [failure('send', 'Your message is masked and ready. Press send again to send it.')],
+    });
+    expect(root.textContent).toContain('Press send again');
+  });
+
+  it('does not claim the site changed when a single send was refused', () => {
+    const { surface, root } = makeSurface();
+    surface.setState({
+      kind: 'degraded',
+      failures: [failure('send', 'This message was not sent: the write did not stick.')],
+    });
+    expect(root.textContent).toContain('did not send this message');
+    expect(root.textContent).not.toContain("layout changed");
+  });
+
+  it('still reports a page-level failure as one', () => {
+    const { surface, root } = makeSurface();
+    surface.setState({
+      kind: 'degraded',
+      failures: [
+        { kind: 'not-found', target: 'composer', detail: 'x', triedStrategies: [] },
+      ],
+    });
+    expect(root.textContent).toContain('not protecting this page');
+    expect(root.textContent).toContain('Could not find: composer');
+  });
+});

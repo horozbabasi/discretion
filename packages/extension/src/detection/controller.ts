@@ -407,7 +407,11 @@ export class DetectionController {
     if (plan.applied.length > 0) {
       const write = this.options.adapter.setComposerText(handle, plan.maskedText);
       if (!write.ok) {
-        this.refuse(`This message was not sent: the masked text could not be written back (${write.reason}).`);
+        // `write.detail` carries the diagnosis - which reason, and the lengths
+        // involved, never the content. Dropping it and printing only the
+        // reason code left the one screen that could explain a failed write
+        // saying `(readback-mismatch)` and nothing else.
+        this.refuse(`This message was not sent: the masked text could not be written back. ${write.detail}`);
         return;
       }
     }

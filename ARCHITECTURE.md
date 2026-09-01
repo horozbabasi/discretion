@@ -4403,6 +4403,71 @@ returned an empty array every time: onnxruntime-web fetches inside a Web
 Worker, which has its own Resource Timing buffer. A field that can only ever
 report "nothing was fetched" reads as evidence and is an artefact of where it
 was measured, so it was removed rather than kept and caveated.
+### D42 - The send gate, verified live, and the one thing that is NOT confirmed (M9)
+
+Run in a real browser against the shipped package, with the real offscreen
+document and the real model: `packages/extension/scripts/verify-send-gate.py`.
+The origin is real and the response is not - Playwright fulfils
+`https://claude.ai/**` from the committed fixture - because the content script
+is declared for three origins, and adding a localhost match to verify would
+mean verifying a manifest that does not ship.
+
+**CONFIRMED END TO END:**
+
+  - a sensitive IBAN typed with real key events is DETECTED (findings panel);
+  - pressing Enter is INTERCEPTED - the page's own bubble-phase handler
+    recorded ZERO sends, so the message never reached it;
+  - the REVIEW panel opens and blocks;
+  - confirming WRITES THE MASKED TEXT BACK: the composer afterwards reads
+    `please wire it to GB97BFDE26054573938622 today`, and the original
+    `GB33BUKB20201555555555` is gone.
+
+**NOT CONFIRMED, and stated as such: the release.** After the write the gate
+refuses with `readback-mismatch` - "Wrote 83 characters but read back 109" -
+so the message stays in the composer, masked, unsent. The value never left;
+this is fail-closed doing its job. But "only the masked version leaves the
+composer" is not demonstrated, because on this fixture nothing leaves it.
+
+**The cause, as far as it is established.** `writeEditableText` selects the
+editable's contents and calls `execCommand('insertText')`. On this DOM the
+insert does not replace everything the selection covered: 26 characters of the
+composer's decorative whitespace structure survive alongside the inserted
+text, so the readback is 109 against the 83 written and `equivalentAfterWrite`
+- which forgives only line-ending form and trailing whitespace - correctly
+refuses.
+
+NOT FIXED HERE. The fix changes the shared write path that all three adapters
+use, so it needs its own verification on all three rather than a change made
+in the tail of the session that found it. Two candidate directions, neither
+yet tested: clear the composer as a separate step before inserting, or compare
+the readback in a form that tolerates structural whitespace the editor owns.
+The second is the more dangerous of the two and would need its counterexample
+first - a loosened comparison is how a write that did not take starts passing.
+
+### D42a - Two defects the live run found that no test would have (M9)
+
+Both were invisible to the suite because both are about what a HUMAN reads.
+
+**The degraded panel discarded the reason it was given.** `renderDegraded`
+took only the failure TARGETS and printed one fixed sentence: "This site's
+layout changed, so the extension can no longer find the parts of the page it
+needs." That was true of its only caller when it was written, the adapter
+health check. The send gate then became a second caller with refusals like
+"your message is masked and ready, press send again" and "masking did not
+remove an IBAN" - and every one of them rendered as a claim that the SITE was
+broken. Not a vaguer version of the truth: a different and false one, which
+tells the user to do nothing when there is something they can do.
+
+Found by reading a screenshot. The panel is inside a closed shadow root, so
+its text is not reachable from the page, and the assertions that existed
+checked the states rather than the sentences.
+
+**The refusal dropped `write.detail`.** The gate reported `(readback-mismatch)`
+and nothing else, when the write path had already produced the diagnosis -
+which reason, and the lengths involved, never the content. The one screen that
+could explain a failed write was printing the least useful half of what it had.
+Surfacing it is what turned "the write failed" into "83 written, 109 read
+back", which is the whole difference between a symptom and a cause.
 
 ## Standing contracts (established in M1)
 

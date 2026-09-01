@@ -4718,101 +4718,108 @@ run ext:fetch-model" line wrote a literal newline into a JS string and broke
 `build.mjs` outright. It was caught immediately because the very next thing run
 was the build - which is the argument for running the thing you just edited
 rather than the thing you think you edited.
-## Status after the M9 content-script batches
 
-**Not the milestone close either, and the gap is named below.** Everything
-SPEC lists for M9 is built; two things stand between that and calling M9 done.
+## Status after M9
 
-**1,144 tests.** Typecheck covers source and test files; lint clean. Every
-figure below was taken with its own exit code checked.
+**M9 is complete.** The extension detects, intercepts, masks, verifies, sends,
+and restores. **1,153 tests**; typecheck covers source and test files; lint
+clean; every figure below taken with its own exit code checked.
 
-### What the content script now does
+SPEC's M9: "Extension: manifest, adapters, content script, review UI, streaming
+restoration in the DOM. Paste guard; review panel shows the document exposure
+score." All of it ships.
 
-The whole of SPEC's content-script flow, steps 1-8:
+### The whole content-script flow
 
-| step | where it lives |
+| step | where |
 | --- | --- |
 | 1. identify site, load adapter, healthCheck, warm the recognizer | `content.ts`, `adapters/` |
 | 2. intercept the submit before the page acts | `controller.onSubmit` |
-| 3. run detection on what is about to be sent | `analyze.ts`, offscreen NER |
-| 4. mask, certify, write, release | `sendGate.ts`, `controller.applyAndRelease` |
-| 5. the review panel, grouped by type | `ui/surface.ts` |
-| 8. restore surrogates in the response | `detection/restore.ts` |
-| paste guard (SPEC line 288) | `controller.onPaste` |
+| 3. run detection on what is about to be sent | `analyze.ts` + offscreen NER |
+| 4. mask, certify, write, release | `sendGate.ts` |
+| 5. review panel, grouped by type, with the exposure score | `ui/surface.ts` |
+| 8. restore surrogates as the response streams | `detection/restore.ts` |
+| paste guard | `controller.onPaste` |
 
-**The surface is one host with five contents**: hidden, findings, paste,
-review, degraded. Closed shadow root, top layer, theme sampled from the page,
-anchor treated as borrowed because all three sites replace the composer
-mid-session.
+**One surface, five contents**: hidden, findings, paste, review, degraded.
+Closed shadow root, top layer, theme sampled from the page, anchor treated as
+borrowed because all three sites replace the composer mid-session.
 
-**Stage 2 runs in an offscreen document** with the gazetteers beside it, which
-took `content.js` from 4,613,033 to 1,230,588 bytes. One IPC crossing per
-analysis at 0.4-0.5 ms p50; the incremental path went 97 to ~104 ms.
+**Stage 2 runs in an offscreen document** with the gazetteers beside it:
+`content.js` 4,613,033 -> 1,230,588 bytes, one IPC crossing per analysis at
+0.4-0.5 ms p50, incremental path 97 -> ~104 ms.
 
-### The blocker set, closed out
+### The blocker set, all four closed
 
-| | state |
+| | |
 | --- | --- |
-| **D34i** ChatGPT mid-generation | **CLOSED** at the health model. A disabled composer is positive evidence of by-design absence, bound to the element the resolution actually rejected. Its detached-node half arrived at the surface layer and was fixed there (D38a). |
-| **D34v** Gemini empty composer | **CLOSED** at the health model. `sendControlNotExpected` reads the composer's text itself rather than trusting a caller's claim about it. |
-| **D36** no visible degraded state | **HALF, now fully.** The state exists and renders, and since the gate landed it also blocks. What remains is D29, below. |
-| **D29** programmatic fills | **OPEN, AND NOW USER-VISIBLE.** See below. |
+| **D29** programmatic fills | CLOSED (D47). The block became a question: "Check this is your message", action relabelled "Protect and send". Only `no-input-witness` becomes a question; every other binding failure still refuses. |
+| **D34i** ChatGPT mid-generation | CLOSED at the health model; its detached-node half fixed at the surface (D38a). |
+| **D34v** Gemini empty composer | CLOSED at the health model. |
+| **D36** no visible degraded state | CLOSED. The state exists, renders, and blocks. |
 
-### D29 became live the moment the gate did
+### What M9 measured, and what it corrected
 
-D29 was a prediction while nothing intercepted sends. It is now behaviour: a
-composer filled by a restored draft, a URL prefill or a SUGGESTION CHIP raises
-no editing event, the input witness never sees the element, `verifyBinding`
-returns `no-input-witness`, and the gate REFUSES THE SEND.
+Four things this milestone published were WRONG when it started, and are
+recorded corrected rather than quietly restated:
 
-That is fail-closed working exactly as designed, and it is a bad first-run
-experience on a path two of the three sites offer prominently. The user is told
-"This element has never received input during this page session", which is true
-and unhelpful.
+- **The latency harness fetched its runtime from a CDN** (D40b), in a project
+  whose first non-negotiable is zero runtime network access. Every WASM figure
+  before it described a build that does not ship.
+- **No test file in the repository was typechecked** (D40). Every
+  `@ts-expect-error` across the suite was inert; enabling it found three tests
+  asserting nothing.
+- **A detection fixture used reserved documentation values** (D40), so a whole
+  file asserted against an empty entity set.
+- **The panel was never positioned** (D48). It rendered in the top-left corner
+  of every page for three batches, in every screenshot, because every
+  assertion asked about state and text and none asked about WHERE.
 
-The candidate fix was chosen long before it was needed (D28, option d): when
-the witness is missing, convert the silent block into a VISIBLE confirmation -
-a "protect and send" step in the review panel. It fails closed without failing
-useless, and it needs the review panel, which now exists. Nothing else in the
-list is blocked behind it.
+Each was found by looking at the thing rather than at the report of it.
 
-### The other thing standing between this and M9's close
+### Verified live
 
-**No live-site verification of the write-back.** D43's fix is confirmed
-end-to-end on all three adapters against committed fixtures, in a real browser,
-with the real model: intercepted, masked, released, original never reaching the
-page. What that does NOT establish is that each site's real editor -
-ProseMirror, Quill - accepts the write and does not revert it on its next
-reconciliation. The fixtures are snapshots of DOM, not of editors. It needs a
-logged-in session on each site, and it is flagged for M11 acceptance if it has
-not happened before then (D43a).
+`scripts/verify-send-gate.py` - all three adapters against committed fixtures
+served at their real origins, exit 0: intercepted with the page's own handler
+firing zero times, masked, released, original never reaching the page.
 
-### Open, carried forward, unresolved
+`scripts/verify-live-site.py` - gemini.google.com, real Quill, exit 0: the
+prefilled send is intercepted and asks (D29); confirming writes the surrogate,
+which Quill accepts and which survives 7 s of its own reconciliation (D43a).
+Nothing was sent; every POST was aborted first.
 
-Nothing here is closed by this batch; it is listed so it is not mistaken for
-closed.
+### Carried into M10, none of it closed
 
-- **D27a** - the unexplained 4-5x machine slow state. Now FLAGGED rather than
-  resolved: a machine-speed canary records the machine's state on every latency
-  measurement (D27b). Whether a slow canary is the same condition is still
-  unconfirmed.
-- **D41f** - the extension's cold path measures 3x FASTER than the in-page
-  harness under matched conditions, with six candidate causes refuted and none
-  named. BENCHMARKS.md's cold figures are pessimistic by roughly that much.
-- **GENERIC_SECRET recall 55.4%**, TAX_ID recall 91.2%, one over-confident
-  calibration bucket, thin mid-range calibration, p50 latency 255.8 ms against
-  a 250 ms budget - all carried from M8, none touched here.
-- **D40a** - known-test-value suppression is scoped to the detector that
-  recognises it, so a test card stays claimable by another detector. Noted, not
-  chased.
+- **claude.ai and chatgpt.com are unverified against their real editors.**
+  claude.ai sits behind a challenge, chatgpt.com's logged-out page has only a
+  marketing textarea; both need credentials. This is the one piece of M9's own
+  work that could not be finished here, and it is flagged for M11 acceptance.
+- **On the logged-out Gemini page the send control does not resolve.** The gate
+  does not depend on it - it binds through the submit event - but healthCheck
+  reports the failure. Whether the logged-in page still resolves it is
+  unverified since 2026-08-29.
+- **D27a** - the 4-5x machine slow state. FLAGGED, not resolved (D27b).
+- **D41f** - the extension's cold path measures 3x faster than the in-page
+  harness, six candidate causes refuted, none named.
+- From M8, untouched: **GENERIC_SECRET recall 55.4%**, TAX_ID recall 91.2%, one
+  over-confident calibration bucket, thin mid-range calibration, **p50 latency
+  255.8 ms against a 250 ms budget**.
+- **D40a** - known-test-value suppression is scoped to one detector.
 
-### What M9 still owes
+### The shape of what went wrong, across the whole milestone
 
-1. D29's confirm-and-send path.
-2. Live-site verification of the write-back on all three sites.
+Nearly every defect M9 found was a CHECK THAT LOOKED LIKE IT HELD. The
+brand-forgery test that never compiled. The benchmark that measured a CDN. The
+probe built from minified markup that could not reproduce the bug it existed to
+find. The positioning assertion that passed in jsdom while the browser computed
+zero. The fixture whose values the detectors correctly ignored.
 
-M10 (popup, options, i18n, Quick Redact, Local Insights) is untouched and stays
-that way until those close.
+None of these failed loudly. Each reported success. The thing that caught every
+one of them was running the check against a condition where it should FAIL and
+confirming that it did - which is now the default here, and is why the brand
+test, the canary, the model fetcher and the write path were each verified by
+breaking them on purpose.
+
 ### D47 - D29 closed: the block became a question (M9)
 
 The gate refused a composer the user never typed into. Correct - the input

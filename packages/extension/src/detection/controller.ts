@@ -70,7 +70,12 @@
 import type { NerRecognizer, SensitivityProfile } from '@privacyshield/core';
 import { PROFILES } from '@privacyshield/core';
 
-import type { ComposerHandle, SiteAdapter, SubmitIntent } from '../adapters/index.js';
+import type {
+  ComposerHandle,
+  ResponseStreamEvent,
+  SiteAdapter,
+  SubmitIntent,
+} from '../adapters/index.js';
 import { verifyBinding } from '../adapters/index.js';
 import type { InputWitness } from '../adapters/index.js';
 import { Surface } from '../ui/surface.js';
@@ -81,6 +86,7 @@ import {
   surfaceStateFor,
 } from '../ui/surfaceState.js';
 import { analyzeText } from './analyze.js';
+import { DomRestorer } from './restore.js';
 import type { AnalyzedEntity, Analysis } from './analyze.js';
 import { DetectionSession } from './session.js';
 import { applyMasking, certifyForRelease, missingStages, PassThrough } from './sendGate.js';
@@ -94,6 +100,18 @@ import { applyMasking, certifyForRelease, missingStages, PassThrough } from './s
  * legitimately matches nothing until its last character.
  */
 const DEBOUNCE_MS = 180;
+
+/**
+ * How long after the last response mutation the settle re-scan runs.
+ *
+ * Long enough that a streaming response does not trigger it repeatedly, short
+ * enough that a user reading the answer sees their own values restored rather
+ * than noticing surrogates and wondering.
+ */
+const SETTLE_MS = 400;
+
+/** The surface's custom element name, which restoration must not write into. */
+const SURFACE_HOST_TAG = 'privacyshield-surface';
 
 export interface ControllerOptions {
   readonly adapter: SiteAdapter;
@@ -144,6 +162,18 @@ export class DetectionController {
    */
   private lastReleasedText: string | null = null;
   private unsubscribeSubmit: (() => void) | null = null;
+  private unsubscribeStream: (() => void) | null = null;
+  /**
+   * Rebuilt whenever the session's vault is replaced.
+   *
+   * The restorer holds the vault, and `session.clear()` swaps in a fresh one -
+   * so a restorer built once at construction would go on restoring from a
+   * vault nobody else is using, which is both wrong and a way to keep cleared
+   * originals alive.
+   */
+  private restorer: DomRestorer;
+  /** Re-scan after the stream stops moving; see `scheduleSettle`. */
+  private settleTimer: number | null = null;
   /**
    * Who the surface currently belongs to.
    *
@@ -163,6 +193,7 @@ export class DetectionController {
   constructor(options: ControllerOptions) {
     this.options = options;
     this.profile = options.profile ?? PROFILES.balanced;
+    this.restorer = new DomRestorer(this.session.vault, SURFACE_HOST_TAG);
     this.surface = new Surface(options.document, {
       onConfirm: () => this.resolveDecision(true),
       onCancel: () => this.resolveDecision(false),
@@ -176,6 +207,12 @@ export class DetectionController {
     this.surface.mount();
     this.unsubscribeSubmit = this.options.adapter.onSubmitIntent((intent) => {
       this.onSubmit(intent);
+    });
+    // SPEC step 8. Subscribed once, for the life of the controller: the
+    // response root is re-resolved by the adapter's own observer, and
+    // re-subscribing on every refresh would drop mutations in the gap.
+    this.unsubscribeStream = this.options.adapter.observeResponseStream((event) => {
+      this.onResponseStream(event);
     });
     this.refresh();
   }
@@ -200,6 +237,7 @@ export class DetectionController {
         // describes a message the user has left.
         this.bindInput(node);
         this.session.clear();
+        this.restorer = new DomRestorer(this.session.vault, SURFACE_HOST_TAG);
         this.lastEntities = [];
         this.lastExposure = 0;
         this.surface.setAnchor(node);
@@ -218,6 +256,9 @@ export class DetectionController {
   destroy(): void {
     this.unsubscribeSubmit?.();
     this.unsubscribeSubmit = null;
+    this.unsubscribeStream?.();
+    this.unsubscribeStream = null;
+    this.cancelSettle();
     // A panel awaiting an answer must not be left with a promise nobody will
     // settle. Resolving it as NOT released is the only safe direction.
     this.resolveDecision(false);
@@ -241,6 +282,60 @@ export class DetectionController {
    */
   panelRootForTesting(): ShadowRoot | null {
     return this.surface.shadowRootForTesting();
+  }
+
+  // ── streaming restoration (SPEC step 8) ───────────────────────────────
+
+  /**
+   * Restore surrogates in the response as it arrives.
+   *
+   * Deliberately does NOT report failures upward. Restoration is a display
+   * concern: if it fails, the user sees a surrogate where their own value
+   * should be - visible, and safe. Escalating that to the blocking degraded
+   * state would take a cosmetic problem and use it to stop the user sending
+   * anything, which is a worse outcome than the problem.
+   *
+   * That asymmetry is worth being explicit about, because everything else in
+   * this file fails closed. The difference is direction: the gate protects
+   * data on its way OUT, where the failure is a leak; restoration renders data
+   * that is already home, where the failure is an inconvenience.
+   */
+  private onResponseStream(event: ResponseStreamEvent): void {
+    try {
+      this.restorer.apply(event.changedTextNodes);
+      this.scheduleSettle(event.root);
+    } catch (error) {
+      this.options.onError(error);
+    }
+  }
+
+  /**
+   * One more pass once the stream stops moving.
+   *
+   * A surrogate split across text nodes is not restored (see restore.ts). Some
+   * of those splits are transient - the site re-renders streaming markdown and
+   * the fragments merge - so a re-scan after the mutations stop catches what
+   * the per-mutation pass could not. Debounced, so a long response schedules it
+   * once rather than per chunk.
+   */
+  private scheduleSettle(root: Node): void {
+    this.cancelSettle();
+    const view = this.options.document.defaultView;
+    if (view === null) return;
+    this.settleTimer = view.setTimeout(() => {
+      this.settleTimer = null;
+      try {
+        this.restorer.applyToSubtree(root);
+      } catch (error) {
+        this.options.onError(error);
+      }
+    }, SETTLE_MS);
+  }
+
+  private cancelSettle(): void {
+    if (this.settleTimer === null) return;
+    this.options.document.defaultView?.clearTimeout(this.settleTimer);
+    this.settleTimer = null;
   }
 
   // ── the send gate ──────────────────────────────────────────────────────

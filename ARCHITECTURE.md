@@ -4528,6 +4528,54 @@ is the safe direction for a test to be wrong in. Left as it is: making the
 fixtures faithful would remove a case the shared write path now handles, and
 the handling is cheap. Recorded because a future reader comparing a fixture to
 a real page will otherwise find the difference and wonder which is authoritative.
+### D44 - Streaming restoration in the DOM, and why it is not core's Restorer (M9)
+
+SPEC step 8. Core already has a `Restorer` and it is the wrong shape for this,
+which is worth saying rather than leaving a reader to wonder why a second one
+exists.
+
+Core's is a LINEAR stream processor whose central guarantee is that it HOLDS
+BACK a suffix which could still turn out to be a surrogate. That needs control
+over what is rendered. Here the SITE renders: by the time a mutation is
+observed the characters are already on screen, and there is nothing to hold.
+
+So `DomRestorer` reaches the same properties by different means:
+
+  - HOLD ON PARTIAL becomes DO NOTHING ON PARTIAL. A half-arrived surrogate
+    does not match, so it is not replaced, and a later mutation completes it.
+    Not replacing is already the safe direction, so nothing needs holding.
+  - LONGEST MATCH FIRST is kept exactly - a surrogate that is a prefix of a
+    longer one must never steal its match.
+  - IDEMPOTENCE is free for core's own reason: the masker guarantees originals
+    are collision-distinct from every surrogate. It matters more here, because
+    sites re-render streaming markdown and the same node is visited repeatedly.
+
+**IT DOES NOT FAIL CLOSED, and that is deliberate.** Everything else in the
+controller blocks on failure. Restoration is a DISPLAY concern: if it fails the
+user sees a surrogate where their own value should be - visible, and safe.
+Escalating that to the blocking degraded state would take a cosmetic problem
+and use it to stop the user sending anything. The difference is direction: the
+gate protects data on its way OUT, where failure is a leak; restoration renders
+data that is already home, where failure is an inconvenience.
+
+**Where it refuses to write**: never inside an editable (an original the user
+could send back), never inside our own panel (which shows surrogates on
+purpose), never a detached node. The editability test is the ADAPTERS' own
+`isEditableSurface`, not a local `isContentEditable` check - jsdom does not
+implement that property, so a local test returns undefined and the guard
+silently stops guarding. A test caught exactly that by restoring into a
+contenteditable it was supposed to refuse.
+
+**Known limitation, pinned by a test rather than left to be discovered**: a
+surrogate SPLIT ACROSS TEXT NODES is not restored. Joining them means
+rewriting the site's element structure while it streams into it, which is a
+larger risk than the failure it prevents - and that failure is visible and
+safe. A debounced settle pass re-scans the subtree once mutations stop, which
+catches the transient splits that markdown re-rendering merges anyway.
+
+The restorer is rebuilt whenever the session's vault is replaced. A restorer
+built once would go on holding a vault nobody else uses - wrong, and a way to
+keep cleared originals alive.
 
 ## Standing contracts (established in M1)
 

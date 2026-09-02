@@ -5532,6 +5532,146 @@ ratios and elements, and "resting and focused styles are identical". Restored,
 both pass. An accessibility check that has never been seen failing is a
 decoration.
 
+### D57 - The send-button gap: measured, renamed, and carried to M11 with a designed fix
+
+M9 handed M10 a note reading "send-button selectors depend on an English
+`aria-label`; this is M10's problem because it is an i18n defect in disguise".
+M10 localised the extension's own UI and did not touch it. Before deciding
+whether to fix it or carry it, the gap was MEASURED rather than argued about,
+and the measurement changed both its name and its severity.
+
+### What the code actually does
+
+All three adapters share one click-handler shape:
+
+| adapter | line | what happens when the send control does not match |
+| --- | --- | --- |
+| claude | `claude.ts:368-372` | `return` |
+| chatgpt | `chatgpt.ts:276-279` | `return` |
+| gemini | `gemini.ts:1007-1012` | `return` |
+
+The `return` precedes `callback(...)`, so no `SubmitIntent` is created,
+`suppress()` never runs, `preventDefault`/`stopPropagation` never run, and the
+capture-phase listener hands the click straight to the page - **which sends the
+composer's ORIGINAL, unmasked text.**
+
+That is a fail-OPEN path in a tool whose first rule is fail-closed, and it is
+worth stating in the sharpest available terms: *"not a send control"* and
+*"a send control we failed to recognise"* are the same answer here, and only
+one of them is safe.
+
+**Nothing else catches it.** Every candidate net was enumerated and each was
+shown, with call sites, not to apply: `onSubmit`, `PassThrough`,
+`certifyForRelease`/`guardEgress`, `verifyBinding`, `recordIntent`, the
+transcript MutationObserver, the paste/input listeners, the service worker, the
+offscreen document. All of them run only AFTER the extension has taken control
+of the event, which is the thing that did not happen.
+
+**And `healthCheck` blocks nothing.** Its result reaches a badge, a console
+line and a panel - `controller.ts:915` feeds `surfaceStateFor` and nothing
+else. ARCHITECTURE already says of the degraded grace window "THIS CHANGES WHAT
+IS DISPLAYED AND NEVER WHAT IS ALLOWED"; that is true here too and it is not a
+mitigation. The degraded panel is even `pointer-events: none`
+(`styles.ts:141`), so it cannot block the click by accident.
+
+### What is actually true today, measured
+
+`scripts/probe-send-locale.py` loads each site in two locales, TYPES INTO THE
+COMPOSER (the send control does not render until it is non-empty - M9 lost four
+rounds to exactly that), and counts what each selector tier matches. Live,
+2026-09-02, signed-out `gemini.google.com/app`:
+
+| tier | en | tr |
+| --- | --- | --- |
+| `[data-test-id="send-button"]` | 0 | 0 |
+| `[data-testid="send-button"]` | 0 | 0 |
+| `.send-button` | **1** | **1** |
+| `mat-icon[fonticon="send"]` | 0 | 0 |
+| mat-icon `send` ligature | 0 | 0 |
+| `[aria-label="Send message" i]` | **1** | 0 |
+
+So:
+
+- **There is no live leak today.** Gemini resolves through a locale-independent
+  clause in Turkish. ChatGPT has no English clause at all (`chatgpt.ts:68-81`),
+  by deliberate design stated in its own comment. Claude's English clauses sit
+  in a union behind `data-testid="send-button"` and `type="submit"`, and its
+  file already calls the dependency "LATENT".
+- **But the redundancy is asymmetric.** An English user on Gemini has TWO
+  anchors; everyone else has ONE - and that one is a CSS CLASS, the tier
+  SPEC.md itself ranks least durable ("class names last"). A re-skin that
+  renames it leaves English users resolving via the label and non-English users
+  falling through to the positional tier.
+- Claude and ChatGPT **could not be measured**: both require a signed-in
+  session. The probe's guard refused a verdict for them rather than reporting
+  the resulting zeroes as a finding, which is the same vacuous-pass trap this
+  project has now caught seven times.
+
+### Renaming it
+
+"Send-button selectors depend on an English aria-label" is the wrong name and
+it is why the item was easy to defer. The defect is:
+
+> **When the send control cannot be resolved, a pointer send is not
+> intercepted and leaves unmasked. Locale is one route to that state; a markup
+> change is a likelier one.**
+
+Two other routes to the identical outcome, neither involving locale:
+
+- **Gemini's ambiguity path.** `decide()` returns `{ buttons: [] }` when two
+  candidates match at a tier (`gemini.ts:762`), and the click handler treats an
+  empty list exactly like no match. So *too many* send controls silently
+  fails open in the same way *too few* does.
+- **Any selector break at all** on any of the three sites.
+
+The failure is also ASYMMETRIC in a way that makes it easy to miss: the Enter
+path never consults the send control, so a user who presses Enter is protected
+on every locale. Only a POINTER send is exposed. The extension looks like it is
+working right up until someone clicks instead of pressing Enter.
+
+### The fix, designed and not yet applied
+
+No new machinery is needed. `onSubmit` suppresses and runs the gate on ANY
+intent, and `captureReplay` re-performs the user's own click from
+`composedPath()` rather than re-acquiring a button by selector
+(`controller.ts:561-565`) - so an intent emitted for an unrecognised control
+would be masked and then replayed on that same control, correctly.
+
+The change is per-adapter and about ten lines each: in `onClick`, when the
+selector does not match, ask whether ANY send control resolves on the page
+right now. If one does, the click was genuinely something else - return, as
+today. If NONE does, and the click landed on a control inside the composer's
+own region, we cannot rule out a send: emit the intent and let the gate decide.
+
+Normal operation is untouched, because the widened branch is reachable only in
+the state where the adapter is already broken.
+
+### Why it is CARRIED to M11 rather than fixed now
+
+Not because it is small - it is - and not because it is unimportant.
+
+**It cannot be verified where it matters.** The change's dangerous failure mode
+is spurious firing: `findSendButtons` returning nothing TRANSIENTLY during page
+load (M9 measured exactly that on claude.ai - "reading #1, 7 ms, composer
+not-found") would make an early click on any composer-region control trigger
+the gate. Whether that happens is a question about real page-load timing on
+three real sites, and two of them cannot be loaded without a signed-in session
+the maintainer has to provide by hand. Shipping an unverified change to the
+fail-closed path of the send gate - the most dangerous code in this repository,
+where M9 spent six rounds - is precisely what this project refuses to do.
+
+**What was landed instead**, both zero-risk:
+
+- `scripts/probe-send-locale.py`, which turned the worry into the table above
+  and will answer the same question again in one command;
+- `test/unrecognised-send-control.test.ts`, which pins the gap in EXECUTABLE
+  form, including two positive controls proving the Enter path and a recognised
+  control still intercept. **When the fix lands those assertions must FAIL** -
+  they are written to be flipped, not deleted.
+
+M11 inherits a named defect with a designed fix and a measurement, rather than
+a sentence in a list.
+
 ## Status after M10
 
 **M10 IS CLOSED, with two items explicitly left open** (below). The extension
@@ -5583,17 +5723,53 @@ Three scripts load the built extension into Edge and drive it:
   Shipping the options page without wiring them would have been three stubs
   behind a settings screen.
 
-### Left open, deliberately
+### Left open, named explicitly
 
-- **The eight translations are machine-generated and unreviewed.** Structure is
-  enforced by tests — placeholder budgets, plural categories, no copy-pasted
-  English — and structure is not meaning. **A release blocker** (D53), not a
-  nicety, because "it compiles and the tests pass" is exactly the condition
-  under which a wrong translation ships quietly.
-- **"Screen-reader tested" is half done.** The accessibility tree is audited;
-  nobody has used these pages with NVDA, VoiceOver or Orca. Announcement
-  order and live-region interruption are judgements a tree walk cannot make
-  (D56).
+Nothing below may be reported as closed until M11 addresses it. The first two
+are the ones M10 promised and did not deliver.
+
+**OPEN 1 — the eight translations are unreviewed.** Machine-generated,
+structurally validated by tests (placeholder budgets, plural categories, no
+copy-pasted English), semantically unverified by any native speaker. Structure
+is not meaning, and a mistranslation in a security warning is a security
+problem. **A RELEASE BLOCKER, and it stays flagged through M11** (D53). "It
+compiles and the tests pass" is exactly the condition under which a wrong
+translation ships quietly.
+
+**OPEN 2 — a pointer send is not intercepted when the send control cannot be
+resolved** (D57). Carried in from M9 as "send-button selectors depend on an
+English aria-label". M10 MEASURED it, and both the name and the severity were
+wrong.
+
+It is not primarily an i18n defect. All three adapters `return` silently when a
+click does not match their send selector, so the page's own handler runs with
+the user's ORIGINAL text — a fail-OPEN path, with no other net behind it, and
+`healthCheck` blocks nothing. Locale is one route into that state; Gemini's
+ambiguity path (`gemini.ts:762`, where two candidates return an EMPTY list) and
+any ordinary markup change are others. The Enter path is unaffected, which is
+what makes it easy to miss: the extension looks like it is working right up
+until someone clicks instead of pressing Enter.
+
+Measured live 2026-09-02: **there is no leak today.** Gemini resolves through a
+locale-independent clause in Turkish; ChatGPT has no English clause at all;
+Claude's sit behind two locale-independent ones. What the measurement did show
+is an ASYMMETRY — on Gemini an English user has two anchors and everyone else
+has one, and that one is a CSS class, the tier SPEC ranks least durable.
+
+CARRIED to M11 rather than fixed, because the fix's dangerous failure mode is
+spurious firing during page load, and that can only be verified against
+signed-in sessions on two of the three sites. Landed instead, both zero-risk:
+`scripts/probe-send-locale.py` (the measurement) and
+`test/unrecognised-send-control.test.ts` (the gap pinned in executable form,
+written so its assertions FAIL when the fix lands).
+
+**OPEN 3 — "screen-reader tested" is half done** (D56). The accessibility tree
+is audited in both pages and both colour schemes; nobody has used these pages
+with NVDA, VoiceOver or Orca. Announcement order and live-region interruption
+are judgements a tree walk cannot make.
+
+Lower stakes, also open:
+
 - **Adapter `ResolutionFailure.detail` strings are still English** (D53), so a
   non-English user sees a translated title above an English explanation.
   Closing it means turning ~20 sites on the fail-closed path from strings into
@@ -5601,20 +5777,13 @@ Three scripts load the built extension into Edge and drive it:
 - **`${name}: ${message}` on the failure path** carries a library's error
   message verbatim into a DOM node. Fixed in Quick Redact, where this batch
   owned the whole path; the same pattern remains in `content.ts` and the
-  controller and is scoped, not closed (D54).
+  controller (D54).
 - **`onnxruntime-web` resolves to a `-dev` nightly** — a transitive resolution
   and a weaker supply-chain position than a tagged release (SECURITY.md).
 
 Carried from earlier and untouched: D27a's unexplained machine slow state,
 D41f's 3× gap, GENERIC_SECRET recall 55.4%, TAX_ID 91.2%, one over-confident
 calibration bucket, p50 255.8 ms against a 250 ms budget, D40a.
-
-**The send-button English-`aria-label` fragility carried in from M9 is NOT
-fixed.** It was recorded as "M10's problem because it is an i18n defect in
-disguise", and M10 localised the extension's own UI without touching how the
-adapters find a send control on a non-English interface. That is a real gap
-between what was promised and what was done, and it is stated here rather than
-quietly dropped.
 
 ### The shape of what went wrong, again
 

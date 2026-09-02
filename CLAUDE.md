@@ -10,7 +10,13 @@ privacyshield is a browser extension that detects and redacts sensitive informat
 
 **Milestones are built strictly one at a time**, tests passing, before the next starts. **M1-M10 COMPLETE — the extension protects, and now has a popup, an options page, nine locales and an accessibility audit. M11 (eval run, benchmarks, docs, store listing) NOT STARTED.** Verified 2026-09-02: **1,255 tests / 79 files**, typecheck (source AND test files), lint and build all clean, each confirmed by its own exit code.
 
-Two M10 items are deliberately NOT closed and must not be reported as done: the eight non-English catalogues are machine-generated and need native review before release (a blocker, see D53), and "screen-reader tested" is covered only for the accessibility TREE — no one has used these pages with NVDA, VoiceOver or Orca (D56).
+**M10 closed with three items OPEN. None may be reported as done.**
+
+1. **The eight non-English catalogues are machine-generated and unreviewed.** Structurally validated by tests, semantically unverified by any native speaker. **A release blocker; stays flagged through M11** (D53).
+2. **A pointer send is not intercepted when the send control cannot be resolved** (D57). All three adapters `return` silently when a click does not match their send selector, so the page sends the ORIGINAL text — fail-open, with no other net behind it and with `healthCheck` blocking nothing. MEASURED 2026-09-02: no leak today (Gemini resolves via a locale-independent clause in Turkish, ChatGPT has no English clause at all, Claude's sit behind two). The fix is designed and ~10 lines per adapter; carried to M11 because its dangerous failure mode is spurious firing during page load, verifiable only against signed-in sessions on two of the three sites. `scripts/probe-send-locale.py` re-runs the measurement; `test/unrecognised-send-control.test.ts` pins the gap and is written to FAIL when the fix lands.
+3. **"Screen-reader tested" is covered only for the accessibility TREE** — nobody has used these pages with NVDA, VoiceOver or Orca (D56).
+
+**THIS MACHINE HAS TWO CHECKOUTS.** `C:\Users\Pc\dev\privacyshield` is the live one and holds all work from M2 onward. `C:\Users\Pc\OneDrive\Desktop\privacyshield` is frozen at M1 (`f4c9a6f`) with `packages/extension` still an empty placeholder, and some tooling reports it as the working directory. Run `git log --oneline -1` before trusting the tree you are in.
 
 ### Complete
 

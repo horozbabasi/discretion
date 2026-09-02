@@ -90,6 +90,8 @@ import { DomRestorer } from './restore.js';
 import { renderSubmitRefusal } from '../debug.js';
 import type { AnalyzedEntity, Analysis } from './analyze.js';
 import { DetectionSession } from './session.js';
+import type { SessionSummary } from './sessionLog.js';
+import { recordMasked } from '../storage/insights.js';
 import { applyMasking, certifyForRelease, missingStages, PassThrough } from './sendGate.js';
 
 /**
@@ -429,6 +431,7 @@ export class DetectionController {
     this.lastMaskedText = plan.maskedText;
     this.lastEntities = analysis.entities;
     this.lastExposure = analysis.exposure.score;
+    this.recordRun(plan.applied, analysis);
     this.surface.setState({ kind: 'hidden' });
   }
 
@@ -716,7 +719,30 @@ export class DetectionController {
     }
 
     this.lastMaskedText = plan.maskedText;
+    this.recordRun(plan.applied, analysis);
     this.release(replay);
+  }
+
+  /**
+   * Records a completed masking run: the session log, and the persisted counts.
+   *
+   * Called only from the two paths that ACTUALLY MASKED something the user
+   * then keeps — the send gate after certification, and paste "mask now".
+   * Analysis alone is not a run: detecting an email while someone is still
+   * typing is not protection, and counting it would make both the popup and
+   * Local Insights report work that never happened.
+   *
+   * The Insights write is deliberately not awaited. It runs after the message
+   * is already masked and certified, nothing downstream depends on it, and a
+   * slow or full disk must not sit in the path between the user pressing send
+   * and the send happening.
+   */
+  private recordRun(applied: readonly AnalyzedEntity[], analysis: Analysis): void {
+    this.session.log.record(
+      applied.map((entity) => ({ type: entity.type, confidence: entity.confidence })),
+      analysis.exposure.score,
+    );
+    void recordMasked(applied.map((entity) => entity.type));
   }
 
   /**
@@ -742,6 +768,18 @@ export class DetectionController {
     } finally {
       this.passThrough.disarm();
     }
+  }
+
+  /**
+   * What this session has masked, for the popup.
+   *
+   * A snapshot rather than the log itself, so nothing outside this class can
+   * hold a reference that survives `session.clear()` — the popup reporting the
+   * previous conversation's counts is exactly the leak `clear()` exists to
+   * prevent.
+   */
+  sessionSummary(): SessionSummary {
+    return this.session.log.summary();
   }
 
   /** Opens the review panel and waits for the user. */

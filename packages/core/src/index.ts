@@ -11,6 +11,8 @@ export type { CodePointClass } from './scripts.js';
 
 export { normalize } from './normalization.js';
 export { labelOf } from './entityLabel.js';
+export { familyOf } from './entityFamily.js';
+export type { EntityFamily } from './entityFamily.js';
 
 export {
   composeMaps,

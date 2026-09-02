@@ -32,6 +32,8 @@
 import { Vault } from '@privacyshield/core';
 import type { SubstitutionMode } from '@privacyshield/core';
 
+import { SessionLog } from './sessionLog.js';
+
 /** One random seed per session, so two sessions produce different surrogates. */
 function sessionSeed(): number {
   const buffer = new Uint32Array(1);
@@ -42,6 +44,13 @@ function sessionSeed(): number {
 export class DetectionSession {
   readonly seed = sessionSeed();
   readonly mode: SubstitutionMode = 'surrogate';
+  /**
+   * SPEC step 9's session log. Lives here because it describes the same
+   * session the vault does and must die at the same moment — the popup
+   * reporting the previous conversation's counts would be a leak of exactly
+   * the kind `clear()` exists to prevent.
+   */
+  readonly log = new SessionLog();
   private vaultInstance = new Vault();
   private reverted = new Set<string>();
   /**
@@ -94,6 +103,7 @@ export class DetectionSession {
   clear(): void {
     this.vaultInstance = new Vault();
     this.reverted = new Set();
+    this.log.clear();
     // Any analysis still in flight is now about a session that no longer
     // exists, and must not be allowed to render.
     this.generation += 1;

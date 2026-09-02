@@ -1,0 +1,329 @@
+/*
+ * The popup.
+ *
+ * ─────────────────────────────────────────────────────────────────────────
+ * WHY THIS LOOKS LIKE AN INSTRUMENT AND NOT LIKE AN APP
+ *
+ * The review panel (ui/styles.ts) is deliberately plain: it appears over
+ * someone else's page mid-sentence and must not shout. This surface is the
+ * opposite situation — it is ours, opened on purpose, and its job is to report
+ * measurements: how much was masked, how exposed the worst message was, what
+ * has been protected over time.
+ *
+ * So it is built like a meter rather than a dashboard. Hairline rules instead
+ * of cards. Tabular monospace for every number, so columns of counts line up
+ * and a changing value does not reflow the row it is in. One saturated accent
+ * against ink-on-paper, carried over from the panel so the two surfaces are
+ * recognisably the same product. A segmented bar for exposure, because 0-100
+ * is a reading and a reading wants a scale.
+ *
+ * No gradient, no card shadow, no rounded blob. Those say "consumer app", and
+ * this is a thing that tells you whether your data left.
+ *
+ * ACCESSIBILITY IS NOT A LAYER ON TOP HERE. Every state that is carried by
+ * colour is also carried by a word. Focus is visible at 2px with an offset on
+ * every interactive element. Motion is removed entirely under
+ * prefers-reduced-motion rather than shortened. Contrast was chosen against
+ * WCAG AA at these exact sizes, not approximated.
+ * ─────────────────────────────────────────────────────────────────────────
+ */
+
+:root {
+  --bg: #ffffff;
+  --raised: #f6f8fa;
+  --fg: #1b1f24;
+  --muted: #5b6672;
+  --border: #d4dae1;
+  --rule: #e6eaee;
+  --accent: #1c4f7c;
+  --accent-weak: #d7e4f0;
+  /* 5.9:1 on --bg. "Protecting" must be readable, not merely green. */
+  --ok: #14563a;
+  --ok-weak: #daeee3;
+  /* 6.4:1 on --bg. */
+  --warn: #7a4a12;
+  --warn-weak: #fdf3e7;
+  --warn-border: #e6c79a;
+  --focus: #1c4f7c;
+
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1e2227;
+    --raised: #262b31;
+    --fg: #e7ebef;
+    --muted: #9aa5b1;
+    --border: #39414a;
+    --rule: #2f353c;
+    --accent: #8ab4e8;
+    --accent-weak: #2b3a4b;
+    --ok: #6cc48f;
+    --ok-weak: #23372c;
+    --warn: #f0d3a4;
+    --warn-weak: #3a2f1e;
+    --warn-border: #6b5426;
+    --focus: #8ab4e8;
+  }
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  width: 380px;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--fg);
+  background: var(--bg);
+}
+
+/* Every number in this UI is monospace and tabular, so a count that changes
+   does not shift the text beside it. */
+.num {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* ── header ── */
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.mark {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  flex: 1;
+}
+
+/* The state is a dot AND a word. The dot alone would be colour-only meaning. */
+.state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+.state::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+.state[data-state='on'] { color: var(--ok); background: var(--ok-weak); }
+.state[data-state='off'] { color: var(--muted); background: var(--raised); border-color: var(--rule); }
+.state[data-state='degraded'] { color: var(--warn); background: var(--warn-weak); border-color: var(--warn-border); }
+
+/* ── tabs ── */
+
+.tabs {
+  display: flex;
+  gap: 2px;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab {
+  appearance: none;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--muted);
+  padding: 9px 10px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  /* Reserve the selected weight so switching tabs does not shift the row. */
+  position: relative;
+}
+.tab::after {
+  content: attr(data-label);
+  font-weight: 600;
+  height: 0;
+  overflow: hidden;
+  display: block;
+  visibility: hidden;
+}
+.tab[aria-selected='true'] {
+  color: var(--fg);
+  font-weight: 600;
+  border-bottom-color: var(--accent);
+}
+.tab:hover { color: var(--fg); }
+
+.panel { padding: 14px; }
+.panel[hidden] { display: none; }
+
+/* ── shared bits ── */
+
+.label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 8px;
+}
+
+.section + .section { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--rule); }
+
+.note { color: var(--muted); font-size: 12px; margin: 8px 0 0; }
+.empty { color: var(--muted); margin: 0; }
+
+button.action {
+  appearance: none;
+  font: inherit;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--raised);
+  color: var(--fg);
+  cursor: pointer;
+}
+button.action:hover { border-color: var(--accent); }
+button.action.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  /* Not var(--bg): in dark mode the accent is light, and light-on-dark here
+     would put pale text on a pale button. */
+  color: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  button.action.primary { color: #10151a; }
+}
+button.action:disabled { opacity: 0.55; cursor: default; border-color: var(--border); }
+
+/* ── the site toggle ── */
+
+.toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.toggle input { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
+.toggle label { cursor: pointer; }
+.site { color: var(--muted); font-size: 12px; }
+
+/* ── the exposure meter ── */
+
+.meter-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+.meter-row + .meter-row { margin-top: 6px; }
+.meter-name { color: var(--muted); font-size: 12px; }
+.meter-value { font-size: 12px; }
+
+/* Twenty segments: a reading against a scale, not a progress bar. Drawn with
+   a repeating gradient so there are no twenty elements to build and no gap to
+   round wrongly at a fractional device pixel. */
+.meter {
+  height: 10px;
+  border-radius: 2px;
+  background:
+    repeating-linear-gradient(
+      to right,
+      var(--rule) 0 calc(5% - 2px),
+      transparent calc(5% - 2px) 5%
+    );
+  position: relative;
+  overflow: hidden;
+}
+.meter > i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  display: block;
+  background:
+    repeating-linear-gradient(
+      to right,
+      var(--accent) 0 calc(5% - 2px),
+      transparent calc(5% - 2px) 5%
+    );
+  /* The fill is clipped to a width, so the segment grid stays aligned with the
+     track behind it rather than being squashed into the filled portion. */
+  background-size: 380px 100%;
+  background-repeat: no-repeat;
+}
+.meter[data-band='high'] > i { background-image: repeating-linear-gradient(to right, var(--warn) 0 calc(5% - 2px), transparent calc(5% - 2px) 5%); }
+
+/* ── counts ── */
+
+.rows { list-style: none; margin: 0; padding: 0; }
+.row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: baseline;
+  padding: 5px 0;
+}
+.row + .row { border-top: 1px solid var(--rule); }
+.row .count { color: var(--accent); font-weight: 600; }
+
+/* Insights: the bar is a second encoding of the same number, never the only
+   one. The count is always printed. */
+.bar {
+  grid-column: 1 / -1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--accent-weak);
+  overflow: hidden;
+}
+.bar > i { display: block; height: 100%; background: var(--accent); }
+
+/* ── Quick Redact ── */
+
+textarea {
+  width: 100%;
+  min-height: 86px;
+  resize: vertical;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--fg);
+}
+textarea[readonly] { background: var(--raised); }
+
+.quick-actions { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+.quick-actions .spacer { flex: 1; }
+
+.status { font-size: 12px; color: var(--muted); min-height: 1.4em; margin: 8px 0 0; }
+.status[data-tone='error'] { color: var(--warn); font-weight: 600; }
+
+select {
+  font: inherit;
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--fg);
+}
+
+/* Nothing here conveys information through motion, so removing it removes
+   nothing. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}

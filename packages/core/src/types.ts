@@ -164,7 +164,14 @@ export interface DetectionResult {
 // Policy / substitution (shapes only — implemented in later milestones)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type SensitivityProfile = 'minimal' | 'balanced' | 'strict' | 'custom';
+// `SensitivityProfile` used to be declared here as the string union
+// 'minimal' | 'balanced' | 'strict' | 'custom'. It was DEAD and worse than
+// dead: `index.ts` re-exports the same name from `fuse/profiles.ts`, where it
+// is the profile OBJECT, so the union was unreachable through the package's
+// public API while still being the first definition a reader finds by name.
+// The union it described is `ProfileName`, which fuse/profiles.ts already
+// exports. Removed rather than renamed - two names for one idea is what
+// created the collision.
 
 export type SubstitutionMode = 'surrogate' | 'token';
 

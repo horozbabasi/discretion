@@ -5239,6 +5239,136 @@ in Spanish where English supplies `$1`), the plural expansion (generator
 emitting only `other`), the RTL pin (hardcoding `ltr` again), and the leak
 check. Each was watched failing before it was trusted passing.
 
+### D54 - Storage, the session log, and the popup: what is written and what is asked for (M10)
+
+**What may go to disk, and what the third non-negotiable actually forbids.**
+SPEC's rule is "originals live in memory only ... never storage.local". That is
+about DETECTED VALUES - text lifted out of a message someone was writing. Two
+things SPEC itself requires do live in `chrome.storage.local`, and neither is
+that: SETTINGS, which the Options page exists to persist, and LOCAL INSIGHTS,
+which SPEC defines as "counts only ... satisfying the no-plaintext-persistence
+rule by construction". `src/storage/area.ts` is the single place the extension
+touches storage, so the whole persistent surface is three method signatures and
+one comment.
+
+One caveat is recorded rather than hidden: the allowlist and denylist are
+user-typed strings, and someone will type their own email address into "never
+mask these". That is persisted plaintext they chose to persist, in their own
+profile, which is a different thing from the extension quietly retaining what
+it detected - but it is not nothing, and the Options page has to say so where
+they type it.
+
+**Fail-closed, applied to configuration.** `chrome.storage.local` returns
+`any`. What comes back was written by an older version, or by a settings import
+from a forum post, or by nothing. So every field is PARSED, not cast: unknown
+values are discarded and the default replaces them, and the defaults are the
+protective position - detection on, every site on, balanced. A corrupt store
+degrades to protecting MORE.
+
+`enabledFor()` is the one question the content script asks and it answers TRUE
+unless storage explicitly and validly says otherwise. A read that throws, a
+missing key, `disabledSites: null`, `disabledSites: "chatgpt"` - all of them
+protect the site. Turning protection off has to be a decision someone actually
+made. The tests assert this by feeding five malformed shapes and requiring the
+site stay protected in every one; casting instead of parsing fails them.
+
+The content script also PROTECTS FIRST AND READS THE PREFERENCE AFTER. Storage
+is async and `start()` is not, so there is a window either way. Starting
+enabled and switching off spends it protecting a site the user disabled;
+waiting for storage spends it unprotected on a site they did not. Only one of
+those two mistakes can leak.
+
+**Insights records less than it could.** It is the only part of the extension
+that writes a history, so what it leaves out is the design:
+
+| kept | left out | why |
+| --- | --- | --- |
+| family (`secret`, `financial`) | the TYPE | "3 identity" instead of "3 US_NPI" - the narrower label hints at a profession or a medical situation, and SPEC asks for categories |
+| month (`2026-09`) | any finer timestamp | an event log reconstructs working hours from counts alone |
+| a count | the site | a per-site count is a browsing trail, which PERMISSIONS.md refuses on exactly these grounds |
+| 24 months | anything older | a record that follows someone indefinitely |
+
+`reset()` REMOVES the key rather than writing `{}` over it: an empty object
+left behind is still a record that the extension was used. The test asserts the
+stored blob does not contain the string `US_NPI` or `HEALTH_DATA` after
+recording them, which is a check on the bytes rather than on the intent.
+
+**The session log and Insights look alike and are governed differently.** The
+log lives in the content script, dies with the tab session, and is therefore
+allowed to be finer: per-TYPE counts, a timestamp per run, a confidence
+histogram. It hangs off `DetectionSession` so `clear()` drops it with the
+vault - the popup reporting the previous conversation's counts is exactly the
+leak the session boundary exists to prevent - and `sessionSummary()` returns a
+SNAPSHOT so nothing outside can hold a reference that survives.
+
+The exposure aggregate is a PEAK and a MEAN, never a sum. The score is 0-100
+for one document; adding them produces a number with no ceiling and no meaning.
+The popup leads with the peak, because a single 90 matters more than an average
+flattened by twenty harmless messages.
+
+**The popup asks the tab who it is rather than reading its URL.** The obvious
+implementation is `chrome.tabs.query` and `tab.url`, which needs the `tabs`
+permission - the URL of every tab in every window, for a status line. Instead
+the popup sends one message to the active tab and lets whoever is running there
+answer with its own site id; a site with no content script does not answer, and
+that silence IS the "does not run here" state. `tabs.query` is still used for
+the tab ID, which needs no permission and carries nothing. Verified against the
+real claude.ai: the reply is `{siteId, enabled, health, session}` and the test
+fails on any fifth field.
+
+**Quick Redact refuses rather than under-masks.** The tempting shortcut is to
+let it run Stage 1 alone when the model is unavailable - it is a utility, not a
+gate, so "some masking" looks better than none. It is worse than at the send
+gate, because there is no review panel: the user copies the output and pastes
+it into Slack believing it is clean, and a name Stage 2 would have caught goes
+out with this extension's assurance behind it. So it checks `missingStages`
+exactly as the gate does and shows a refusal in place of an output.
+
+It also carries only the error's NAME, not its message. `${name}: ${message}`
+is safe for the errors core raises - `DetectorError` deliberately keeps the
+cause off its own message - but that is a convention, not a construction, and
+the stack under this call includes the tokenizer and the ONNX runtime, whose
+messages this project does not author. A library that quoted the input in an
+error would put the user's text into a DOM node through the failure path. The
+test asserts the value is absent from `detail` using an error message that
+contains it. **The same pattern exists elsewhere on the failure path** -
+`content.ts` and the controller both surface `${name}: ${message}` - and is
+NOT changed here: it sits on the fail-closed path, the fix is the same three
+lines in each place, and it deserves its own reviewed batch rather than riding
+along with a popup.
+
+**Two things moved because a second consumer appeared.** `familyOf` went to
+core beside `labelOf`, for the reason already recorded there: "two maps drift
+the moment a type is added to one of them", and Insights is now the second
+surface that groups the same types. And `types.ts` declared a
+`SensitivityProfile` string union that `index.ts` shadows with the profile
+OBJECT from `fuse/profiles.ts` - unreachable through the public API, while
+still being the first definition a reader finds by name. It is what made the
+popup pass a string where an object was wanted. Removed; `ProfileName` already
+was that union.
+
+**Verified in a real browser, not in jsdom** (`scripts/verify-popup.py`). The
+extension is loaded unpacked into Edge and the popup driven at its real 380px
+width: no CSP violation, no uncaught error, a non-empty body (a CSP failure
+produces an empty one and would let every later assertion pass vacuously),
+roving tabindex with arrow keys, and Quick Redact masking a real address and a
+checksummed IBAN out of the output. In Arabic it renders `dir=rtl`, Arabic tab
+labels, and - for exactly two items - `أُخفي عنصران`, the DUAL form. That is
+`Intl.PluralRules('ar').select(2) === 'two'` selecting a form no one/other
+scheme has, in a browser, end to end.
+
+**Three mistakes this batch made, all of the same shape.** The first test input
+used `rene.dupont@example.org`; SPEC has the email detector classify RFC 2606
+reserved domains as NON-SENSITIVE, so the check asserted that nothing happened
+and then reported that nothing happening was fine - the same trap a detection
+fixture fell into in M8 (D40). The second used a fixed 4-second wait that raced
+the 6,568 ms cold model load and produced a different verdict on two
+consecutive runs of identical code. The third printed "All popup checks passed"
+while a check it had been asked to run was silently absent, and the summary now
+prints NOT RUN and refuses the word "all". Every one of them was a green result
+that meant nothing, which is the failure mode M9 catalogued and this batch
+reproduced three more times.
+
 ## Standing contracts (established in M1)
 
 - **Offset map:** `offsetMap[i]` is the original index of the cluster that

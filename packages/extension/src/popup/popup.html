@@ -1,0 +1,35 @@
+<!doctype html>
+<!--
+  The popup shell.
+
+  STRUCTURE ONLY, NO COPY. Every visible string is written by popup.ts from
+  the message catalogue, because this file cannot be localised — chrome.i18n
+  substitutes __MSG_…__ in the manifest and in CSS, but not in an extension
+  page's HTML. Text here would be English for everyone.
+
+  No inline script: the extension CSP is script-src 'self', and popup.js is a
+  module. The stylesheet is a file rather than a <style> block for the same
+  reason - one policy question fewer.
+-->
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PrivacyShield</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header class="head">
+      <span class="mark" id="mark"></span>
+      <span class="state" id="state" data-state="off"></span>
+    </header>
+
+    <div class="tabs" role="tablist" id="tabs"></div>
+
+    <section class="panel" id="panel-status" role="tabpanel" tabindex="0"></section>
+    <section class="panel" id="panel-quick" role="tabpanel" tabindex="0" hidden></section>
+    <section class="panel" id="panel-insights" role="tabpanel" tabindex="0" hidden></section>
+
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

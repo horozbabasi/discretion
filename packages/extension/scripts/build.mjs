@@ -49,6 +49,10 @@ const ENTRIES = [
   { file: 'src/content.ts', name: 'content', format: 'iife' },
   { file: 'src/service-worker.ts', name: 'service-worker', format: 'es' },
   { file: 'src/offscreen/offscreen.ts', name: 'offscreen', format: 'es' },
+  // The popup is an extension PAGE loading a module script, like the offscreen
+  // document. Separate from the content script because nothing is shared: the
+  // popup has no page to inject into, and the content script has no popup.
+  { file: 'src/popup/popup.ts', name: 'popup', format: 'es' },
   ...(BENCH ? [{ file: 'src/bench/ipcBench.ts', name: 'bench', format: 'iife' }] : []),
 ];
 
@@ -187,6 +191,8 @@ if (BENCH) {
 writeFileSync(join(OUT, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}
 `);
 cpSync(join(ROOT, 'src', 'offscreen', 'offscreen.html'), join(OUT, 'offscreen.html'));
+cpSync(join(ROOT, 'src', 'popup', 'popup.html'), join(OUT, 'popup.html'));
+cpSync(join(ROOT, 'src', 'popup', 'popup.css'), join(OUT, 'popup.css'));
 cpSync(join(ROOT, 'src', 'icons'), join(OUT, 'icons'), {
   recursive: true,
   filter: (src) => statSync(src).isDirectory() || src.endsWith('.png'),
@@ -224,6 +230,9 @@ const required = [
   'offscreen.js',
   'offscreen.html',
   'icons/icon128.png',
+  'popup.html',
+  'popup.css',
+  'popup.js',
   '_locales/en/messages.json',
   '_locales/ar/messages.json',
 ];

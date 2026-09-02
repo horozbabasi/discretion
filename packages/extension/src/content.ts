@@ -28,6 +28,8 @@ import { buildDiagnostic, markScriptStart } from './diagnostics.js';
 import { loadDebugPreference, renderDiagnostic, renderUnsupported } from './debug.js';
 import { DetectionController } from './detection/controller.js';
 import { PortNerRecognizer } from './detection/portRecognizer.js';
+import type { PopupStatusReply } from './messages.js';
+import { enabledFor, loadSettings } from './storage/settings.js';
 
 const HEALTH_INTERVAL_MS = 15_000;
 
@@ -142,21 +144,112 @@ function start(): void {
    * panel, because "found nothing" and "could not look" are indistinguishable
    * to the user and only one of them is safe.
    */
-  const detection = new DetectionController({
-    adapter,
-    document,
-    // The same witness the adapter was built with. verifyBinding needs it, and
-    // a second witness would have seen none of this session's typing.
-    witness,
-    ner: recognizer,
-    onError: (error) => {
-      // Never the error's data, only its type and message: a detection error
-      // can carry a candidate, and a candidate carries page text.
-      const detail = error instanceof Error ? `${error.name}: ${error.message}` : 'unknown error';
-      report({ kind: 'detection-error', detail });
-    },
+  const newController = (): DetectionController =>
+    new DetectionController({
+      adapter,
+      document,
+      // The same witness the adapter was built with. verifyBinding needs it,
+      // and a second witness would have seen none of this session's typing.
+      witness,
+      ner: recognizer,
+      onError: (error) => {
+        // Never the error's data, only its type and message: a detection error
+        // can carry a candidate, and a candidate carries page text.
+        const detail = error instanceof Error ? `${error.name}: ${error.message}` : 'unknown error';
+        report({ kind: 'detection-error', detail });
+      },
+    });
+
+  /**
+   * The per-site toggle, applied without a reload.
+   *
+   * A FRESH CONTROLLER on every re-enable rather than a start/stop pair on one:
+   * `destroy()` clears the session vault and tears down the surface, which is
+   * exactly what switching a site off has to do, and a restarted controller
+   * would be carrying the leftovers of the session it just discarded.
+   *
+   * Switching a site OFF is a decision the user made and it is honoured
+   * literally — no interception, no panel. Everything that DEFAULTS is on:
+   * `enabledFor` answers true for missing, unreadable or malformed settings,
+   * so the only way to be unprotected is to have asked for it.
+   */
+  let detection: DetectionController | null = null;
+  let enabled = true;
+
+  const applyEnabled = (next: boolean): void => {
+    enabled = next;
+    if (next === (detection !== null)) return;
+    if (next) {
+      detection = newController();
+      detection.start();
+      return;
+    }
+    detection?.destroy();
+    detection = null;
+  };
+
+  // PROTECT FIRST, THEN READ THE PREFERENCE. Storage is asynchronous and
+  // `start()` is not, so there is a window of a few milliseconds either way.
+  // Starting enabled and switching off spends that window PROTECTING a site
+  // the user disabled; waiting for storage would spend it unprotected on a
+  // site they did not. Only one of those two mistakes can leak.
+  applyEnabled(true);
+  void loadSettings().then((settings) => {
+    applyEnabled(enabledFor(adapter.id, settings));
   });
-  detection.start();
+
+  // Toggling in the popup writes settings; this is what makes the tab notice.
+  const onSettingsChanged = (
+    changes: Record<string, chrome.storage.StorageChange>,
+    areaName: string,
+  ): void => {
+    if (areaName !== 'local' || !('settings' in changes)) return;
+    void loadSettings().then((settings) => {
+      applyEnabled(enabledFor(adapter.id, settings));
+    });
+  };
+  chrome.storage.onChanged.addListener(onSettingsChanged);
+
+  /**
+   * Answers the popup's question about this tab.
+   *
+   * Returns `true` synchronously so Chrome keeps the channel open, and the
+   * reply carries counts and type names only — never a value, and never the
+   * URL the popup deliberately does not ask for.
+   */
+  const onPopupMessage = (
+    message: unknown,
+    _sender: chrome.runtime.MessageSender,
+    sendResponse: (reply: PopupStatusReply) => void,
+  ): boolean | undefined => {
+    if (
+      typeof message !== 'object' ||
+      message === null ||
+      (message as { kind?: unknown }).kind !== 'popup-status'
+    ) {
+      return undefined;
+    }
+    const health = adapter.healthCheck();
+    const session = detection?.sessionSummary() ?? null;
+    sendResponse({
+      siteId: adapter.id,
+      enabled,
+      health: {
+        ok: health.ok,
+        failures: health.failures.map((failure) => ({ target: failure.target })),
+        checkedAt: Date.now(),
+      },
+      session: {
+        runs: session?.runs ?? 0,
+        totalMasked: session?.totalMasked ?? 0,
+        byType: session?.byType.map((entry) => ({ type: entry.type, count: entry.count })) ?? [],
+        peakExposure: session?.peakExposure ?? null,
+        meanExposure: session?.meanExposure ?? null,
+      },
+    });
+    return true;
+  };
+  chrome.runtime.onMessage.addListener(onPopupMessage);
 
   /** Emits a diagnostic regardless of whether the verdict has changed. */
   const forceDiagnostic = (): void => {
@@ -171,7 +264,7 @@ function start(): void {
     }
     // Re-resolves the composer, which is what catches the element being
     // replaced by an SPA navigation or a conversation switch (D34i, D38a).
-    detection.refresh();
+    detection?.refresh();
 
     const health = adapter.healthCheck();
 
@@ -235,7 +328,9 @@ function start(): void {
     witness.stop();
     // SPEC: originals live in memory only, per-tab-session, cleared on
     // nav-away/close. This is the nav-away.
-    detection.destroy();
+    detection?.destroy();
+    chrome.storage.onChanged.removeListener(onSettingsChanged);
+    chrome.runtime.onMessage.removeListener(onPopupMessage);
     // The port is dropped too. Anything still in flight carried composer text.
     recognizer.disconnect();
   });

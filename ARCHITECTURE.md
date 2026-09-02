@@ -6053,6 +6053,134 @@ HELD. M10 reproduced that five more times, all in code written this milestone:
 Each was caught by the same move that caught M9's: running the check against a
 condition where it must FAIL, and confirming it does.
 
+### D58 - M11: the eval reproduces exactly, and the canary earns its keep
+
+### The full eval re-run reproduces M8 exactly
+
+Stage 1+2 with the shipped model, 368.1 s over 2,600 documents and 6,645
+ground-truth entities. NER gates pass. **Every per-type figure M8 published
+reproduces to the decimal**, four milestones and an entire extension later:
+
+| type | M8 published | M11 re-run |
+| --- | --- | --- |
+| GENERIC_SECRET | 2.0%, FP 2,075 | 2.0%, FP 2,075 |
+| POSTAL_CODE | 23.5%, FP 224 | 23.5%, FP 224 |
+| URL_WITH_CREDENTIALS | 33.6%, FP 140 | 33.6%, FP 140 |
+| IP_ADDRESS | 87.8%, FP 32 | 87.8%, FP 32 |
+| NATIONAL_ID | 68.2%, FP 268 | 68.2%, FP 268 |
+| TAX_ID | 46.0%, FP 149 | 46.0%, FP 149 |
+| EMAIL | 99.0%, FP 6 | 99.0%, FP 6 |
+
+The fixed seeds do what the CLI header promises: the same commit produces the
+same numbers, so a diff in the report means a change in behaviour rather than
+in the dice.
+
+**One apparent discrepancy, explained rather than waved away.** The run totals
+**3,170** false positives against M8's published **2,991**. The difference is
+179, which is exactly `PERSON(20) + ORG(34) + LOCATION(125)` — M8's Stage 4
+table counted Stage-1 types only, because overlap resolution acts on those.
+Excluding them gives 2,991 on the nose.
+
+*The first attempt at that arithmetic read the GT column as FP and reported a
+2,238 gap.* It was caught because the numbers were implausibly large, not
+because anything checked it — a reminder that a script written to explain a
+discrepancy is as capable of inventing one.
+
+### The fresh-clone blocker, closed
+
+M9 flagged that the model is ~280 MB, is not in the repository, and that a
+fresh clone therefore could not build the extension at all — "a hard blocker
+for M11's production build verified loading unpacked in Chrome".
+
+`scripts/verify-fresh-clone.sh` now runs the whole chain and passed:
+
+```
+clone (depth 1, from GitHub)
+  → assert no node_modules and no .hf-cache      ← the precondition, asserted
+  → npm ci                                          not assumed
+  → npm run ext:build WITHOUT the model          → REFUSED OUTRIGHT
+  → npm run ext:fetch-model                      → "4 fetched, 0 already
+                                                    verified", every file
+                                                    checked against its
+                                                    recorded SHA-256
+  → npm run build                                → all ten artifacts present
+  → verify-loads.py                              → loads, DIFFERENT extension id
+```
+
+The different extension id matters: it is what proves this was a separate
+install from a separate tree rather than this working copy measured twice. And
+the build refusing outright without the model is the right failure — a build
+that quietly produced a package with no weights would ship an extension whose
+Stage 2 fails closed on every message, which is the worst outcome because it
+looks installed.
+
+### A toggle that did nothing
+
+Counting entity types while writing the README found that the options page
+rendered **35 checkboxes for 35 `EntityType` members** — and one of them,
+`DATE_OF_BIRTH`, has **zero Stage 1 detectors** and is not emitted by Stage 2.
+
+Core's own comment says it is "carried here so both stay implementable", for
+SPEC's Strict profile and its substitution table. That is a sound reason for
+the type to exist in the union. M10's options page then turned a type-level
+placeholder into a user-facing control that changes nothing in either
+position — which is a quiet claim that the type is being looked for.
+
+Now excluded, with the reasoning at the exclusion, and the browser check pins
+**34** rather than being loosened: a silently SHORT list is still a bug, since
+a type nobody can switch off looks identical to one nobody wants to.
+
+Found by counting, not by testing. Nothing in the suite could have caught it,
+because every test agreed with the code that 35 was the number.
+
+### The latency re-run, and the canary firing for the first time in anger
+
+M11 re-ran the latency benchmark. The result is **NOT COMPARABLE** to the
+published figures, and the machinery built at D27b is what says so.
+
+| | published (M9) | M11 re-run | ratio |
+| --- | ---: | ---: | ---: |
+| Stages 0–3 p50 | 10.6 ms | 30.6 ms | 2.89× |
+| Stages 0–3 + NER p50 | 255.8 ms | 769.7 ms | 3.01× |
+| **machine canary** | baseline 2.2989 ms | **6.25–6.33 ms** | **2.72–2.75×** |
+
+The canary reports `degraded` at a threshold of 2.0×. **So the published
+figures stand and these do not replace them** — D27b's whole design was that
+"a degraded measurement is still worth having; what must not happen is
+comparing it against a healthy one without that being visible".
+
+**What this does and does not tell us about D27a.** D27b left one question
+explicitly open: whether the canary detects the SAME condition as D27a's
+inference slowdown, "UNCONFIRMED and stays so until the anomaly recurs and the
+canary is observed firing during it".
+
+This is the first time the canary has fired outside a forced test, and the
+three ratios agree closely — 2.72× on a pure integer loop that touches no
+allocation, no I/O, no WASM and no model; 2.89× on a pure-JavaScript detection
+path; 3.01× on a path dominated by WASM inference. A single factor slowing all
+three by the same amount is what a whole-MACHINE slowdown looks like, and it is
+evidence the canary tracks the right thing.
+
+It is NOT a confirmation that this is D27a. Two reasons, both stated rather
+than reasoned past:
+
+1. **The magnitude is wrong.** D27a recorded 4–5×; this is 2.7–3×.
+2. **There is an ordinary explanation available.** The machine was running the
+   user's own browser with many processes alongside this work. The obvious
+   first suspicion was that the leftovers were MINE, from the browser probes
+   this session ran — checked, and they are not: of 19 `msedge.exe` processes,
+   18 have no `--user-data-dir` (renderer children) and one carries the user's
+   real profile. No Playwright temp profile is among them. So they were not
+   killed, and ordinary background load remains the likeliest cause.
+
+D27a stays OPEN, and the honest summary is smaller than it looks: the canary
+did its job, which was to stop a degraded number being published as a
+regression.
+
+**Accuracy is unaffected.** The eval is deterministic; machine speed changes
+how long it takes and not what it finds. The detection numbers above stand
+regardless.
+
 ## Standing contracts (established in M1)
 
 - **Offset map:** `offsetMap[i]` is the original index of the cluster that

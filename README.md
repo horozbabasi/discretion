@@ -365,6 +365,14 @@ eval corpus, with 30 warmup iterations discarded:
 Reproduce with `node packages/eval/dist/bench/latency.js --samples 200
 --ner jiting/xlm-roberta-base-ner-hrl_onnx --dtype q8`.
 
+> **These M9 figures still stand, and an M11 re-run did not replace them.** The
+> re-run measured 30.6 ms and 769.7 ms — and the machine canary
+> (`node bench/check-canary.mjs`) reported `degraded` at 2.72× its calibrated
+> baseline at the same time, so the numbers are not comparable to the ones
+> above rather than a regression against them. Run the canary before trusting
+> any latency figure from this repository, including these. See ARCHITECTURE.md
+> D27b and D58.
+
 ### The p50 miss, and which way the error runs
 
 The combined path misses the p50 budget by 5.8 ms as measured — but 2.3% is

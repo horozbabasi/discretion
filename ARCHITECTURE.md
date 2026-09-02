@@ -5929,6 +5929,7 @@ of it ships.
 | **Quick Redact** | The full pipeline, and it REFUSES when Stage 2 did not run — under-masking is worse here than at the send gate, because there is no review panel between the output and someone's clipboard. |
 | **SECURITY.md** | Five guarantees, each with the check a reader can run themselves, and three admissions rather than claims. |
 | **Accessibility** | Both pages, both colour schemes, through the real accessibility tree. |
+| **Submit backstop** | A capture-phase `submit` listener on all three adapters, closing `form.requestSubmit()` and native submission — routes that previously reached the site with the user's original text (D57b). |
 
 ### Verified in a real browser, not in jsdom
 
@@ -5939,6 +5940,8 @@ Three scripts load the built extension into Edge and drive it:
 | `verify-popup.py` | No CSP violation, a non-empty body, roving tabindex with arrow keys, Quick Redact masking a real address and a checksummed IBAN out of its output, Arabic rendering `dir=rtl` and the DUAL plural form for exactly two items, the content script answering `popup-status` on the live claude.ai with exactly its four contracted fields, and the per-site toggle reaching the tab and re-protecting when cleared |
 | `verify-options.py` | 35 type checkboxes, every change read back out of `chrome.storage` rather than out of the DOM, the live tester counting real regex matches, an uncompilable pattern refused at the input and not stored |
 | `verify-a11y.py` | Every control named, tab stops matching a model of the page, focus changing the computed style, worst-case contrast 5.50:1 against AA's 4.5, no target under 24×24 |
+| `probe-send-locale.py` | Which send-control tier each site resolves at, per locale, with the composer TYPED INTO first because the control does not render until it is non-empty |
+| `probe-submit-routes.py` | Five send routes against the real extension on a document served at the real origin. Aborts if a plain Enter is not intercepted, so a dead harness cannot report leaks that are really a broken probe |
 
 ### What M10 found in code that already shipped
 

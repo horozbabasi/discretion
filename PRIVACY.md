@@ -2,7 +2,7 @@
 
 **Discretion browser extension**
 
-Last updated: 2 September 2026
+Last updated: 3 September 2026
 
 ---
 

@@ -238,7 +238,7 @@ person with an account.** It cannot be automated and must not be faked.
 | --- | --- |
 | Homepage | `https://github.com/horozbabasi/discretion` |
 | Support | `https://github.com/horozbabasi/discretion/issues` |
-| Privacy policy | **BLOCKED.** `PRIVACY.md` is written, but the repository is PRIVATE, so the URL returns 404 to anyone but the owner. Measured, not assumed: an anonymous `git ls-remote` is refused and the repo root returns HTTP 404. |
+| Privacy policy | **DONE** — `https://github.com/horozbabasi/discretion/blob/main/PRIVACY.md`. Verified by FETCHING it anonymously after the repository was made public: HTTP 200, as are the repo root, README, BENCHMARKS and VERSIONING. |
 
 ---
 
@@ -246,29 +246,14 @@ person with an account.** It cannot be automated and must not be faked.
 
 Listed here rather than left for the submission to discover.
 
-1. **THE REPOSITORY IS PRIVATE, and most of this listing depends on it not
-   being.** Found by fetching the privacy-policy URL rather than by trusting
-   the entry that said it was done: the repo root, the raw README and
-   `PRIVACY.md` all return **HTTP 404** to an unauthenticated request, and
-   `git ls-remote` without credentials is refused.
+1. ~~The repository is private, and most of this listing depends on it not
+   being.~~ **RESOLVED 2026-09-03.** The repository is public, and every URL
+   this listing depends on was re-fetched anonymously and returns HTTP 200:
+   the repo root, `PRIVACY.md` (the store-required privacy policy), the README,
+   BENCHMARKS and VERSIONING.
 
-   What that breaks, all of it reviewer-visible:
-
-   - the **privacy policy URL**, which the store requires;
-   - the **homepage** and **support** links in this listing;
-   - the "OPEN SOURCE" paragraph of the detailed description, which invites the
-     reader to inspect source they cannot reach;
-   - every `github.com` link in `packages/core/README.md`, which would ship to
-     npm as dead links.
-
-   **Either make the repository public, or host the privacy policy somewhere
-   public and remove the source-inspection claims.** Making it public is the
-   option consistent with what the listing already says about itself.
-
-   This also qualifies an M11 result: `verify-fresh-clone.sh` passed because
-   `git clone` used the local credential helper. It proved the build works from
-   a clean tree; it did not prove a stranger can obtain the source. The script
-   now checks and reports that distinction.
+   The M11 fresh-clone result was re-run after the flip, this time with the
+   anonymity check passing rather than being labelled AUTHENTICATED.
 
 2. **Translations: eight locales are unreviewed and NOT SHIPPED.** Not a
    blocker on the submission - a decision already taken and enforced in the

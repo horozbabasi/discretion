@@ -6417,6 +6417,113 @@ reserved value and misread correct behaviour as a failure, after M10's RFC 2606
 e-mail domain. Tests now generate their values with core's own seeded
 generators instead of hand-picking them.
 
+### D60 - M13: enforcing the translation policy, and two false passes
+
+Not a SPEC milestone. The M12 close named four blockers; this is the work of
+closing the ones that could be closed and being precise about the ones that
+could not.
+
+#### The translation policy became code
+
+M12 stated the policy - a locale ships when a speaker has read its 21
+safety-critical strings - and enforced it with nothing. `REVIEW_SIGNOFFS` is
+now consulted by the build, and it is EMPTY, so the package ships
+`_locales/en` alone and announces the eight it dropped on every run.
+
+**A sign-off records a digest, not just a name and a date.** A name-and-date
+record keeps claiming to be true after the text changes: someone reviews the
+Turkish panel, a string is later reworded, and the record still vouches for
+words nobody read. The digest covers exactly the 21 strings, so a reword
+invalidates the sign-off and the locale drops out again. The record cannot
+outlive what it describes. `reviewed.test.ts` proves both directions -
+constructing a valid sign-off, then rewording one string and watching it stop
+matching - because "it drops everything" would otherwise pass for the wrong
+reason.
+
+The digest deliberately does NOT cover the other 95 keys. Re-reading 21 strings
+because an options label was reworded would make the gate expensive enough to
+be worked around, and a gate people route around is worse than no gate.
+
+#### English text in an RTL layout
+
+Dropping `ar` surfaced a real defect. `isRtl()` asked
+`chrome.i18n.getUILanguage()` - what the browser is SET to - so a browser set
+to Arabic reported `rtl` while every string on the page came from
+`_locales/en`. English welded into a right-to-left layout.
+
+`@@bidi_dir` looked like the fix and is not: it follows the UI language too,
+which was checked rather than assumed after trying it and watching the options
+page still render `dir=rtl`. Direction now comes from a `ui.dir` message key,
+which goes through chrome's ordinary message lookup and therefore falls back to
+English alongside everything else. **Direction follows the words, not the
+preference.**
+
+`verify-options.py` was the thing that caught it, and it needed changing too:
+its RTL assertions had `ar` as their subject, and that subject no longer ships.
+The fix was not to delete them - they are the only browser-level check that RTL
+works at all - but to read the shipped set from the build and report NOT RUN
+when the subject is absent. Its summary line carries the caveat as well, for a
+reader who sees only the last line.
+
+#### A NUL byte, for the second time
+
+`${key} ${...}` in the digest function was written with a NUL where the space
+belonged. Caught by the source-hygiene sweep added at M10 after exactly this.
+Second time that check has paid for itself, and the second time the file was
+one this project had just written rather than one it had edited.
+
+#### Two false passes, both caught by a control
+
+Worth recording together, because they are the same failure at different
+scales.
+
+**The promotional tile.** The first draft showed `sk_live_...` becoming another
+`sk_live_...`, illustrating format-preserving substitution. Checked before
+shipping the image: API_KEY surrogates are drawn from the whole provider pool,
+so a Stripe key is actually replaced by a Google, npm or Hugging Face one. An
+IBAN and a card number really are replaced in kind; an API key is not. The tile
+now shows measured `protect()` output rather than a designer's idea of it.
+
+**The live IME probe.** It reported `WAITS CORRECTLY` against chatgpt.com - and
+was testing the LOGGED-OUT LANDING PAGE, whose `<textarea>` has no send handler
+attached. Nothing was sent because nothing could be.
+
+Its own `--control` step caught it: a plain Enter did not send either, it
+inserted a newline. That control exists precisely because a negative result is
+meaningless unless a positive one is shown to be observable in the same run -
+the same reasoning as the network trap in `verify-standalone-consumer.sh` and
+the blocker check in the optional-peer probe. This is the first time one of
+those controls has actually fired.
+
+#### What is now known about isComposing
+
+The manual step was described as needing a human at a CJK IME. That was wrong.
+
+| approach | real composing Enter? |
+| --- | --- |
+| page-dispatched `KeyboardEvent{isComposing:true}` | no - `isTrusted:false` |
+| CDP `Input.imeSetComposition` + `dispatchKeyEvent` | **yes** - trusted `compositionstart`, trusted Enter with `isComposing:true` |
+
+So the composition is fully automatable and the only barrier is the LOGIN. The
+`.live-profile` from M9 has expired, and no script here will type a password or
+attempt a challenge. The step is now two commands, one of which is a person
+logging in by hand, and it is documented in `docs/manual-checks/isComposing.md`.
+
+The question stays OPEN. It is explicitly not reported as answered, because the
+run that would have reported it answered was measuring the wrong page.
+
+#### The screenshot that was not taken
+
+A store screenshot of the panel over a real conversation was not produced, and
+could have been faked convincingly: the harness can render the panel on a page
+served from `chatgpt.com`, and a full-page capture would look exactly like the
+real thing.
+
+That would be a fabricated record of the product running somewhere it did not,
+however genuine the panel in it happens to be. The capture is cropped to the
+panel - no page, no URL bar, no chrome - so the image claims only what it
+shows. The real-conversation screenshot needs a person with an account.
+
 ## Status after M11
 
 **M11's deliverables are complete**, with one measured caveat and the same two

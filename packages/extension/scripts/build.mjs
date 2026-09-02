@@ -26,7 +26,8 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const REPO = join(ROOT, '..', '..');
@@ -129,19 +130,62 @@ for (const entry of ENTRIES) {
   });
 }
 
+// ── _locales/, generated from the typed catalogues ──
+//
+// Built through vite from src/ rather than imported from dist/, because
+// `npm run ext:build` does not run `tsc -b` and a stale dist/ would ship last
+// week's translations without saying so.
+const LOCALES_TMP = join(OUT, '.locales.tmp.mjs');
+await build({
+  root: ROOT,
+  configFile: false,
+  logLevel: 'warn',
+  build: {
+    outDir: 'build',
+    emptyOutDir: false,
+    target: 'es2022',
+    minify: false,
+    lib: {
+      entry: join(ROOT, 'src', 'i18n', 'locales', 'index.ts'),
+      formats: ['es'],
+      fileName: () => '.locales.tmp.mjs',
+    },
+    rollupOptions: { external: [] },
+  },
+});
+const { LOCALES, toMessages } = await import(pathToFileURL(LOCALES_TMP).href);
+rmSync(LOCALES_TMP, { force: true });
+
+// The flattening itself lives in src/i18n/toMessages.ts, where it is
+// typechecked and unit-tested. All that belongs here is the file writing.
+const localesRoot = join(OUT, '_locales');
+rmSync(localesRoot, { recursive: true, force: true });
+const localesWritten = LOCALES.map((locale) => {
+  const messages = toMessages(locale.catalogue, locale.entities);
+  const dir = join(localesRoot, locale.dir);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, 'messages.json'), `${JSON.stringify(messages, null, 2)}
+`, 'utf8');
+  return { dir: locale.dir, keys: Object.keys(messages).length };
+});
+
+const manifest = JSON.parse(readFileSync(join(ROOT, 'src', 'manifest.json'), 'utf8'));
+// The store listing is localised through the same catalogues as the UI. Chrome
+// resolves __MSG_…__ in the manifest against _locales/<default_locale>/.
+manifest.default_locale = 'en';
+manifest.name = '__MSG_appName__';
+manifest.description = '__MSG_appDescription__';
+manifest.action.default_title = '__MSG_appName__';
 if (BENCH) {
-  const manifest = JSON.parse(readFileSync(join(ROOT, 'src', 'manifest.json'), 'utf8'));
   manifest.content_scripts.push({
     matches: ['http://localhost/*'],
     js: ['bench.js'],
     run_at: 'document_idle',
   });
   manifest.host_permissions = [...manifest.host_permissions, 'http://localhost/*'];
-  writeFileSync(join(OUT, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}
-`);
-} else {
-  cpSync(join(ROOT, 'src', 'manifest.json'), join(OUT, 'manifest.json'));
 }
+writeFileSync(join(OUT, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}
+`);
 cpSync(join(ROOT, 'src', 'offscreen', 'offscreen.html'), join(OUT, 'offscreen.html'));
 cpSync(join(ROOT, 'src', 'icons'), join(OUT, 'icons'), {
   recursive: true,
@@ -180,6 +224,8 @@ const required = [
   'offscreen.js',
   'offscreen.html',
   'icons/icon128.png',
+  '_locales/en/messages.json',
+  '_locales/ar/messages.json',
 ];
 const missing = required.filter((f) => {
   try {
@@ -213,6 +259,29 @@ if (bigLiterals.length > 0) {
   process.exit(1);
 }
 
+// ── the content script must NOT contain the translated catalogues ──
+//
+// At run time chrome.i18n hands back the one locale the browser is set to, so
+// content.js carries English as its floor and nothing else. src/i18n/locales/
+// says so in a comment; this is what makes it true. One careless import would
+// link all nine languages into a script parsed on every page load of all three
+// sites, to make eight of them unreachable.
+//
+// The sentinel is read from each catalogue rather than hardcoded here, so it
+// cannot drift out of step with the translation it is checking for.
+const leaked = LOCALES.filter((l) => l.dir !== 'en').filter((l) =>
+  contentSource.includes(l.catalogue['panel.action.maskAndSend']),
+);
+if (leaked.length > 0) {
+  console.error(
+    `extension build FAILED: content.js contains the ${leaked
+      .map((l) => l.dir)
+      .join(', ')} catalogue(s). Translations reach the page through chrome.i18n; ` +
+      'nothing reachable from src/content.ts may import src/i18n/locales/.',
+  );
+  process.exit(1);
+}
+
 const listing = readdirSync(OUT, { recursive: true })
   .filter((f) => !statSync(join(OUT, f)).isDirectory())
   .map((f) => ({ f, size: statSync(join(OUT, f)).size }))
@@ -220,6 +289,9 @@ const listing = readdirSync(OUT, { recursive: true })
 const total = listing.reduce((n, e) => n + e.size, 0);
 
 console.log(`extension build OK ->  ${OUT}`);
+console.log(
+  `  _locales: ${localesWritten.map((l) => `${l.dir} (${l.keys} keys)`).join(', ')}`,
+);
 for (const { f, size } of listing.slice(0, 12)) {
   console.log(`  ${f} (${size.toLocaleString()} bytes)`);
 }

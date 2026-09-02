@@ -1,0 +1,126 @@
+/**
+ * Japanese. Machine-translated; needs native review before release (D53).
+ *
+ * Every plural message supplies only `other`, which is complete rather than
+ * partial: `Intl.PluralRules('ja')` has exactly one category and returns
+ * `other` for every count. A one/other pair here would invent a distinction
+ * the language does not make.
+ */
+
+import type { Catalogue, EntityLabels } from '../catalogue.js';
+
+export const JA: Catalogue = {
+  appName: 'PrivacyShield',
+  appDescription:
+    'AI チャットに送信される前に、テキスト内の機密情報を検出してマスクします。すべてお使いのデバイス上で動作します。',
+
+  'panel.review.aria': 'PrivacyShield: 送信前にマスクされる内容を確認してください',
+  'panel.review.title': { other: 'マスクする項目 $1 件' },
+  'panel.exposure': '露出度 $1/100',
+  'panel.action.cancel': 'キャンセル',
+  'panel.action.maskAndSend': 'マスクして送信',
+  'panel.action.protectAndSend': '保護して送信',
+  'panel.item.keepOriginal': '元のまま',
+  'panel.item.maskThis': 'これをマスク',
+  'panel.item.aria': '$1: $2、$4 件中 $3 件目',
+
+  'panel.unwitnessed.title': 'このメッセージがご自身のものか確認してください',
+  'panel.unwitnessed.body':
+    'このテキストは最初から入力欄にありました。PrivacyShield は入力を確認していません。保存された下書き、入力欄を自動で埋めるリンク、提案文では通常のことです。',
+
+  'panel.findings.aria': { other: 'PrivacyShield: このメッセージで機密情報 $1 件を検出しました' },
+  'panel.findings.title': { other: '$1 件を検出' },
+  'panel.findings.note': '送信時に置き換えられ、その前に確認を求めます。',
+
+  'panel.paste.title': '貼り付けた内容に $1',
+  'panel.paste.body': '送信時にマスクされます。今すぐマスクすることもできます。',
+  'panel.paste.none': '機密情報は見つかりませんでした。',
+  'panel.paste.dismiss': '閉じる',
+  'panel.paste.maskNow': '今すぐマスク',
+  'panel.paste.countOfType': { other: '$2 $1 件' },
+
+  'panel.degraded.pageTitle': 'PrivacyShield はこのページを保護していません',
+  'panel.degraded.sendTitle': 'PrivacyShield はこのメッセージを送信しませんでした',
+  'panel.degraded.couldNotFind': '見つかりません: $1。',
+  'panel.degraded.noReason': '拡張機能が問題を報告しましたが、内容は不明です。',
+
+  'popup.title': 'PrivacyShield',
+  'popup.tab.status': 'ステータス',
+  'popup.tab.quickRedact': 'クイックマスク',
+  'popup.tab.insights': '統計',
+  'popup.status.protected': 'このページを保護しています',
+  'popup.status.unprotected': 'このページは保護されていません',
+  'popup.status.unsupported': 'PrivacyShield はこのサイトでは動作しません',
+  'popup.status.sessionCounts': 'このセッションでマスクした件数',
+  'popup.status.sessionExposure': 'セッションの露出度',
+  'popup.status.profile': '検出レベル',
+  'popup.profile.minimal': '最小',
+  'popup.profile.balanced': '標準',
+  'popup.profile.strict': '厳格',
+  'popup.status.enabledHere': 'このサイトで有効',
+
+  'quick.heading': 'どこでも使えるテキストマスク',
+  'quick.explain':
+    '任意のアプリからテキストを貼り付けてください。マスク後のテキストはそのまま送信できます。返信を貼り付けると実際の値に戻せます。',
+  'quick.input.aria': 'マスクするテキスト',
+  'quick.output.aria': 'マスク済みテキスト',
+  'quick.action.mask': 'マスク',
+  'quick.action.restore': '復元',
+  'quick.action.copy': 'コピー',
+  'quick.copied': 'コピーしました',
+  'quick.empty': 'マスクするものはまだありません。',
+  'quick.found': { other: '$1 件をマスクしました' },
+  'quick.memoryOnly':
+    'テキストと置換値の対応はメモリ上にのみ保持され、このウィンドウを閉じると消去されます。',
+
+  'insights.heading': '保護した内容',
+  'insights.explain': '件数のみです。テキストや値が保存されることはありません。',
+  'insights.empty': 'まだ何もマスクしていません。',
+  'insights.thisMonth': '今月',
+  'insights.allTime': '累計',
+  'insights.reset': '件数をリセット',
+  'insights.resetConfirm': 'すべての件数をリセットしますか？元に戻せません。',
+
+  'options.title': 'PrivacyShield の設定',
+  'options.section.detection': '検出する対象',
+  'options.section.substitution': '置換のスタイル',
+  'options.section.lists': '常にマスク / 常に除外',
+  'options.mode.surrogate': '自然な置換',
+  'options.mode.token': '[EMAIL_1] のようなラベル',
+  'options.allowlist': 'これらは常に除外',
+  'options.denylist': 'これらは常にマスク',
+  'options.save': '保存',
+  'options.saved': '保存しました',
+};
+
+export const JA_ENTITIES: EntityLabels = {
+  EMAIL: 'メールアドレス',
+  PHONE: '電話番号',
+  IP_ADDRESS: 'IP アドレス',
+  MAC_ADDRESS: 'MAC アドレス',
+  URL_WITH_CREDENTIALS: '認証情報を含む URL',
+  CREDIT_CARD: 'クレジットカード',
+  SWIFT_BIC: 'SWIFT/BIC',
+  US_ROUTING_NUMBER: 'ルーティング番号（米国）',
+  UK_SORT_CODE: '銀行支店コード（英国）',
+  CA_TRANSIT_NUMBER: 'トランジット番号（カナダ）',
+  BR_AGENCIA: '銀行支店（ブラジル）',
+  CRYPTO_WALLET: '暗号資産ウォレット',
+  NATIONAL_ID: '身分証番号',
+  TAX_ID: '納税者番号',
+  VAT_NUMBER: '付加価値税番号',
+  PASSPORT_MRZ: 'パスポート（MRZ）',
+  DRIVERS_LICENSE: '運転免許証',
+  HEALTH_DATA: '健康情報',
+  API_KEY: 'API キー',
+  PRIVATE_KEY: '秘密鍵',
+  GENERIC_SECRET: '機密値',
+  CONNECTION_STRING: '接続文字列',
+  POSTAL_CODE: '郵便番号',
+  STREET_ADDRESS: '住所',
+  COORDINATES: '座標',
+  PERSON: '人物',
+  ORG: '組織',
+  LOCATION: '場所',
+  DATE_OF_BIRTH: '生年月日',
+};

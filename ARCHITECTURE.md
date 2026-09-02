@@ -5153,6 +5153,92 @@ appeared in every diagnostic from the first, on pages where three other
 strategies matched 1/1. The region-based strategy finding nothing WAS the bug,
 visible for six rounds, in output that was being read for other things.
 
+### D53 - i18n: what the type system enforces, and what it cannot (M10)
+
+SPEC.md: "Extension UI internationalized via chrome.i18n with English plus at
+minimum Spanish, German, French, Portuguese, Turkish, Japanese, Hindi, and
+Arabic (with RTL layout support)."
+
+**The catalogues are TypeScript; `_locales/*/messages.json` is generated.**
+`chrome.i18n` is the mechanism SPEC names and it is the right one - the browser
+picks the locale, and the Chrome Web Store reads the same files for the
+listing. But it has one failure mode that matters more in this UI than
+anywhere else: `getMessage` answers a key it does not know with an EMPTY
+STRING. No warning, no key name, nothing. A mistyped key or a locale missing an
+entry is a BLANK BUTTON on the panel whose entire job is to tell someone their
+data is about to leave.
+
+So the catalogues live in `src/i18n/`, where `Catalogue` is a total
+`Record<MessageKey, ...>` and a locale missing a key does not compile, and
+`scripts/build.mjs` generates the JSON. Type safety at author time, the
+platform's own format at run time, one source of truth. `t()` is typed to
+`MessageKey`, so the typo case is a compile error before it can be a runtime
+one, and English is bundled as the floor so the worst case is legible English
+rather than nothing.
+
+**Plurals are `Intl.PluralRules`, not one/other.** `chrome.i18n` has no plural
+support at all, and the usual workaround - a `.one` key and an `.other` key -
+is wrong for most of the languages SPEC requires. Arabic has SIX categories and
+uses every one of them (zero, one, two for the dual, few for 3-10, many for
+11-99, other for 100+). Japanese has one. Turkish does not mark the plural
+after a numeral at all. `plural()` asks Intl for the category and looks up that
+form, falling back to `other`, which every language defines; the generator
+emits one chrome key per category the locale actually supplies. Arabic
+generates 122 keys where English generates 73, and Japanese 97 - that spread is
+the design working, not an inconsistency.
+
+**Entity labels are `Partial` while messages are total, and the difference is
+the floor.** A missing message renders as nothing. A missing entity label falls
+back to `labelOf()` in core, which DERIVES "Credit card" from `CREDIT_CARD` -
+real text, always. Requiring all 34 would make nine catalogues restate IBAN,
+JWT, VIN and SWIFT/BIC, which are the same word in every one of them, and would
+break D4's rule that adding a national identifier touches exactly one new file.
+`entityLabel()` replaced `labelOf()` at the single site that builds a review
+item, so the review groups and the paste summary were both localised by one
+change.
+
+**The RTL defect was mine, and D38 introduced it.** `ui/styles.ts` pinned
+`direction: ltr !important` on the host, because `all: initial` does not reset
+`direction` or `unicode-bidi` and an RTL host page would otherwise mirror the
+panel. That reasoning is sound and the value was wrong: for an Arabic-speaking
+user it welded a left-to-right panel in place with our own stylesheet, with
+`!important` guaranteeing nothing downstream could undo it - the one part of
+their browser that refused to mirror. The hardening requirement was never
+"ltr", it was "the PAGE does not decide". The direction now comes from
+`isRtl()` on the extension's own locale and keeps the `!important`. A test
+asserts both directions and fails if `ltr` is hardcoded again.
+
+**The eight translations must not ship without native review.** They are
+machine-generated. Every locale file says so in its header and this entry says
+so here, because "it compiles and the tests pass" is exactly the condition
+under which a wrong translation ships quietly. The tests check structure -
+placeholder budgets, plural completeness, no copy-pasted English - and
+structure is not meaning. THIS IS A RELEASE BLOCKER, not a nicety.
+
+**Known gap, deliberately not closed in this batch.** The ~20
+`ResolutionFailure.detail` sentences produced by the adapters are rendered
+straight into the degraded panel and are still English, so a non-English user
+gets a translated title above an English explanation. Closing it means turning
+each `detail` from a string into a key plus arguments, which touches every
+refusal site on the fail-closed path - the code least suited to being churned
+alongside a copy retrofit. Scoped and carried, not forgotten.
+
+**The leak check, and why it exists.** Translations reach the page through
+`chrome.i18n`, which hands back only the locale the browser is set to, so
+`content.js` carries English and nothing else. `src/i18n/locales/index.ts` says
+that in a comment; `scripts/build.mjs` is what makes it true, failing the build
+if a translated string appears in the content script - the same reasoning that
+keeps the gazetteers out of it. A claim about what links is worth exactly as
+much as the check that enforces it. Verified by adding the import on purpose:
+build exits 1 naming all eight locales, exits 0 with it removed. content.js
+grew 1,276,157 to 1,283,093 bytes, which is English plus the lookup code.
+
+**Verified by breaking it, per the standing rule.** The English fallback (4
+tests fail when `t()` stops falling back), the placeholder-budget check (a `$3`
+in Spanish where English supplies `$1`), the plural expansion (generator
+emitting only `other`), the RTL pin (hardcoding `ltr` again), and the leak
+check. Each was watched failing before it was trusted passing.
+
 ## Standing contracts (established in M1)
 
 - **Offset map:** `offsetMap[i]` is the original index of the cluster that

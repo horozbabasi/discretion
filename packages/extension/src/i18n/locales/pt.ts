@@ -1,0 +1,123 @@
+/** Portuguese (Brazil). Machine-translated; needs native review before release (D53). */
+
+import type { Catalogue, EntityLabels } from '../catalogue.js';
+
+export const PT: Catalogue = {
+  appName: 'PrivacyShield',
+  appDescription:
+    'Detecta e oculta informações sensíveis no texto antes que cheguem às interfaces de chat de IA. Funciona inteiramente no seu dispositivo.',
+
+  'panel.review.aria': 'PrivacyShield: revise o que será mascarado antes de enviar',
+  'panel.review.title': { one: '$1 item a mascarar', other: '$1 itens a mascarar' },
+  'panel.exposure': 'exposição $1/100',
+  'panel.action.cancel': 'Cancelar',
+  'panel.action.maskAndSend': 'Mascarar e enviar',
+  'panel.action.protectAndSend': 'Proteger e enviar',
+  'panel.item.keepOriginal': 'Manter original',
+  'panel.item.maskThis': 'Mascarar este',
+  'panel.item.aria': '$1: $2, item $3 de $4',
+
+  'panel.unwitnessed.title': 'Confirme que esta mensagem é sua',
+  'panel.unwitnessed.body':
+    'Este texto já estava na caixa — o PrivacyShield não viu você digitá-lo. Isso é normal em um rascunho salvo, em um link que preenche a caixa por você ou em uma sugestão.',
+
+  'panel.findings.aria': {
+    one: 'PrivacyShield: $1 item sensível detectado nesta mensagem',
+    other: 'PrivacyShield: $1 itens sensíveis detectados nesta mensagem',
+  },
+  'panel.findings.title': { one: '$1 item detectado', other: '$1 itens detectados' },
+  'panel.findings.note':
+    'Ao enviar, eles serão substituídos e sua confirmação será pedida antes.',
+
+  'panel.paste.title': '$1 no que você acabou de colar',
+  'panel.paste.body': 'Serão mascarados ao enviar. Você também pode mascará-los agora.',
+  'panel.paste.none': 'Nada sensível foi encontrado.',
+  'panel.paste.dismiss': 'Dispensar',
+  'panel.paste.maskNow': 'Mascarar agora',
+  'panel.paste.countOfType': { one: '$1 $2', other: '$1 $2' },
+
+  'panel.degraded.pageTitle': 'O PrivacyShield não está protegendo esta página',
+  'panel.degraded.sendTitle': 'O PrivacyShield não enviou esta mensagem',
+  'panel.degraded.couldNotFind': 'Não encontrado: $1.',
+  'panel.degraded.noReason': 'A extensão relatou um problema sem dizer qual era.',
+
+  'popup.title': 'PrivacyShield',
+  'popup.tab.status': 'Status',
+  'popup.tab.quickRedact': 'Mascaramento rápido',
+  'popup.tab.insights': 'Estatísticas',
+  'popup.status.protected': 'Protegendo esta página',
+  'popup.status.unprotected': 'Não está protegendo esta página',
+  'popup.status.unsupported': 'O PrivacyShield não funciona neste site',
+  'popup.status.sessionCounts': 'Mascarado nesta sessão',
+  'popup.status.sessionExposure': 'Exposição da sessão',
+  'popup.status.profile': 'Sensibilidade',
+  'popup.profile.minimal': 'Mínima',
+  'popup.profile.balanced': 'Equilibrada',
+  'popup.profile.strict': 'Rigorosa',
+  'popup.status.enabledHere': 'Ativado neste site',
+
+  'quick.heading': 'Mascarar texto para qualquer lugar',
+  'quick.explain':
+    'Cole texto de qualquer aplicativo. A versão mascarada pode ser enviada com segurança. Cole uma resposta aqui para restaurar os valores reais.',
+  'quick.input.aria': 'Texto a mascarar',
+  'quick.output.aria': 'Texto mascarado',
+  'quick.action.mask': 'Mascarar',
+  'quick.action.restore': 'Restaurar',
+  'quick.action.copy': 'Copiar',
+  'quick.copied': 'Copiado',
+  'quick.empty': 'Ainda não há nada para mascarar.',
+  'quick.found': { one: '$1 item mascarado', other: '$1 itens mascarados' },
+  'quick.memoryOnly':
+    'A correspondência entre o seu texto e as substituições fica apenas na memória e é apagada quando esta janela é fechada.',
+
+  'insights.heading': 'O que você protegeu',
+  'insights.explain': 'Apenas contagens. Nenhum texto e nenhum valor são armazenados.',
+  'insights.empty': 'Nada mascarado ainda.',
+  'insights.thisMonth': 'Este mês',
+  'insights.allTime': 'Desde o início',
+  'insights.reset': 'Zerar contagens',
+  'insights.resetConfirm': 'Zerar todas as contagens? Isso não pode ser desfeito.',
+
+  'options.title': 'Configurações do PrivacyShield',
+  'options.section.detection': 'O que detectar',
+  'options.section.substitution': 'Estilo de substituição',
+  'options.section.lists': 'Sempre e nunca',
+  'options.mode.surrogate': 'Substituições realistas',
+  'options.mode.token': 'Rótulos como [EMAIL_1]',
+  'options.allowlist': 'Nunca mascarar estes',
+  'options.denylist': 'Sempre mascarar estes',
+  'options.save': 'Salvar',
+  'options.saved': 'Salvo',
+};
+
+export const PT_ENTITIES: EntityLabels = {
+  EMAIL: 'E-mail',
+  PHONE: 'Telefone',
+  IP_ADDRESS: 'Endereço IP',
+  MAC_ADDRESS: 'Endereço MAC',
+  URL_WITH_CREDENTIALS: 'URL com credenciais',
+  CREDIT_CARD: 'Cartão de crédito',
+  SWIFT_BIC: 'SWIFT/BIC',
+  US_ROUTING_NUMBER: 'Número de roteamento (EUA)',
+  UK_SORT_CODE: 'Código bancário (Reino Unido)',
+  CA_TRANSIT_NUMBER: 'Número de trânsito (Canadá)',
+  BR_AGENCIA: 'Agência bancária',
+  CRYPTO_WALLET: 'Carteira de criptomoeda',
+  NATIONAL_ID: 'Documento de identidade',
+  TAX_ID: 'CPF/CNPJ',
+  VAT_NUMBER: 'Número de IVA',
+  PASSPORT_MRZ: 'Passaporte (zona MRZ)',
+  DRIVERS_LICENSE: 'Carteira de motorista',
+  HEALTH_DATA: 'Dados de saúde',
+  API_KEY: 'Chave de API',
+  PRIVATE_KEY: 'Chave privada',
+  GENERIC_SECRET: 'Segredo',
+  CONNECTION_STRING: 'String de conexão',
+  POSTAL_CODE: 'CEP',
+  STREET_ADDRESS: 'Endereço',
+  COORDINATES: 'Coordenadas',
+  PERSON: 'Pessoa',
+  ORG: 'Organização',
+  LOCATION: 'Local',
+  DATE_OF_BIRTH: 'Data de nascimento',
+};

@@ -33,16 +33,33 @@
  * and `unicode-bidi`, both of which inherit and both of which cross the
  * boundary. An RTL host would otherwise mirror the panel. They are pinned
  * explicitly.
+ *
+ * ─────────────────────────────────────────────────────────────────────────
+ * WHICH DIRECTION IS PINNED IS AN I18N DECISION, NOT A HARDENING ONE
+ *
+ * That pin used to read `direction: ltr !important` unconditionally. Against a
+ * hostile page it was right; for an Arabic-speaking user it welded a
+ * left-to-right panel in place with our own stylesheet, and `!important` meant
+ * nothing downstream could undo it. The panel would have been the one part of
+ * their browser that refused to mirror.
+ *
+ * The hardening requirement was never "ltr" - it was "the PAGE does not get to
+ * decide". So the value now comes from the extension's OWN locale via
+ * `isRtl()`, and keeps the `!important` that makes it unoverridable. The page
+ * still cannot mirror the panel; the user's language now can.
  * ─────────────────────────────────────────────────────────────────────────
  */
+import { isRtl } from '../i18n/index.js';
+
 export const PANEL_STYLES = `
 /* The reset, alone, so the structural rule below can override the longhands
    all expands to. Order matters here. */
 :host { all: initial !important; }
 
 :host {
-  /* all does not touch these two, and both inherit across the boundary. */
-  direction: ltr !important;
+  /* all does not touch these two, and both inherit across the boundary.
+     The direction is OURS - taken from the UI locale, not from the page. */
+  direction: ${isRtl() ? 'rtl' : 'ltr'} !important;
   unicode-bidi: isolate !important;
 
   position: fixed !important;

@@ -48,12 +48,13 @@ import {
   calibrate,
   computeExposure,
   detect,
-  labelOf,
   maskOriginal,
   normalize,
   resolveOverlaps,
   toDetectedEntity,
 } from '@privacyshield/core';
+
+import { entityLabel } from '../i18n/index.js';
 import type {
   CalibrationModel,
   ContextScoredCandidate,
@@ -236,7 +237,7 @@ export async function analyzeText(text: string, options: AnalysisOptions): Promi
     entities.push({
       id: surrogate.vaultId,
       type: candidate.type,
-      label: labelOf(candidate.type),
+      label: entityLabel(candidate.type),
       confidence,
       explanation: explanationSentence(scored, confidence),
       surrogate: surrogate.replacement,

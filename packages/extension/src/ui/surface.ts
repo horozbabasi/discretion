@@ -41,6 +41,7 @@
  */
 
 import type { ResolutionFailure } from '../adapters/index.js';
+import { plural, t } from '../i18n/index.js';
 import type { PasteSummary, ReviewContent, ReviewGroup, SurfaceState } from './surfaceState.js';
 import { itemCount, pasteTotal } from './surfaceState.js';
 import { PANEL_STYLES } from './styles.js';
@@ -500,14 +501,14 @@ export class Surface {
     // floating over someone's chat would take the page away from them.
     panel.setAttribute('role', 'dialog');
     panel.setAttribute('aria-modal', 'false');
-    panel.setAttribute('aria-label', 'PrivacyShield: review what will be masked before sending');
+    panel.setAttribute('aria-label', t('panel.review.aria'));
     panel.tabIndex = -1;
 
     const count = itemCount(content);
     panel.append(
       this.head(
-        `${String(count)} item${count === 1 ? '' : 's'} to mask`,
-        `exposure ${String(Math.round(content.exposureScore))}/100`,
+        plural('panel.review.title', count),
+        t('panel.exposure', Math.round(content.exposureScore)),
       ),
     );
 
@@ -520,11 +521,11 @@ export class Surface {
     if (content.unwitnessed === true) {
       const notice = this.el('div', 'degraded');
       notice.append(
-        this.text('div', 'title', 'Check this is your message'),
+        this.text('div', 'title', t('panel.unwitnessed.title')),
         this.text(
           'div',
           'why',
-          'This text was already in the box - PrivacyShield did not see you type it. That is normal for a saved draft, a link that fills the box for you, or a suggested prompt.',
+          t('panel.unwitnessed.body'),
         ),
       );
       panel.append(notice);
@@ -535,7 +536,7 @@ export class Surface {
     const actions = this.el('div', 'actions');
     const cancel = this.el('button', '') as HTMLButtonElement;
     cancel.type = 'button';
-    cancel.textContent = 'Cancel';
+    cancel.textContent = t('panel.action.cancel');
     cancel.addEventListener('click', () => this.callbacks.onCancel());
 
     const send = this.el('button', 'primary') as HTMLButtonElement;
@@ -543,7 +544,8 @@ export class Surface {
     // The label carries the difference. "Protect and send" is an answer to the
     // question above it; "Mask and send" would read as the same routine
     // confirmation as every other send, which is exactly what this is not.
-    send.textContent = content.unwitnessed === true ? 'Protect and send' : 'Mask and send';
+    send.textContent =
+      content.unwitnessed === true ? t('panel.action.protectAndSend') : t('panel.action.maskAndSend');
     send.addEventListener('click', () => this.callbacks.onConfirm());
 
     actions.append(cancel, send);
@@ -566,13 +568,13 @@ export class Surface {
     panel.setAttribute('role', 'region');
     panel.setAttribute(
       'aria-label',
-      `PrivacyShield: ${String(count)} sensitive item${count === 1 ? '' : 's'} detected in this message`,
+      plural('panel.findings.aria', count),
     );
 
     panel.append(
       this.head(
-        `${String(count)} item${count === 1 ? '' : 's'} detected`,
-        `exposure ${String(Math.round(content.exposureScore))}/100`,
+        plural('panel.findings.title', count),
+        t('panel.exposure', Math.round(content.exposureScore)),
       ),
     );
     this.appendGroups(panel, content);
@@ -588,7 +590,7 @@ export class Surface {
       this.text(
         'div',
         'why',
-        'When you send, these will be replaced and you will be asked to confirm first.',
+        t('panel.findings.note'),
       ),
     );
     panel.append(note);
@@ -616,18 +618,16 @@ export class Surface {
     // entry rather than for the whole phrase, because "1 API keys" is the kind
     // of detail that makes a user trust the rest of the panel less.
     const phrase = summary.counts
-      .map((entry) => `${String(entry.count)} ${entry.label}${entry.count === 1 ? '' : 's'}`)
+      .map((entry) => plural('panel.paste.countOfType', entry.count, entry.label))
       .join(', ');
 
     const box = this.el('div', 'degraded');
     box.append(
-      this.text('div', 'title', `${phrase} in what you just pasted`),
+      this.text('div', 'title', t('panel.paste.title', phrase)),
       this.text(
         'div',
         'why',
-        total === 0
-          ? 'Nothing sensitive was found in it.'
-          : 'These will be masked when you send. You can mask them now instead.',
+        total === 0 ? t('panel.paste.none') : t('panel.paste.body'),
       ),
     );
     panel.append(box);
@@ -635,12 +635,12 @@ export class Surface {
     const actions = this.el('div', 'actions');
     const dismiss = this.el('button', '') as HTMLButtonElement;
     dismiss.type = 'button';
-    dismiss.textContent = 'Dismiss';
+    dismiss.textContent = t('panel.paste.dismiss');
     dismiss.addEventListener('click', () => this.callbacks.onDismiss?.());
 
     const maskNow = this.el('button', 'primary') as HTMLButtonElement;
     maskNow.type = 'button';
-    maskNow.textContent = 'Mask now';
+    maskNow.textContent = t('panel.paste.maskNow');
     maskNow.addEventListener('click', () => this.callbacks.onMaskNow?.());
 
     actions.append(dismiss, maskNow);
@@ -694,7 +694,7 @@ export class Surface {
 
       const toggle = this.el('button', 'link') as HTMLButtonElement;
       toggle.type = 'button';
-      const action = item.reverted ? 'Mask this' : 'Keep original';
+      const action = item.reverted ? t('panel.item.maskThis') : t('panel.item.keepOriginal');
       toggle.textContent = action;
       // The accessible name STARTS with the visible text, per WCAG 2.5.3
       // (Label in Name), so speech input still activates the button by what is
@@ -704,7 +704,7 @@ export class Surface {
       // tell which one reverts which detection.
       toggle.setAttribute(
         'aria-label',
-        `${action}: ${group.label}, item ${String(position)} of ${String(total)}`,
+        t('panel.item.aria', action, group.label, position, total),
       );
       toggle.addEventListener('click', () => this.callbacks.onToggleItem(item.id));
       li.append(toggle);
@@ -756,14 +756,14 @@ export class Surface {
         'div',
         'title',
         aboutThisSend
-          ? 'PrivacyShield did not send this message'
-          : 'PrivacyShield is not protecting this page',
+          ? t('panel.degraded.sendTitle')
+          : t('panel.degraded.pageTitle'),
       ),
     );
 
     if (failures.length === 0) {
       box.append(
-        this.text('div', 'why', 'The extension reported a problem without saying what it was.'),
+        this.text('div', 'why', t('panel.degraded.noReason')),
       );
     }
     for (const failure of failures) {
@@ -774,7 +774,7 @@ export class Surface {
         this.text(
           'div',
           'why',
-          `Could not find: ${failures.map((failure) => failure.target).join(', ')}.`,
+          t('panel.degraded.couldNotFind', failures.map((failure) => failure.target).join(', ')),
         ),
       );
     }

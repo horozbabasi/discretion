@@ -1,0 +1,126 @@
+/** French. Machine-translated; needs native review before release (D53). */
+
+import type { Catalogue, EntityLabels } from '../catalogue.js';
+
+export const FR: Catalogue = {
+  appName: 'PrivacyShield',
+  appDescription:
+    "Détecte et masque les informations sensibles dans le texte avant qu'elles n'atteignent les interfaces de discussion IA. Fonctionne entièrement sur votre appareil.",
+
+  'panel.review.aria': "PrivacyShield : vérifiez ce qui sera masqué avant l'envoi",
+  'panel.review.title': { one: '$1 élément à masquer', other: '$1 éléments à masquer' },
+  'panel.exposure': 'exposition $1/100',
+  'panel.action.cancel': 'Annuler',
+  'panel.action.maskAndSend': 'Masquer et envoyer',
+  'panel.action.protectAndSend': 'Protéger et envoyer',
+  'panel.item.keepOriginal': "Garder l'original",
+  'panel.item.maskThis': 'Masquer',
+  'panel.item.aria': '$1 : $2, élément $3 sur $4',
+
+  'panel.unwitnessed.title': "Vérifiez qu'il s'agit bien de votre message",
+  'panel.unwitnessed.body':
+    "Ce texte était déjà dans le champ : PrivacyShield ne vous a pas vu le saisir. C'est normal pour un brouillon enregistré, un lien qui remplit le champ à votre place ou une suggestion.",
+
+  'panel.findings.aria': {
+    one: 'PrivacyShield : $1 élément sensible détecté dans ce message',
+    other: 'PrivacyShield : $1 éléments sensibles détectés dans ce message',
+  },
+  'panel.findings.title': { one: '$1 élément détecté', other: '$1 éléments détectés' },
+  'panel.findings.note':
+    "À l'envoi, ils seront remplacés et une confirmation vous sera demandée.",
+
+  'panel.paste.title': '$1 dans ce que vous venez de coller',
+  'panel.paste.body':
+    "Ils seront masqués à l'envoi. Vous pouvez aussi les masquer maintenant.",
+  'panel.paste.none': "Rien de sensible n'y a été trouvé.",
+  'panel.paste.dismiss': 'Ignorer',
+  'panel.paste.maskNow': 'Masquer maintenant',
+  'panel.paste.countOfType': { one: '$1 $2', other: '$1 $2' },
+
+  'panel.degraded.pageTitle': 'PrivacyShield ne protège pas cette page',
+  'panel.degraded.sendTitle': "PrivacyShield n'a pas envoyé ce message",
+  'panel.degraded.couldNotFind': 'Introuvable : $1.',
+  'panel.degraded.noReason':
+    "L'extension a signalé un problème sans préciser lequel.",
+
+  'popup.title': 'PrivacyShield',
+  'popup.tab.status': 'État',
+  'popup.tab.quickRedact': 'Masquage rapide',
+  'popup.tab.insights': 'Statistiques',
+  'popup.status.protected': 'Cette page est protégée',
+  'popup.status.unprotected': "Cette page n'est pas protégée",
+  'popup.status.unsupported': 'PrivacyShield ne fonctionne pas sur ce site',
+  'popup.status.sessionCounts': 'Masqué pendant cette session',
+  'popup.status.sessionExposure': 'Exposition de la session',
+  'popup.status.profile': 'Sensibilité',
+  'popup.profile.minimal': 'Minimale',
+  'popup.profile.balanced': 'Équilibrée',
+  'popup.profile.strict': 'Stricte',
+  'popup.status.enabledHere': 'Activé sur ce site',
+
+  'quick.heading': "Masquer du texte pour n'importe où",
+  'quick.explain':
+    "Collez du texte depuis n'importe quelle application. La version masquée peut être envoyée sans risque. Recollez une réponse ici pour restaurer les valeurs réelles.",
+  'quick.input.aria': 'Texte à masquer',
+  'quick.output.aria': 'Texte masqué',
+  'quick.action.mask': 'Masquer',
+  'quick.action.restore': 'Restaurer',
+  'quick.action.copy': 'Copier',
+  'quick.copied': 'Copié',
+  'quick.empty': "Rien à masquer pour l'instant.",
+  'quick.found': { one: '$1 élément masqué', other: '$1 éléments masqués' },
+  'quick.memoryOnly':
+    'La correspondance entre votre texte et ses remplacements est conservée en mémoire uniquement, et effacée à la fermeture de cette fenêtre.',
+
+  'insights.heading': 'Ce que vous avez protégé',
+  'insights.explain': "Des comptages uniquement. Aucun texte ni aucune valeur n'est conservé.",
+  'insights.empty': "Rien n'a encore été masqué.",
+  'insights.thisMonth': 'Ce mois-ci',
+  'insights.allTime': 'Depuis le début',
+  'insights.reset': 'Réinitialiser les compteurs',
+  'insights.resetConfirm':
+    'Réinitialiser tous les compteurs ? Cette action est irréversible.',
+
+  'options.title': 'Paramètres de PrivacyShield',
+  'options.section.detection': "Ce qu'il faut détecter",
+  'options.section.substitution': 'Style de remplacement',
+  'options.section.lists': 'Toujours et jamais',
+  'options.mode.surrogate': 'Remplacements réalistes',
+  'options.mode.token': 'Étiquettes comme [EMAIL_1]',
+  'options.allowlist': 'Ne jamais masquer ceci',
+  'options.denylist': 'Toujours masquer ceci',
+  'options.save': 'Enregistrer',
+  'options.saved': 'Enregistré',
+};
+
+export const FR_ENTITIES: EntityLabels = {
+  EMAIL: 'Adresse e-mail',
+  PHONE: 'Numéro de téléphone',
+  IP_ADDRESS: 'Adresse IP',
+  MAC_ADDRESS: 'Adresse MAC',
+  URL_WITH_CREDENTIALS: 'URL avec identifiants',
+  CREDIT_CARD: 'Carte bancaire',
+  SWIFT_BIC: 'SWIFT/BIC',
+  US_ROUTING_NUMBER: 'Numéro de routage (États-Unis)',
+  UK_SORT_CODE: 'Code guichet (Royaume-Uni)',
+  CA_TRANSIT_NUMBER: 'Numéro de transit (Canada)',
+  BR_AGENCIA: 'Agence bancaire (Brésil)',
+  CRYPTO_WALLET: 'Portefeuille de cryptomonnaie',
+  NATIONAL_ID: "Pièce d'identité",
+  TAX_ID: 'Numéro fiscal',
+  VAT_NUMBER: 'Numéro de TVA',
+  PASSPORT_MRZ: 'Passeport (zone MRZ)',
+  DRIVERS_LICENSE: 'Permis de conduire',
+  HEALTH_DATA: 'Données de santé',
+  API_KEY: 'Clé API',
+  PRIVATE_KEY: 'Clé privée',
+  GENERIC_SECRET: 'Secret',
+  CONNECTION_STRING: 'Chaîne de connexion',
+  POSTAL_CODE: 'Code postal',
+  STREET_ADDRESS: 'Adresse postale',
+  COORDINATES: 'Coordonnées',
+  PERSON: 'Personne',
+  ORG: 'Organisation',
+  LOCATION: 'Lieu',
+  DATE_OF_BIRTH: 'Date de naissance',
+};

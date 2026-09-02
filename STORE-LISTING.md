@@ -285,14 +285,11 @@ Listed here rather than left for the submission to discover.
 
 ### Still genuinely open
 
-- **The `isComposing` Enter is unverified on ALL THREE sites.** Our side is
-  settled: the adapters skip a composing Enter. Whether each site's own handler
-  does the same is unknown, and if one submits, a CJK user sends ungated text.
-
-  The route to answer it now exists and needs no IME: a browser you launch
-  yourself with `--remote-debugging-port`, logged into by hand, and
-  `probe-ime-live.py --attach`. Nobody has run it. See
-  `docs/manual-checks/isComposing.md`.
+- ~~The `isComposing` Enter is unverified.~~ **ANSWERED 2026-09-03: all three
+  sites wait correctly.** A composing Enter commits the IME candidate and does
+  not submit, on ChatGPT, Claude and Gemini, so the adapters' existing skip is
+  correct. Measured against real signed-in sessions with trusted composition
+  events; see ARCHITECTURE.md D63.
 
 - `form.submit()` cannot be intercepted by any listener (ARCHITECTURE.md D57b),
   and a click on a control no adapter recognises is not gated. Neither is a

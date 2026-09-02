@@ -235,15 +235,56 @@ def probe_site(context, name: str, site: dict, control: bool) -> tuple[int, str]
         print()
         print("  -- control: a plain Enter, to show a send would have been visible --")
         print("     (this sends one short message to your account, on purpose)")
-        page.wait_for_timeout(600)
+
+        # END THE COMPOSITION FIRST, and start the control from a clean line.
+        #
+        # The first version pressed Enter straight after the composing one and
+        # the control FAILED on claude and gemini. The likely reason is that the
+        # composition was still open, so the "plain" Enter was not plain at all
+        # - it was a second composing Enter, committing rather than sending.
+        # ChatGPT's handler ended the composition on the first Enter, which is
+        # why only it passed.
+        #
+        # So the composition is cancelled explicitly, the composer is cleared,
+        # and the text is typed WITHOUT an IME. Whether that guess was right is
+        # not assumed either: the control Enter's own isComposing is recorded
+        # and printed below.
+        try:
+            cdp.send("Input.imeSetComposition",
+                     {"text": "", "selectionStart": -1, "selectionEnd": -1})
+        except Exception:
+            pass  # not every implementation accepts a cancel; the clear below still runs
+        page.wait_for_timeout(300)
+
+        composer.click()
+        page.keyboard.press("ControlOrMeta+a")
+        page.keyboard.press("Delete")
+        page.wait_for_timeout(300)
+        page.evaluate("() => { window.__ps.enters.length = 0; }")
+
+        page.keyboard.type(COMPOSITION_TEXT, delay=40)
+        page.wait_for_timeout(500)
         control_before = page.evaluate("() => window.__ps.text()")
+
         page.keyboard.press("Enter")
         page.wait_for_timeout(4_000)
         control_after = page.evaluate("() => window.__ps.text()")
+        control_enters = page.evaluate("() => window.__ps.enters")
         control_sent = (
             len(control_before.strip()) > 0 and len(control_after.strip()) == 0
         )
         print(f"  before: {control_before!r}  after: {control_after!r}")
+        print(f"  control Enter: {control_enters}")
+
+        still_composing = any(e["isComposing"] for e in control_enters)
+        if still_composing:
+            # The control never ran as a control. Say so rather than reporting
+            # it as a failed send.
+            print("  ????  the control Enter ALSO arrived with isComposing=true, so the")
+            print("        composition was never closed and this did not test a plain send")
+            page.close()
+            return 3, f"{name}: control Enter was still composing"
+
         if control_sent:
             print("  ok    a plain Enter DID send, so the negative result above is real")
             page.close()

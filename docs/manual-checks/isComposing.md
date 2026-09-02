@@ -1,7 +1,23 @@
 # Manual check: the `isComposing` Enter
 
-**Status: OPEN on all three sites.** Two routes remain, both needing a person
-for the login and nothing else.
+**Status: ANSWERED, 2026-09-03. All three sites wait correctly.** No code
+change was needed. Kept as the record of how it was settled and how to re-check
+it when a site changes its composer.
+
+| site | composing Enter | control (plain Enter) | verdict |
+| --- | --- | --- | --- |
+| chatgpt | `isComposing:true, trusted:true` — not sent | sent | waits correctly |
+| claude | `isComposing:true, trusted:true` — not sent | sent | waits correctly |
+| gemini | `isComposing:true, trusted:true` — not sent | sent | waits correctly |
+
+Re-run with:
+
+```bash
+python packages/extension/scripts/probe-ime-live.py --attach 9222 --control
+```
+
+after starting a browser yourself as in Route A below. It exits `1` if any site
+starts submitting on a composing Enter, so it can gate a release.
 
 ## The question
 

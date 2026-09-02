@@ -67,7 +67,13 @@
  * ─────────────────────────────────────────────────────────────────────────
  */
 
-import type { NerRecognizer, SensitivityProfile } from '@privacyshield/core';
+import type {
+  EntityType,
+  NerRecognizer,
+  SensitivityProfile,
+  SubstitutionMode,
+  UserLists,
+} from '@privacyshield/core';
 import { PROFILES, Vault } from '@privacyshield/core';
 
 import type {
@@ -92,6 +98,8 @@ import type { AnalyzedEntity, Analysis } from './analyze.js';
 import { DetectionSession } from './session.js';
 import type { SessionSummary } from './sessionLog.js';
 import { recordMasked } from '../storage/insights.js';
+import { DEFAULT_SETTINGS, loadSettings, typeEnabled } from '../storage/settings.js';
+import type { Settings } from '../storage/settings.js';
 import { applyMasking, certifyForRelease, missingStages, PassThrough } from './sendGate.js';
 
 /**
@@ -160,7 +168,6 @@ export interface ControllerOptions {
    * bundled - see analyze.ts.
    */
   readonly ner: NerRecognizer | null;
-  readonly profile?: SensitivityProfile;
   /** Reported instead of thrown, so the caller decides what a failure means. */
   readonly onError: (error: unknown) => void;
 }
@@ -169,7 +176,6 @@ export class DetectionController {
   private readonly options: ControllerOptions;
   private readonly surface: Surface;
   private readonly session = new DetectionSession();
-  private readonly profile: SensitivityProfile;
 
   /** The composer node the input listener is bound to, if any. */
   private boundComposer: HTMLElement | null = null;
@@ -197,6 +203,16 @@ export class DetectionController {
    * approved instead of re-masking it.
    */
   private lastMaskedText: string | null = null;
+  /**
+   * The Options page's answers, refreshed when they change.
+   *
+   * Starts at DEFAULT_SETTINGS rather than at null, so an analysis that
+   * happens before the first storage read uses the PROTECTIVE position -
+   * balanced profile, every type on, no allowlist. The alternative is a
+   * window in which a stale null means "no policy", and no policy is
+   * indistinguishable from an empty one that permits everything.
+   */
+  private settings: Settings = DEFAULT_SETTINGS;
   private unsubscribeSubmit: (() => void) | null = null;
   private unsubscribeStream: (() => void) | null = null;
   /**
@@ -230,7 +246,6 @@ export class DetectionController {
 
   constructor(options: ControllerOptions) {
     this.options = options;
-    this.profile = options.profile ?? PROFILES.balanced;
     this.restorer = new DomRestorer(this.session.vault, SURFACE_HOST_TAG);
     this.surface = new Surface(options.document, {
       onConfirm: () => this.resolveDecision(true),
@@ -245,6 +260,7 @@ export class DetectionController {
 
   start(): void {
     this.surface.mount();
+    this.watchSettings();
     this.unsubscribeSubmit = this.options.adapter.onSubmitIntent((intent) => {
       this.onSubmit(intent);
     });
@@ -294,6 +310,15 @@ export class DetectionController {
 
   /** Clears everything a session may hold. SPEC: no plaintext survives. */
   destroy(): void {
+    if (this.onSettingsChanged !== null) {
+      try {
+        chrome.storage.onChanged.removeListener(this.onSettingsChanged);
+      } catch {
+        // Registration is guarded the same way; if it never succeeded there
+        // is nothing to remove.
+      }
+      this.onSettingsChanged = null;
+    }
     this.unsubscribeSubmit?.();
     this.unsubscribeSubmit = null;
     this.unsubscribeStream?.();
@@ -355,8 +380,7 @@ export class DetectionController {
   private async summarisePaste(pasted: string): Promise<void> {
     const analysis = await analyzeText(pasted, {
       ner: this.options.ner,
-      profile: this.profile,
-      mode: this.session.mode,
+      ...this.policy(),
       seed: this.session.seed,
       // A SEPARATE vault: this analysis exists only to count what was pasted,
       // and registering its surrogates in the session vault would mint
@@ -822,12 +846,61 @@ export class DetectionController {
   private analyseNow(text: string): Promise<Analysis> {
     return analyzeText(text, {
       ner: this.options.ner,
-      profile: this.profile,
-      mode: this.session.mode,
+      ...this.policy(),
       seed: this.session.seed,
       vault: this.session.vault,
     });
   }
+
+  /**
+   * The parts of an analysis that come from the user's settings.
+   *
+   * One place, so the three call sites cannot drift - the paste guard warning
+   * about something the send gate would not mask, or the reverse, is a
+   * contradiction the user has no way to resolve.
+   */
+  private policy(): {
+    readonly profile: SensitivityProfile;
+    readonly mode: SubstitutionMode;
+    readonly lists: UserLists;
+    readonly typeAllowed: (type: EntityType) => boolean;
+    readonly defaultRegion?: string;
+  } {
+    return {
+      profile: PROFILES[this.settings.profile],
+      mode: this.settings.mode,
+      lists: { allow: this.settings.allowlist, deny: this.settings.denylist },
+      typeAllowed: (type) => typeEnabled(type, this.settings),
+      ...(this.settings.phoneRegion.length === 2
+        ? { defaultRegion: this.settings.phoneRegion }
+        : {}),
+    };
+  }
+
+  /** Reads the Options page's answers, and keeps reading them. */
+  private watchSettings(): void {
+    void loadSettings().then((settings) => {
+      this.settings = settings;
+    });
+    this.onSettingsChanged = (changes, areaName) => {
+      if (areaName !== 'local' || !('settings' in changes)) return;
+      void loadSettings().then((settings) => {
+        this.settings = settings;
+      });
+    };
+    try {
+      chrome.storage.onChanged.addListener(this.onSettingsChanged);
+    } catch {
+      // No extension context - a test, or the playground. `loadSettings()`
+      // has already fallen back to the protective defaults, and there is
+      // nothing to be notified about because nothing can change them.
+      this.onSettingsChanged = null;
+    }
+  }
+
+  private onSettingsChanged:
+    | ((changes: Record<string, chrome.storage.StorageChange>, areaName: string) => void)
+    | null = null;
 
   // ── internals ──────────────────────────────────────────────────────────
 
@@ -961,8 +1034,7 @@ export class DetectionController {
 
       const analysis = await analyzeText(text, {
         ner: this.options.ner,
-        profile: this.profile,
-        mode: this.session.mode,
+        ...this.policy(),
         seed: this.session.seed,
         vault: this.session.vault,
       });

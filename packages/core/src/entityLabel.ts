@@ -30,6 +30,7 @@ const INITIALISMS = [
   'NPI',
   'VAT',
   'VIN',
+  'ID',
   'IP',
   'US',
   'UK',

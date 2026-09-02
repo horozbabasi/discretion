@@ -53,6 +53,7 @@ const ENTRIES = [
   // document. Separate from the content script because nothing is shared: the
   // popup has no page to inject into, and the content script has no popup.
   { file: 'src/popup/popup.ts', name: 'popup', format: 'es' },
+  { file: 'src/options/options.ts', name: 'options', format: 'es' },
   ...(BENCH ? [{ file: 'src/bench/ipcBench.ts', name: 'bench', format: 'iife' }] : []),
 ];
 
@@ -192,7 +193,9 @@ writeFileSync(join(OUT, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}
 `);
 cpSync(join(ROOT, 'src', 'offscreen', 'offscreen.html'), join(OUT, 'offscreen.html'));
 cpSync(join(ROOT, 'src', 'popup', 'popup.html'), join(OUT, 'popup.html'));
-cpSync(join(ROOT, 'src', 'popup', 'popup.css'), join(OUT, 'popup.css'));
+cpSync(join(ROOT, 'src', 'options', 'options.html'), join(OUT, 'options.html'));
+// One stylesheet for both pages - see its header.
+cpSync(join(ROOT, 'src', 'ui', 'pages.css'), join(OUT, 'pages.css'));
 cpSync(join(ROOT, 'src', 'icons'), join(OUT, 'icons'), {
   recursive: true,
   filter: (src) => statSync(src).isDirectory() || src.endsWith('.png'),
@@ -231,8 +234,10 @@ const required = [
   'offscreen.html',
   'icons/icon128.png',
   'popup.html',
-  'popup.css',
   'popup.js',
+  'options.html',
+  'options.js',
+  'pages.css',
   '_locales/en/messages.json',
   '_locales/ar/messages.json',
 ];

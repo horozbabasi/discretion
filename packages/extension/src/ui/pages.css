@@ -1,5 +1,9 @@
 /*
- * The popup.
+ * The extension's own pages: the popup and the options page.
+ *
+ * ONE STYLESHEET FOR BOTH, because they are one product and a second copy of
+ * the palette is a second thing to keep in step. Page-specific rules are
+ * scoped by a class on <body> rather than split into a second file.
  *
  * ─────────────────────────────────────────────────────────────────────────
  * WHY THIS LOOKS LIKE AN INSTRUMENT AND NOT LIKE AN APP
@@ -72,7 +76,6 @@
 
 body {
   margin: 0;
-  width: 380px;
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   font-size: 13px;
   line-height: 1.45;
@@ -91,6 +94,15 @@ body {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
   border-radius: 3px;
+}
+
+/* A popup is a fixed 380px; the options page is a document and gets a reading
+   measure rather than the full width of a monitor. */
+body.popup { width: 380px; }
+body.options {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 28px 20px 64px;
 }
 
 /* ── header ── */
@@ -326,4 +338,112 @@ select {
    nothing. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+
+/* ═══ the options page ═══ */
+
+body.options h1 {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0 0 4px;
+}
+
+body.options .section {
+  margin-top: 26px;
+  padding-top: 22px;
+}
+
+body.options fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+body.options legend { padding: 0; }
+
+/* A radio group that reads as a choice, not as a form. */
+.choices { display: grid; gap: 8px; }
+.choice {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 10px;
+  align-items: start;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  cursor: pointer;
+}
+.choice:hover { border-color: var(--accent); }
+.choice input { accent-color: var(--accent); margin-top: 2px; }
+.choice[data-selected='true'] { border-color: var(--accent); background: var(--accent-weak); }
+.choice .why { grid-column: 2; color: var(--muted); font-size: 12px; }
+
+/* The type toggles: dense, alphabetical within a family, and countable at a
+   glance. A three-column grid at this width keeps 34 of them on one screen. */
+.types { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 4px 14px; }
+.type {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+  cursor: pointer;
+}
+.type input { accent-color: var(--accent); }
+.family-head {
+  grid-column: 1 / -1;
+  margin: 10px 0 2px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 640px) { .pair { grid-template-columns: 1fr; } }
+.pair textarea { min-height: 120px; }
+
+/* custom rules */
+.rule {
+  display: grid;
+  grid-template-columns: auto 1fr 2fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 7px 0;
+}
+.rule + .rule { border-top: 1px solid var(--rule); }
+@media (max-width: 640px) { .rule { grid-template-columns: auto 1fr auto; } }
+
+input[type='text'] {
+  font: inherit;
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--fg);
+}
+input[type='text'].mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+}
+input[type='text'][aria-invalid='true'] { border-color: var(--warn); }
+
+/* The "what this does not protect" list: the most important copy on the page,
+   so it is set as prose rather than as a settings row. */
+.about { color: var(--fg); }
+.about li { margin: 0 0 8px; }
+.about ul { margin: 8px 0 0; padding-inline-start: 20px; }
+
+.sticky-save {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  margin-top: 24px;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
 }

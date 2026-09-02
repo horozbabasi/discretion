@@ -82,6 +82,19 @@ export interface AnalysisOptions {
   readonly ner: NerRecognizer | null;
   readonly profile: SensitivityProfile;
   readonly lists?: UserLists;
+  /**
+   * The user's configured region, for identifiers whose format is ambiguous
+   * without one. A phone number written in national form cannot be validated
+   * at all without it, so leaving this unset does not merely lower confidence
+   * - it means the detector reports nothing.
+   */
+  readonly defaultRegion?: string;
+  /**
+   * Per-type toggles from the Options page. Applied at the REPORT decision,
+   * before a surrogate is minted, so a type the user switched off never
+   * reaches the vault rather than being filtered out of the panel afterwards.
+   */
+  readonly typeAllowed?: (type: EntityType) => boolean;
   readonly mode: SubstitutionMode;
   /** Per-session, so two sessions produce different surrogates. */
   readonly seed: number;
@@ -173,6 +186,9 @@ export async function analyzeText(text: string, options: AnalysisOptions): Promi
   const normalization = normalize(text);
   const outcome = await detect(normalization, {
     ...(options.ner === null ? {} : { ner: options.ner }),
+    ...(options.defaultRegion === undefined
+      ? {}
+      : { stage1: { defaultRegion: options.defaultRegion } }),
   });
 
   // Stage 4a: resolve overlaps BEFORE calibrating or scoring exposure. An
@@ -201,7 +217,9 @@ export async function analyzeText(text: string, options: AnalysisOptions): Promi
       options.profile,
       options.lists ?? {},
     );
-    if (decision.report) reported.push({ scored, confidence });
+    if (!decision.report) continue;
+    if (options.typeAllowed?.(item.candidate.type) === false) continue;
+    reported.push({ scored, confidence });
   }
 
   // Surrogates come from the masker rather than from `chooseSurrogate`

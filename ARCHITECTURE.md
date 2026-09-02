@@ -5369,6 +5369,93 @@ prints NOT RUN and refuses the word "all". Every one of them was a green result
 that meant nothing, which is the failure mode M9 catalogued and this batch
 reproduced three more times.
 
+### D55 - The options page, and three defects it exposed (M10)
+
+SPEC.md, Options: "per-entity toggles, sensitivity profile, surrogate vs token
+mode, allowlist, denylist, custom regex rules with live tester, default phone
+region, settings export/import, a plain-language explanation of what the
+extension does and does not protect against". All of it ships.
+
+**It saves as you go, and there is no Save button.** A settings page for a
+protection tool has one failure mode worse than a surprise write: a change that
+LOOKS applied and is not. Someone switches a type off, closes the tab, and the
+extension carries on masking it - or switches one ON, closes the tab, and it
+never starts. A Save button puts that outcome one missed click away, every
+time. So every control writes on change, and the two text areas write on BLUR
+rather than on input, because a list stored per keystroke stores every prefix
+of what someone is typing - which for a denylist is a series of partial values
+on disk. `options.save` was deleted from all nine catalogues rather than left
+as a key nobody renders.
+
+**The page could only ever have been decorative, and nearly was.** Three of the
+settings it writes had no consumer at the moment they were written:
+
+| setting | what was missing |
+| --- | --- |
+| allowlist / denylist | `analyzeText` forwards `lists` to `decide()`, but the CONTROLLER never passed them |
+| phone region | `Stage1Options.defaultRegion` reaches the phone detector, but nothing in the extension ever set it - so a number in national format could not be validated at all, not merely with lower confidence |
+| per-type toggles | no consumer of any kind |
+
+Shipping the page without wiring these would have been three stubs behind a
+settings screen, which SPEC's fourth non-negotiable forbids and which is worse
+than a missing feature: a control that appears to work. The controller now
+holds a `Settings`, refreshes on `chrome.storage.onChanged`, and funnels all
+three into one `policy()` used by all three analysis call sites - so the paste
+guard cannot warn about something the send gate would not mask.
+
+`policy()` starts from DEFAULT_SETTINGS rather than from null, so an analysis
+racing the first storage read uses the protective position. A stale null would
+mean "no policy", and no policy is indistinguishable from an empty one that
+permits everything.
+
+### Three defects the options page exposed
+
+**`NATIONAL_ID` rendered as "National id".** `labelOf`'s own header says
+"sentence case turns IBAN into 'Iban', and a reviewer who sees 'Iban'
+reasonably doubts everything else on the panel" - and then omitted `ID` from
+its initialism list, so the two identity types most likely to appear on a
+review panel were labelled wrong. It had shipped that way since M1 and was
+invisible until 35 labels were listed in one column. `labelOf` had NO TEST AT
+ALL; there is now one that sweeps every `EntityType` and checks that no known
+initialism comes back lowercased, verified by removing `ID` again and watching
+it fail.
+
+**A NUL byte in `storage/settings.ts`.** Inside a comment, at byte 854. It
+survived `tsc`, `eslint`, 1,245 tests and a production build - TypeScript
+treats it as whitespace in a comment, so nothing in the toolchain has an
+opinion about it. It was found only because `grep` refused to search the file
+and reported it as binary while a SECURITY.md claim was being checked. This is
+the SECOND NUL byte to reach this repository. `source-hygiene.test.ts` now
+walks the tree for them, and asserts it found files to check first so the sweep
+cannot pass vacuously.
+
+**A test that was wrong and was deleted.** The same file briefly checked for
+CRLF line endings and flagged five files. All five are stored in git as LF:
+`.gitattributes` pins `* text=auto eol=lf`, so endings are normalised on commit
+and only the Windows WORKING TREE differs. The check was testing the checkout
+rather than the source and would have failed for every Windows contributor over
+a condition git already prevents. Removed, with the reasoning left in the file,
+because the difference between it and the NUL check is the whole point: git
+stores a NUL byte verbatim and normalises a line ending.
+
+### SECURITY.md
+
+SPEC requires it. It states the five guarantees - zero runtime network, fail
+closed, no plaintext persistence, nothing the page can read, no innerHTML - and
+for each one names the check a reader can run themselves rather than asking
+them to believe it. Three things in it are admissions rather than claims:
+
+- the **allowlist and denylist are user-typed plaintext** on disk, which is the
+  user's own choice and still worth saying out loud;
+- **`onnxruntime-web` resolves to a `-dev` nightly**, a transitive resolution
+  and a weaker supply-chain position than a tagged release;
+- the **eight translations are machine-generated and unreviewed**, which is a
+  release blocker and is written down as one.
+
+The `innerHTML` guarantee is the one SECURITY.md tells a reader to verify with
+`grep`, so the same check now runs on every commit - a claim in a security
+document that nothing enforces is a claim with a shelf life.
+
 ## Standing contracts (established in M1)
 
 - **Offset map:** `offsetMap[i]` is the original index of the cluster that

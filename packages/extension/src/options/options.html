@@ -1,0 +1,28 @@
+<!doctype html>
+<!--
+  The options page shell.
+
+  STRUCTURE ONLY, NO COPY, for the same reason as popup.html: chrome.i18n
+  substitutes __MSG_…__ in the manifest and in CSS but not in an extension
+  page's HTML, so any text here would be English for everyone. options.ts
+  writes every string from the catalogue.
+
+  One <main> per section, filled programmatically. No inline script — the
+  extension CSP is script-src 'self'.
+-->
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PrivacyShield</title>
+    <link rel="stylesheet" href="pages.css" />
+  </head>
+  <body class="options">
+    <header>
+      <h1 id="title"></h1>
+      <p class="note" id="intro"></p>
+    </header>
+    <main id="main"></main>
+    <script type="module" src="options.js"></script>
+  </body>
+</html>

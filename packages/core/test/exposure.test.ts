@@ -22,7 +22,7 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
 import { computeExposure, exposureBand, type ExposureInput } from '../src/exposure/index.js';
-import { CATEGORY_OF, SEVERITY_WEIGHTS, TYPE_FACTORS } from '@privacyshield/data';
+import { CATEGORY_OF, SEVERITY_WEIGHTS, TYPE_FACTORS } from '@discretion/data';
 import type { EntityType } from '../src/types.js';
 
 const SCORABLE = Object.keys(CATEGORY_OF) as EntityType[];

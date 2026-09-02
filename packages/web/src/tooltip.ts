@@ -5,7 +5,7 @@
  * hovered mark.
  */
 
-import type { MaskedEntity, Stage1Candidate } from '@privacyshield/core';
+import type { MaskedEntity, Stage1Candidate } from '@discretion/core';
 import { el } from './dom.js';
 import { confidenceTier, familyOf, labelOf } from './entityMeta.js';
 

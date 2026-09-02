@@ -27,7 +27,7 @@
  * ─────────────────────────────────────────────────────────────────────────
  */
 
-import type { EntityType, ProfileName, SubstitutionMode } from '@privacyshield/core';
+import type { EntityType, ProfileName, SubstitutionMode } from '@discretion/core';
 
 import type { StorageArea } from './area.js';
 import { defaultArea } from './area.js';

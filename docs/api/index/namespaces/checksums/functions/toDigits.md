@@ -1,14 +1,14 @@
-[**@privacyshield/core**](../../../../README.md)
+[**@discretion/core**](../../../../README.md)
 
 ***
 
-[@privacyshield/core](../../../../README.md) / [index](../../../README.md) / [checksums](../README.md) / toDigits
+[@discretion/core](../../../../README.md) / [index](../../../README.md) / [checksums](../README.md) / toDigits
 
 # Function: toDigits()
 
 > **toDigits**(`value`): `number`[] \| `null`
 
-Defined in: [packages/core/src/checksums/digits.ts:24](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/checksums/digits.ts#L24)
+Defined in: [packages/core/src/checksums/digits.ts:24](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/checksums/digits.ts#L24)
 
 Parse a string of ASCII digits into numeric digit values.
 

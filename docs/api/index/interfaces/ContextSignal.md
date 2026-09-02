@@ -1,12 +1,12 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / [index](../README.md) / ContextSignal
+[@discretion/core](../../README.md) / [index](../README.md) / ContextSignal
 
 # Interface: ContextSignal
 
-Defined in: [packages/core/src/detect/types.ts:91](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/types.ts#L91)
+Defined in: [packages/core/src/detect/types.ts:91](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/types.ts#L91)
 
 Evidence from a candidate's surroundings.
 
@@ -27,7 +27,7 @@ in M2; `assignment` below is the half that stays dormant.
 
 > `readonly` `optional` **assignment?**: `boolean`
 
-Defined in: [packages/core/src/detect/types.ts:96](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/types.ts#L96)
+Defined in: [packages/core/src/detect/types.ts:96](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/types.ts#L96)
 
 The candidate sits on the value side of an assignment or key-value pair
  (`api_key = …`, a JSON key, a .env line, a CSV column header).
@@ -38,7 +38,7 @@ The candidate sits on the value side of an assignment or key-value pair
 
 > `readonly` `optional` **documentType?**: `string`
 
-Defined in: [packages/core/src/detect/types.ts:103](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/types.ts#L103)
+Defined in: [packages/core/src/detect/types.ts:103](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/types.ts#L103)
 
 Detected document type, which shifts weights (code raises secret
  sensitivity and lowers person-name sensitivity).
@@ -49,7 +49,7 @@ Detected document type, which shifts weights (code raises secret
 
 > `readonly` `optional` **negative?**: `boolean`
 
-Defined in: [packages/core/src/detect/types.ts:100](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/types.ts#L100)
+Defined in: [packages/core/src/detect/types.ts:100](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/types.ts#L100)
 
 Negative evidence: documentation example, test fixture, lorem ipsum,
  a UUID in a log line. Actively suppresses rather than merely failing to
@@ -61,6 +61,6 @@ Negative evidence: documentation example, test fixture, lorem ipsum,
 
 > `readonly` `optional` **trigger?**: `string`
 
-Defined in: [packages/core/src/detect/types.ts:93](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/types.ts#L93)
+Defined in: [packages/core/src/detect/types.ts:93](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/types.ts#L93)
 
 A nearby label matched a trigger lexicon entry ("SSN:", "IBAN", "kimlik").

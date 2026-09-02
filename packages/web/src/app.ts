@@ -1,4 +1,4 @@
-import { exposureBand } from '@privacyshield/core';
+import { exposureBand } from '@discretion/core';
 /**
  * app.ts — the playground: input pane (textarea + highlight backdrop),
  * masked output pane, summary rail, mode toggle, loadable examples.
@@ -13,7 +13,7 @@ import { exposureBand } from '@privacyshield/core';
  * blocking error state rather than falling back to the unmasked text.
  */
 
-import type { SubstitutionMode } from '@privacyshield/core';
+import type { SubstitutionMode } from '@discretion/core';
 import type { AnalysisResult, AnalyzeFn } from './pipeline.js';
 import { analyze as coreAnalyze, randomSessionSeed } from './pipeline.js';
 import { buildExamples } from './examples.js';
@@ -112,7 +112,7 @@ export function createApp(mount: HTMLElement, options: AppOptions = {}): App {
       el(
         'div',
         { class: 'masthead-title' },
-        el('h1', {}, 'PrivacyShield'),
+        el('h1', {}, 'Discretion'),
         el('p', { class: 'tagline' }, 'Paste text. See what it gives away. Send the masked version.'),
       ),
       el(
@@ -171,7 +171,7 @@ export function createApp(mount: HTMLElement, options: AppOptions = {}): App {
     el(
       'footer',
       { class: 'colophon' },
-      'PrivacyShield playground · detection and masking measured, not asserted — see the eval baseline in the repository.',
+      'Discretion playground · detection and masking measured, not asserted — see the eval baseline in the repository.',
     ),
   );
 
@@ -223,7 +223,7 @@ export function createApp(mount: HTMLElement, options: AppOptions = {}): App {
         'div',
         { class: 'fail-closed', role: 'alert' },
         el('strong', {}, 'Detection failed — this send would be blocked.'),
-        el('p', {}, 'PrivacyShield fails closed: when detection cannot complete, nothing is allowed out.'),
+        el('p', {}, 'Discretion fails closed: when detection cannot complete, nothing is allowed out.'),
         el('p', { class: 'fail-detail' }, message),
       ),
     ]);

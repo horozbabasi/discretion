@@ -1,8 +1,8 @@
-[**@privacyshield/core**](../../../README.md)
+[**@discretion/core**](../../../README.md)
 
 ***
 
-[@privacyshield/core](../../../README.md) / [index](../../README.md) / checksums
+[@discretion/core](../../../README.md) / [index](../../README.md) / checksums
 
 # checksums
 

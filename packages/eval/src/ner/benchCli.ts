@@ -14,7 +14,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import process from 'node:process';
 
-import { createTransformersClassifier } from '@privacyshield/core/ner-transformers';
+import { createTransformersClassifier } from '@discretion/core/ner-transformers';
 import { NER_TYPES, runNerBench } from './benchmark.js';
 
 function arg(name: string, fallback?: string): string | undefined {

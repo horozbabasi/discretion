@@ -1,12 +1,12 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / [index](../README.md) / TransformationRecord
+[@discretion/core](../../README.md) / [index](../README.md) / TransformationRecord
 
 # Interface: TransformationRecord
 
-Defined in: [packages/core/src/types.ts:274](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/types.ts#L274)
+Defined in: [packages/core/src/types.ts:274](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/types.ts#L274)
 
 One transform application, recorded for debugging and for the review UI.
 
@@ -16,7 +16,7 @@ One transform application, recorded for debugging and for the review UI.
 
 > **kind**: [`TransformKind`](../type-aliases/TransformKind.md)
 
-Defined in: [packages/core/src/types.ts:275](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/types.ts#L275)
+Defined in: [packages/core/src/types.ts:275](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/types.ts#L275)
 
 ***
 
@@ -24,7 +24,7 @@ Defined in: [packages/core/src/types.ts:275](https://github.com/horozbabasi/priv
 
 > **original**: `string`
 
-Defined in: [packages/core/src/types.ts:281](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/types.ts#L281)
+Defined in: [packages/core/src/types.ts:281](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/types.ts#L281)
 
 The affected slice of the ORIGINAL text.
 
@@ -34,7 +34,7 @@ The affected slice of the ORIGINAL text.
 
 > **originalEnd**: `number`
 
-Defined in: [packages/core/src/types.ts:279](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/types.ts#L279)
+Defined in: [packages/core/src/types.ts:279](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/types.ts#L279)
 
 End of the affected range in the ORIGINAL text (exclusive).
 
@@ -44,7 +44,7 @@ End of the affected range in the ORIGINAL text (exclusive).
 
 > **originalStart**: `number`
 
-Defined in: [packages/core/src/types.ts:277](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/types.ts#L277)
+Defined in: [packages/core/src/types.ts:277](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/types.ts#L277)
 
 Start of the affected range in the ORIGINAL text (inclusive).
 
@@ -54,6 +54,6 @@ Start of the affected range in the ORIGINAL text (inclusive).
 
 > **replacement**: `string`
 
-Defined in: [packages/core/src/types.ts:283](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/types.ts#L283)
+Defined in: [packages/core/src/types.ts:283](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/types.ts#L283)
 
 What this transform emitted for that range ('' for deletions).

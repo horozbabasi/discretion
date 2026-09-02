@@ -10,8 +10,8 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { PROFILES } from '@privacyshield/core';
-import type { NerRecognizer, NerSpan } from '@privacyshield/core';
+import { PROFILES } from '@discretion/core';
+import type { NerRecognizer, NerSpan } from '@discretion/core';
 
 import { QuickRedactSession } from '../src/popup/quickRedact.js';
 

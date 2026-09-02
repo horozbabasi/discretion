@@ -1,4 +1,4 @@
-## Publishes @privacyshield/data and @privacyshield/core to npm with provenance.
+## Publishes @discretion/data and @discretion/core to npm with provenance.
 ##
 ## WHY IT PUBLISHES FROM CI AND NOT FROM A LAPTOP
 ##
@@ -110,8 +110,8 @@ jobs:
       - run: npm run build:ts
 
       # data first: core pins it at an exact version and cannot install without it.
-      - name: publish @privacyshield/data
-        run: npm publish --workspace @privacyshield/data --provenance --access public
+      - name: publish @discretion/data
+        run: npm publish --workspace @discretion/data --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -119,18 +119,18 @@ jobs:
         run: |
           version=$(node -p "require('./packages/data/package.json').version")
           for attempt in $(seq 1 30); do
-            if npm view "@privacyshield/data@$version" version >/dev/null 2>&1; then
-              echo "@privacyshield/data@$version is live"
+            if npm view "@discretion/data@$version" version >/dev/null 2>&1; then
+              echo "@discretion/data@$version is live"
               exit 0
             fi
             echo "attempt $attempt: not yet visible, waiting"
             sleep 10
           done
-          echo "::error::@privacyshield/data@$version never became resolvable"
+          echo "::error::@discretion/data@$version never became resolvable"
           exit 1
 
-      - name: publish @privacyshield/core
-        run: npm publish --workspace @privacyshield/core --provenance --access public
+      - name: publish @discretion/core
+        run: npm publish --workspace @discretion/core --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -139,7 +139,7 @@ jobs:
           version=$(node -p "require('./packages/core/package.json').version")
           # A publish that silently lost its attestation would look identical
           # to a successful one from the log alone.
-          if npm view "@privacyshield/core@$version" --json | grep -q '"attestations"'; then
+          if npm view "@discretion/core@$version" --json | grep -q '"attestations"'; then
             echo "provenance attestation present"
           else
             echo "::error::published without provenance"

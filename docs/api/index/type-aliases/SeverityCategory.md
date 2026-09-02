@@ -1,8 +1,8 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / [index](../README.md) / SeverityCategory
+[@discretion/core](../../README.md) / [index](../README.md) / SeverityCategory
 
 # Type Alias: SeverityCategory
 

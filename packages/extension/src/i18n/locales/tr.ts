@@ -11,11 +11,11 @@
 import type { Catalogue, EntityLabels } from '../catalogue.js';
 
 export const TR: Catalogue = {
-  appName: 'PrivacyShield',
+  appName: 'Discretion',
   appDescription:
     'Metindeki hassas bilgileri yapay zekâ sohbet arayüzlerine ulaşmadan önce tespit eder ve maskeler. Tamamen cihazınızda çalışır.',
 
-  'panel.review.aria': 'PrivacyShield: göndermeden önce nelerin maskeleneceğini gözden geçirin',
+  'panel.review.aria': 'Discretion: göndermeden önce nelerin maskeleneceğini gözden geçirin',
   'panel.review.title': { other: '$1 öğe maskelenecek' },
   'panel.exposure': 'açığa çıkma $1/100',
   'panel.action.cancel': 'İptal',
@@ -27,9 +27,9 @@ export const TR: Catalogue = {
 
   'panel.unwitnessed.title': 'Bu mesajın sizin olduğunu doğrulayın',
   'panel.unwitnessed.body':
-    'Bu metin kutuda zaten vardı — PrivacyShield sizin yazdığınızı görmedi. Kaydedilmiş bir taslakta, kutuyu sizin için dolduran bir bağlantıda veya hazır bir öneride bu normaldir.',
+    'Bu metin kutuda zaten vardı — Discretion sizin yazdığınızı görmedi. Kaydedilmiş bir taslakta, kutuyu sizin için dolduran bir bağlantıda veya hazır bir öneride bu normaldir.',
 
-  'panel.findings.aria': { other: 'PrivacyShield: bu mesajda $1 hassas öğe bulundu' },
+  'panel.findings.aria': { other: 'Discretion: bu mesajda $1 hassas öğe bulundu' },
   'panel.findings.title': { other: '$1 öğe bulundu' },
   'panel.findings.note':
     'Gönderdiğinizde bunlar değiştirilecek ve önce onayınız istenecek.',
@@ -42,20 +42,20 @@ export const TR: Catalogue = {
   'panel.paste.maskNow': 'Şimdi maskele',
   'panel.paste.countOfType': { other: '$1 $2' },
 
-  'panel.degraded.pageTitle': 'PrivacyShield bu sayfayı korumuyor',
-  'panel.degraded.sendTitle': 'PrivacyShield bu mesajı göndermedi',
+  'panel.degraded.pageTitle': 'Discretion bu sayfayı korumuyor',
+  'panel.degraded.sendTitle': 'Discretion bu mesajı göndermedi',
   'panel.degraded.couldNotFind': 'Bulunamadı: $1.',
   'panel.degraded.noReason': 'Uzantı bir sorun bildirdi ama ne olduğunu söylemedi.',
 
   // Layout direction, not a translation. See catalogue.ts.
   'ui.dir': 'ltr',
-  'popup.title': 'PrivacyShield',
+  'popup.title': 'Discretion',
   'popup.tab.status': 'Durum',
   'popup.tab.quickRedact': 'Hızlı maskeleme',
   'popup.tab.insights': 'İstatistikler',
   'popup.status.protected': 'Bu sayfa korunuyor',
   'popup.status.unprotected': 'Bu sayfa korunmuyor',
-  'popup.status.unsupported': 'PrivacyShield bu sitede çalışmaz',
+  'popup.status.unsupported': 'Discretion bu sitede çalışmaz',
   'popup.status.sessionCounts': 'Bu oturumda maskelenen',
   'popup.status.sessionExposure': 'Oturumun açığa çıkma puanı',
   'popup.status.profile': 'Hassasiyet',
@@ -108,7 +108,7 @@ export const TR: Catalogue = {
   'family.person': 'İsimler',
   'family.other': 'Diğer',
 
-  'options.title': 'PrivacyShield ayarları',
+  'options.title': 'Discretion ayarları',
   'options.section.detection': 'Neler algılansın',
   'options.section.substitution': 'Değiştirme biçimi',
   'options.section.lists': 'Her zaman ve asla',

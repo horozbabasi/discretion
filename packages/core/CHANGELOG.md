@@ -1,9 +1,9 @@
 # Changelog
 
-All notable changes to `@privacyshield/core`.
+All notable changes to `@discretion/core`.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
-Versioning follows [VERSIONING.md](https://github.com/horozbabasi/privacyshield/blob/main/VERSIONING.md),
+Versioning follows [VERSIONING.md](https://github.com/horozbabasi/discretion/blob/main/VERSIONING.md),
 which is stricter than 0.x requires: **in 0.x, a minor bump is the breaking
 one.**
 
@@ -62,7 +62,7 @@ rather than as the extension's internals.
   If you use Stage 2, add `@huggingface/transformers` to your own
   dependencies.
 
-- `@privacyshield/data` is pinned to an exact version instead of `*`, so core
+- `@discretion/data` is pinned to an exact version instead of `*`, so core
   and its data tables cannot drift apart across releases.
 
 ### Fixed
@@ -105,7 +105,7 @@ rather than as the extension's internals.
 ### Known limitations
 
 Published rather than smoothed; the full table is in
-[BENCHMARKS.md](https://github.com/horozbabasi/privacyshield/blob/main/BENCHMARKS.md).
+[BENCHMARKS.md](https://github.com/horozbabasi/discretion/blob/main/BENCHMARKS.md).
 
 - `GENERIC_SECRET` recall is 56.8% and its precision is 2.0% before Stage 4
   overlap resolution reassigns most of those matches to a specific type.

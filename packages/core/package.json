@@ -1,5 +1,5 @@
 {
-  "name": "@privacyshield/core",
+  "name": "@discretion/core",
   "version": "0.1.0",
   "type": "module",
   "description": "Local-first detection and masking of PII, credentials and secrets in text. No network access, no DOM, no Node built-ins.",
@@ -16,11 +16,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/horozbabasi/privacyshield.git",
+    "url": "git+https://github.com/horozbabasi/discretion.git",
     "directory": "packages/core"
   },
-  "homepage": "https://github.com/horozbabasi/privacyshield/tree/main/packages/core#readme",
-  "bugs": "https://github.com/horozbabasi/privacyshield/issues",
+  "homepage": "https://github.com/horozbabasi/discretion/tree/main/packages/core#readme",
+  "bugs": "https://github.com/horozbabasi/discretion/issues",
   "engines": {
     "node": ">=20"
   },
@@ -50,7 +50,7 @@
     "provenance": true
   },
   "dependencies": {
-    "@privacyshield/data": "0.1.0",
+    "@discretion/data": "0.1.0",
     "libphonenumber-js": "^1.13.11"
   },
   "peerDependencies": {

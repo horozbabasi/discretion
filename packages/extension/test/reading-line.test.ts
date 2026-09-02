@@ -35,7 +35,7 @@ beforeEach(() => {
   // than bypassing it keeps the test honest: if that detection breaks, these
   // tests go silent too, which is the correct signal.
   (globalThis as unknown as { chrome: unknown }).chrome = {
-    runtime: { getManifest: () => ({ name: 'PrivacyShield' }) },
+    runtime: { getManifest: () => ({ name: 'Discretion' }) },
     storage: { local: { get: async () => ({}) } },
   };
   vi.spyOn(console, 'warn').mockImplementation((...a: unknown[]) => {

@@ -43,7 +43,7 @@
  * the failure is left where it cannot be mistaken for a result.
  */
 
-import { CALIBRATION_MODEL } from '@privacyshield/data';
+import { CALIBRATION_MODEL } from '@discretion/data';
 
 import { computeExposure } from './exposure/index.js';
 import { calibrate, type CalibrationModel } from './fuse/calibrate.js';

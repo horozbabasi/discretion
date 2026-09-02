@@ -18,7 +18,7 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { generate } from '@privacyshield/core';
+import { generate } from '@discretion/core';
 
 import { ClaudeAdapter } from '../src/adapters/claude.js';
 import { InputWitness } from '../src/adapters/binding.js';
@@ -64,7 +64,7 @@ function makeController(): {
 
 /** The panel, reached through the surface's own test seam. */
 function panelText(): string {
-  const host = document.querySelector('privacyshield-surface');
+  const host = document.querySelector('discretion-surface');
   // The root is closed, so the page cannot read it; the test reaches it the
   // same way the class does, through the instance. Here the host is all the
   // light DOM exposes, which is itself the property `surface.test.ts` pins.
@@ -97,7 +97,7 @@ describe('the controller reads the composer and never writes to it', () => {
     type(composerNode(), `my iban is ${IBAN}`);
     await settle();
 
-    const host = document.querySelector('privacyshield-surface');
+    const host = document.querySelector('discretion-surface');
     expect(host?.getAttribute('data-state')).toBe('findings');
     expect(host?.getAttribute('data-hidden')).toBe('false');
     controller.destroy();
@@ -121,13 +121,13 @@ describe('the controller reads the composer and never writes to it', () => {
     const node = composerNode();
     type(node, `my iban is ${IBAN}`);
     await settle();
-    expect(document.querySelector('privacyshield-surface')?.getAttribute('data-state')).toBe(
+    expect(document.querySelector('discretion-surface')?.getAttribute('data-state')).toBe(
       'findings',
     );
 
     type(node, '');
     await settle();
-    expect(document.querySelector('privacyshield-surface')?.getAttribute('data-hidden')).toBe(
+    expect(document.querySelector('discretion-surface')?.getAttribute('data-hidden')).toBe(
       'true',
     );
     controller.destroy();
@@ -156,7 +156,7 @@ describe('the composer is re-resolved, not remembered', () => {
     await settle();
 
     // The new node is the one being read: the panel came back.
-    expect(document.querySelector('privacyshield-surface')?.getAttribute('data-state')).toBe(
+    expect(document.querySelector('discretion-surface')?.getAttribute('data-state')).toBe(
       'findings',
     );
     controller.destroy();
@@ -177,7 +177,7 @@ describe('the composer is re-resolved, not remembered', () => {
     // remaining states is right is the health model's decision, tested in
     // surface-state.test.ts; what matters here is that a detached node does
     // not go on producing results.
-    expect(document.querySelector('privacyshield-surface')?.getAttribute('data-state')).not.toBe(
+    expect(document.querySelector('discretion-surface')?.getAttribute('data-state')).not.toBe(
       'findings',
     );
     controller.destroy();
@@ -197,7 +197,7 @@ describe('a detection failure is never an empty panel', () => {
     type(composerNode(), `my iban is ${IBAN}`);
     await settle();
 
-    const host = document.querySelector('privacyshield-surface');
+    const host = document.querySelector('discretion-surface');
     expect(host?.getAttribute('data-state')).toBe('degraded');
     expect(errors).toHaveLength(1);
     controller.destroy();

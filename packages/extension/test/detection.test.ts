@@ -14,8 +14,8 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { generate, PROFILES, Vault } from '@privacyshield/core';
-import type { NerRecognizer } from '@privacyshield/core';
+import { generate, PROFILES, Vault } from '@discretion/core';
+import type { NerRecognizer } from '@discretion/core';
 
 import { analyzeText } from '../src/detection/analyze.js';
 import { DetectionSession } from '../src/detection/session.js';

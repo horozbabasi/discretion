@@ -11,7 +11,7 @@
  */
 
 import assert from 'node:assert/strict';
-import { protect, restore } from '@privacyshield/core';
+import { protect, restore } from '@discretion/core';
 
 const message = 'Wire it to DE44500105175407324931 and use key sk_live_7f3Kq2mNpX8vC1bWzR4tY6.';
 

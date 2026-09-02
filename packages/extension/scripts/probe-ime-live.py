@@ -4,7 +4,7 @@
 THE LAST UNVERIFIED SEND ROUTE
 
 Our side is settled: the adapter skips an Enter whose `isComposing` is true, so
-PrivacyShield does not gate that keystroke. That is only SAFE IF THE SITE ALSO
+Discretion does not gate that keystroke. That is only SAFE IF THE SITE ALSO
 SKIPS IT. If ChatGPT submits on a composing Enter, a CJK user commits a
 candidate and the message goes out ungated.
 

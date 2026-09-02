@@ -1,14 +1,14 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / [index](../README.md) / calibrate
+[@discretion/core](../../README.md) / [index](../README.md) / calibrate
 
 # Function: calibrate()
 
 > **calibrate**(`model`, `type`, `score`): `number`
 
-Defined in: [packages/core/src/fuse/calibrate.ts:168](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/fuse/calibrate.ts#L168)
+Defined in: [packages/core/src/fuse/calibrate.ts:168](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/fuse/calibrate.ts#L168)
 
 Map a raw score to a calibrated probability.
 

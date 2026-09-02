@@ -73,8 +73,8 @@ import type {
   SensitivityProfile,
   SubstitutionMode,
   UserLists,
-} from '@privacyshield/core';
-import { PROFILES, Vault } from '@privacyshield/core';
+} from '@discretion/core';
+import { PROFILES, Vault } from '@discretion/core';
 
 import type {
   ComposerHandle,
@@ -135,7 +135,7 @@ const SETTLE_MS = 400;
  *
  * Both failures were real readings of a real DOM, and both described a page
  * that was still assembling itself. Reporting either to the user is reporting
- * a broken site that is not broken - and "PrivacyShield is not protecting this
+ * a broken site that is not broken - and "Discretion is not protecting this
  * page" is the loudest thing this extension says.
  *
  * So a failure has to last before it is shown. 2500 ms clears the transition
@@ -150,7 +150,7 @@ const SETTLE_MS = 400;
 const DEGRADED_GRACE_MS = 2500;
 
 /** The surface's custom element name, which restoration must not write into. */
-const SURFACE_HOST_TAG = 'privacyshield-surface';
+const SURFACE_HOST_TAG = 'discretion-surface';
 
 export interface ControllerOptions {
   readonly adapter: SiteAdapter;

@@ -1,12 +1,12 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / [index](../README.md) / TriggerIndex
+[@discretion/core](../../README.md) / [index](../README.md) / TriggerIndex
 
 # Interface: TriggerIndex
 
-Defined in: [packages/core/src/context/triggers.ts:52](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/context/triggers.ts#L52)
+Defined in: [packages/core/src/context/triggers.ts:52](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/context/triggers.ts#L52)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [packages/core/src/context/triggers.ts:52](https://github.com/horozb
 
 > `readonly` **termCount**: `number`
 
-Defined in: [packages/core/src/context/triggers.ts:54](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/context/triggers.ts#L54)
+Defined in: [packages/core/src/context/triggers.ts:54](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/context/triggers.ts#L54)
 
 Number of distinct terms indexed, for reporting.
 
@@ -24,7 +24,7 @@ Number of distinct terms indexed, for reporting.
 
 > **near**(`text`, `start`, `end`, `window?`): readonly [`TriggerMatch`](TriggerMatch.md)[]
 
-Defined in: [packages/core/src/context/triggers.ts:60](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/context/triggers.ts#L60)
+Defined in: [packages/core/src/context/triggers.ts:60](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/context/triggers.ts#L60)
 
 Triggers found within `window` characters of the span, nearest first.
 Searching both sides matters: most languages label before the value

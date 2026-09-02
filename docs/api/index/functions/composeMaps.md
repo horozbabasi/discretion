@@ -1,14 +1,14 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / [index](../README.md) / composeMaps
+[@discretion/core](../../README.md) / [index](../README.md) / composeMaps
 
 # Function: composeMaps()
 
 > **composeMaps**(`outer`, `inner`): `Int32Array`
 
-Defined in: [packages/core/src/offsetMap.ts:68](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/offsetMap.ts#L68)
+Defined in: [packages/core/src/offsetMap.ts:68](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/offsetMap.ts#L68)
 
 Compose two offset maps.
 

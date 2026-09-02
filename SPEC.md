@@ -1,4 +1,4 @@
-# PrivacyShield — Specification
+# Discretion — Specification
 
 ## What it is
 A Chrome extension (Manifest V3) that protects sensitive data when people use ChatGPT, Claude, and Gemini in their browser. It detects sensitive information in outgoing text, substitutes it with realistic format-preserving surrogates, sends only sanitized text, and restores the original values in the response as it streams in. Everything runs locally. Zero outbound network requests at runtime. The engine underneath (packages/core) is additionally published post-launch as a standalone npm library (M12); the extension is one consumer of it, not its definition.
@@ -24,7 +24,7 @@ This is intended for public release on the Chrome Web Store and for real daily u
 ## Monorepo
 npm workspaces. TypeScript strict throughout: no `any`, strictNullChecks, noUncheckedIndexedAccess, exactOptionalPropertyTypes.
 
-privacyshield/
+discretion/
   packages/
     core/        Detection, substitution, and restoration engine. Zero DOM dependencies. Published standalone to npm after launch (M12).
     data/        Bundled gazetteers, validator tables, surrogate pools, confusables map, trigger lexicons.
@@ -377,6 +377,6 @@ M8  Stage 4 fusion, calibration, explanations, sensitivity profiles. Publish the
 M9  Extension: manifest, adapters, content script, review UI, streaming restoration in the DOM. Paste guard; review panel shows the document exposure score.
 M10 Popup, options, i18n, accessibility, security hardening. Quick Redact, Local Insights, and the exposure session aggregate in the popup.
 M11 Full eval run, performance benchmarks, documentation, store listing draft, production build verified loading unpacked in Chrome. README/docs cover the exposure model, Quick Redact, Local Insights, and all non-goals with reasoning.
-M12 Library publication (post-launch, after the extension ships): finalize core's public API surface with explicit exports and no internal leakage; semver from 0.x with a documented policy; generated plus hand-curated API docs; npm publish workflow with provenance; a standalone "using the library" guide with examples fully independent of the extension; a CHANGELOG. Final package name decided at M12 (the PrivacyShield name itself is still an open pre-public question, separate from this). Acceptance test: a developer who has never seen this repo can npm install the package and run detection and masking from the docs alone.
+M12 Library publication (post-launch, after the extension ships): finalize core's public API surface with explicit exports and no internal leakage; semver from 0.x with a documented policy; generated plus hand-curated API docs; npm publish workflow with provenance; a standalone "using the library" guide with examples fully independent of the extension; a CHANGELOG. Final package name decided at M12 (the Discretion name itself is still an open pre-public question, separate from this). Acceptance test: a developer who has never seen this repo can npm install the package and run detection and masking from the docs alone.
 
 Write clean, strictly typed, thoroughly commented TypeScript. Prefer clarity over cleverness. Where you make a judgement call, record it in ARCHITECTURE.md with the reasoning. At each milestone, show the passing tests and the measured numbers.

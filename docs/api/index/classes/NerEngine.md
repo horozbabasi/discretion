@@ -1,12 +1,12 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / [index](../README.md) / NerEngine
+[@discretion/core](../../README.md) / [index](../README.md) / NerEngine
 
 # Class: NerEngine
 
-Defined in: [packages/core/src/ner/engine.ts:41](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/ner/engine.ts#L41)
+Defined in: [packages/core/src/ner/engine.ts:41](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/ner/engine.ts#L41)
 
 What Stage 2 needs from whatever performs recognition.
 
@@ -32,7 +32,7 @@ runs detection, including the one that has no model at all.
 
 > **new NerEngine**(`classifier`, `options?`): `NerEngine`
 
-Defined in: [packages/core/src/ner/engine.ts:48](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/ner/engine.ts#L48)
+Defined in: [packages/core/src/ner/engine.ts:48](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/ner/engine.ts#L48)
 
 #### Parameters
 
@@ -56,7 +56,7 @@ Defined in: [packages/core/src/ner/engine.ts:48](https://github.com/horozbabasi/
 
 > **get** **id**(): `string`
 
-Defined in: [packages/core/src/ner/engine.ts:55](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/ner/engine.ts#L55)
+Defined in: [packages/core/src/ner/engine.ts:55](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/ner/engine.ts#L55)
 
 Model identity, recorded on every candidate this produces.
 
@@ -76,7 +76,7 @@ Model identity, recorded on every candidate this produces.
 
 > **recognize**(`text`, `cache?`): `Promise`\<[`NerSpan`](../interfaces/NerSpan.md)[]\>
 
-Defined in: [packages/core/src/ner/engine.ts:77](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/ner/engine.ts#L77)
+Defined in: [packages/core/src/ner/engine.ts:77](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/ner/engine.ts#L77)
 
 Recognize entities in (normalized) `text`.
 
@@ -108,7 +108,7 @@ shared across every session in the process. See chunkCache.ts.
 
 > **warmup**(): `Promise`\<`void`\>
 
-Defined in: [packages/core/src/ner/engine.ts:60](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/ner/engine.ts#L60)
+Defined in: [packages/core/src/ner/engine.ts:60](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/ner/engine.ts#L60)
 
 One tiny inference so model init cost is paid before first real use.
 

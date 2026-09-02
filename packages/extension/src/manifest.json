@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "PrivacyShield",
+  "name": "Discretion",
   "version": "0.1.0",
   "description": "Detects and redacts sensitive information in text before it reaches AI chat interfaces. Runs entirely on your device.",
   "minimum_chrome_version": "116",
@@ -14,7 +14,7 @@
     "storage"
   ],
   "action": {
-    "default_title": "PrivacyShield",
+    "default_title": "Discretion",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",

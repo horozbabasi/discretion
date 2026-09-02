@@ -17,7 +17,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { normalize, runStage1 } from '@privacyshield/core';
+import { normalize, runStage1 } from '@discretion/core';
 import { generateCorpus } from '../src/corpus/builder.js';
 import { generateHardNegatives } from '../src/corpus/hardNegatives.js';
 

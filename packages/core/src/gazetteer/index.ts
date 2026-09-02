@@ -5,7 +5,7 @@
  * model … Gazetteer hit alone is medium confidence; gazetteer plus model
  * agreement is high."
  *
- * The bundled sets are Bloom filters (see `@privacyshield/data`'s
+ * The bundled sets are Bloom filters (see `@discretion/data`'s
  * gazetteers.ts for why). Two consequences shape this module:
  *
  *   • A filter can report a false POSITIVE and never a false negative. So a
@@ -15,7 +15,7 @@
  *     out explicitly rather than pulled from a library that might change.
  */
 
-import { GAZETTEERS, type GazetteerFilter } from '@privacyshield/data';
+import { GAZETTEERS, type GazetteerFilter } from '@discretion/data';
 import type { EntityType } from '../types.js';
 
 /** Entity types a gazetteer can speak to. */

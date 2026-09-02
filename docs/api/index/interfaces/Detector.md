@@ -1,12 +1,12 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / [index](../README.md) / Detector
+[@discretion/core](../../README.md) / [index](../README.md) / Detector
 
 # Interface: Detector
 
-Defined in: [packages/core/src/detect/types.ts:201](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/types.ts#L201)
+Defined in: [packages/core/src/detect/types.ts:201](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/types.ts#L201)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [packages/core/src/detect/types.ts:201](https://github.com/horozbaba
 
 > `readonly` **baseConfidence**: `number`
 
-Defined in: [packages/core/src/detect/types.ts:231](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/types.ts#L231)
+Defined in: [packages/core/src/detect/types.ts:231](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/types.ts#L231)
 
 Confidence when the validator passes and no per-match confidence is
 returned. The runner clamps this to `CONFIDENCE.LOW` when
@@ -26,7 +26,7 @@ returned. The runner clamps this to `CONFIDENCE.LOW` when
 
 > `readonly` **description**: `string`
 
-Defined in: [packages/core/src/detect/types.ts:256](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/types.ts#L256)
+Defined in: [packages/core/src/detect/types.ts:256](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/types.ts#L256)
 
 Human-readable description, shown in the options UI's per-entity toggles
 and in eval reports.
@@ -37,7 +37,7 @@ and in eval reports.
 
 > `readonly` **entityType**: [`EntityType`](../type-aliases/EntityType.md)
 
-Defined in: [packages/core/src/detect/types.ts:211](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/types.ts#L211)
+Defined in: [packages/core/src/detect/types.ts:211](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/types.ts#L211)
 
 The entity type emitted. For national schemes this is the FAMILY
  (`NATIONAL_ID`), with the concrete scheme carried in metadata.
@@ -48,7 +48,7 @@ The entity type emitted. For national schemes this is the FAMILY
 
 > `readonly` **id**: `string`
 
-Defined in: [packages/core/src/detect/types.ts:207](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/types.ts#L207)
+Defined in: [packages/core/src/detect/types.ts:207](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/types.ts#L207)
 
 Stable, unique, kebab-case identifier — `"national-id-tr-tckn"`,
 `"credit-card"`, `"iban"`. Appears in `Candidate.detectorId`, in eval
@@ -60,7 +60,7 @@ error analysis, and in regression-gate config, so it must not churn.
 
 > `readonly` **pattern**: `RegExp`
 
-Defined in: [packages/core/src/detect/types.ts:224](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/types.ts#L224)
+Defined in: [packages/core/src/detect/types.ts:224](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/types.ts#L224)
 
 The candidate generator. Must carry the `g` flag; the runner never
 mutates it, cloning per scan so a shared `lastIndex` cannot leak state
@@ -75,7 +75,7 @@ Patterns should over-generate. Precision is the validator's job.
 
 > `readonly` **regions**: readonly `string`[]
 
-Defined in: [packages/core/src/detect/types.ts:214](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/types.ts#L214)
+Defined in: [packages/core/src/detect/types.ts:214](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/types.ts#L214)
 
 Jurisdictions this detector applies to, or `[GLOBAL_REGION]`.
 
@@ -85,7 +85,7 @@ Jurisdictions this detector applies to, or `[GLOBAL_REGION]`.
 
 > `readonly` `optional` **requiresContext?**: `boolean`
 
-Defined in: [packages/core/src/detect/types.ts:250](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/types.ts#L250)
+Defined in: [packages/core/src/detect/types.ts:250](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/types.ts#L250)
 
 This detector cannot reach its base confidence without Stage 3 evidence.
 
@@ -99,7 +99,7 @@ what keeps GENERIC_SECRET from "firing on entropy alone".
 
 > **validate**(`ctx`): [`ValidationResult`](../type-aliases/ValidationResult.md)
 
-Defined in: [packages/core/src/detect/types.ts:241](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/types.ts#L241)
+Defined in: [packages/core/src/detect/types.ts:241](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/types.ts#L241)
 
 Decide whether a match is genuinely an instance of `entityType`.
 

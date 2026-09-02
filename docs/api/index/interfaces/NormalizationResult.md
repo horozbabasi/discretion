@@ -1,12 +1,12 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / [index](../README.md) / NormalizationResult
+[@discretion/core](../../README.md) / [index](../README.md) / NormalizationResult
 
 # Interface: NormalizationResult
 
-Defined in: [packages/core/src/types.ts:327](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/types.ts#L327)
+Defined in: [packages/core/src/types.ts:327](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/types.ts#L327)
 
 The result of Stage 0 normalization.
 
@@ -44,7 +44,7 @@ the run is at the very end), which is what makes offsetMap[0] === 0 hold.
 
 > **normalizedLength**: `number`
 
-Defined in: [packages/core/src/types.ts:338](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/types.ts#L338)
+Defined in: [packages/core/src/types.ts:338](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/types.ts#L338)
 
 ***
 
@@ -52,7 +52,7 @@ Defined in: [packages/core/src/types.ts:338](https://github.com/horozbabasi/priv
 
 > **normalizedText**: `string`
 
-Defined in: [packages/core/src/types.ts:328](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/types.ts#L328)
+Defined in: [packages/core/src/types.ts:328](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/types.ts#L328)
 
 ***
 
@@ -60,7 +60,7 @@ Defined in: [packages/core/src/types.ts:328](https://github.com/horozbabasi/priv
 
 > **offsetMap**: `Int32Array`
 
-Defined in: [packages/core/src/types.ts:330](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/types.ts#L330)
+Defined in: [packages/core/src/types.ts:330](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/types.ts#L330)
 
 normalized index → original index; length is normalizedText.length + 1.
 
@@ -70,7 +70,7 @@ normalized index → original index; length is normalizedText.length + 1.
 
 > **originalLength**: `number`
 
-Defined in: [packages/core/src/types.ts:337](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/types.ts#L337)
+Defined in: [packages/core/src/types.ts:337](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/types.ts#L337)
 
 ***
 
@@ -78,7 +78,7 @@ Defined in: [packages/core/src/types.ts:337](https://github.com/horozbabasi/priv
 
 > **reverseMap**: `Int32Array`
 
-Defined in: [packages/core/src/types.ts:332](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/types.ts#L332)
+Defined in: [packages/core/src/types.ts:332](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/types.ts#L332)
 
 original index → normalized index; length is originalText.length + 1.
 
@@ -88,7 +88,7 @@ original index → normalized index; length is originalText.length + 1.
 
 > **scripts**: [`ScriptInfo`](ScriptInfo.md)
 
-Defined in: [packages/core/src/types.ts:334](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/types.ts#L334)
+Defined in: [packages/core/src/types.ts:334](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/types.ts#L334)
 
 Script breakdown of the NORMALIZED text.
 
@@ -98,6 +98,6 @@ Script breakdown of the NORMALIZED text.
 
 > **transformations**: readonly [`TransformationRecord`](TransformationRecord.md)[]
 
-Defined in: [packages/core/src/types.ts:336](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/types.ts#L336)
+Defined in: [packages/core/src/types.ts:336](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/types.ts#L336)
 
 Every transform that fired, with ranges in original-text coordinates.

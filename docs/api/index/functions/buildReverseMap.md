@@ -1,14 +1,14 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / [index](../README.md) / buildReverseMap
+[@discretion/core](../../README.md) / [index](../README.md) / buildReverseMap
 
 # Function: buildReverseMap()
 
 > **buildReverseMap**(`offsetMap`, `originalLength`): `Int32Array`
 
-Defined in: [packages/core/src/offsetMap.ts:100](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/offsetMap.ts#L100)
+Defined in: [packages/core/src/offsetMap.ts:100](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/offsetMap.ts#L100)
 
 Build the reverse map (original index → normalized index) from a forward
 map.

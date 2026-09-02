@@ -28,7 +28,7 @@ import {
   reliability,
   resolveOverlaps,
   type CalibrationSample,
-} from '@privacyshield/core';
+} from '@discretion/core';
 
 import { generateCorpus } from '../corpus/builder.js';
 import { generateHardNegatives } from '../corpus/hardNegatives.js';

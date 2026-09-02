@@ -7,8 +7,8 @@
 // Families and labels both live in core: the extension's review panel and
 // Local Insights name and group the same types, and two maps drift the moment
 // a type is added to one of them.
-export type { EntityFamily } from '@privacyshield/core';
-export { familyOf, labelOf } from '@privacyshield/core';
+export type { EntityFamily } from '@discretion/core';
+export { familyOf, labelOf } from '@discretion/core';
 
 /** Confidence tier name for a raw Stage 1 confidence value. */
 export function confidenceTier(raw: number): 'maximum' | 'high' | 'medium' | 'low' {

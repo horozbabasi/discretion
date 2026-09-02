@@ -1,12 +1,12 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / [index](../README.md) / Vault
+[@discretion/core](../../README.md) / [index](../README.md) / Vault
 
 # Class: Vault
 
-Defined in: [packages/core/src/mask/vault.ts:42](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/mask/vault.ts#L42)
+Defined in: [packages/core/src/mask/vault.ts:42](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/mask/vault.ts#L42)
 
 ## Constructors
 
@@ -26,7 +26,7 @@ Defined in: [packages/core/src/mask/vault.ts:42](https://github.com/horozbabasi/
 
 > **get** **size**(): `number`
 
-Defined in: [packages/core/src/mask/vault.ts:129](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/mask/vault.ts#L129)
+Defined in: [packages/core/src/mask/vault.ts:129](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/mask/vault.ts#L129)
 
 ##### Returns
 
@@ -38,7 +38,7 @@ Defined in: [packages/core/src/mask/vault.ts:129](https://github.com/horozbabasi
 
 > **clear**(): `void`
 
-Defined in: [packages/core/src/mask/vault.ts:134](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/mask/vault.ts#L134)
+Defined in: [packages/core/src/mask/vault.ts:134](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/mask/vault.ts#L134)
 
 Wipe everything. Called on navigation away and conversation switch.
 
@@ -52,7 +52,7 @@ Wipe everything. Called on navigation away and conversation switch.
 
 > **createEgressAuditor**(): [`EgressAuditor`](../interfaces/EgressAuditor.md)
 
-Defined in: [packages/core/src/mask/vault.ts:142](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/mask/vault.ts#L142)
+Defined in: [packages/core/src/mask/vault.ts:142](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/mask/vault.ts#L142)
 
 THE one deliberate door to the plaintext set. Egress guard only.
 
@@ -66,7 +66,7 @@ THE one deliberate door to the plaintext set. Egress guard only.
 
 > **getByOriginal**(`original`, `canonical?`): [`VaultEntry`](../interfaces/VaultEntry.md) \| `undefined`
 
-Defined in: [packages/core/src/mask/vault.ts:89](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/mask/vault.ts#L89)
+Defined in: [packages/core/src/mask/vault.ts:89](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/mask/vault.ts#L89)
 
 Find the entry for an original: exact writing first, then the
 detector's canonical form (separator variants of one identifier), then
@@ -93,7 +93,7 @@ unambiguous.
 
 > **getBySurrogate**(`replacement`): [`VaultEntry`](../interfaces/VaultEntry.md) \| `undefined`
 
-Defined in: [packages/core/src/mask/vault.ts:104](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/mask/vault.ts#L104)
+Defined in: [packages/core/src/mask/vault.ts:104](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/mask/vault.ts#L104)
 
 Find the entry whose replacement is exactly `replacement`.
 
@@ -113,7 +113,7 @@ Find the entry whose replacement is exactly `replacement`.
 
 > **register**(`entry`): [`VaultEntry`](../interfaces/VaultEntry.md)
 
-Defined in: [packages/core/src/mask/vault.ts:56](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/mask/vault.ts#L56)
+Defined in: [packages/core/src/mask/vault.ts:56](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/mask/vault.ts#L56)
 
 Register a new masked value. The caller (the masker) has already
 resolved consistency — `register` throws on a duplicate original or
@@ -137,7 +137,7 @@ ambiguous.
 
 > **replacements**(): readonly `string`[]
 
-Defined in: [packages/core/src/mask/vault.ts:125](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/mask/vault.ts#L125)
+Defined in: [packages/core/src/mask/vault.ts:125](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/mask/vault.ts#L125)
 
 All current replacements (surrogates/tokens) — contains no originals;
  the restorer builds its match tables from this.
@@ -152,7 +152,7 @@ readonly `string`[]
 
 > **wouldCollide**(`value`): `boolean`
 
-Defined in: [packages/core/src/mask/vault.ts:110](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/mask/vault.ts#L110)
+Defined in: [packages/core/src/mask/vault.ts:110](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/mask/vault.ts#L110)
 
 True when `value` is already in use as a replacement or an original —
  the collision check surrogate selection runs before committing.

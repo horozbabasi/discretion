@@ -1,5 +1,5 @@
 /**
- * @privacyshield/eval — corpus generation, metrics, error analysis, and
+ * @discretion/eval — corpus generation, metrics, error analysis, and
  * regression gates for the detection pipeline.
  */
 

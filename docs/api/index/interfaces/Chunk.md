@@ -1,12 +1,12 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / [index](../README.md) / Chunk
+[@discretion/core](../../README.md) / [index](../README.md) / Chunk
 
 # Interface: Chunk
 
-Defined in: [packages/core/src/ner/chunk.ts:19](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/ner/chunk.ts#L19)
+Defined in: [packages/core/src/ner/chunk.ts:19](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/ner/chunk.ts#L19)
 
 chunk.ts — window long inputs so the model sees ALL of the text.
 
@@ -30,7 +30,7 @@ plausible entity length — the owning window saw the whole entity.
 
 > `readonly` **coreEnd**: `number`
 
-Defined in: [packages/core/src/ner/chunk.ts:25](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/ner/chunk.ts#L25)
+Defined in: [packages/core/src/ner/chunk.ts:25](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/ner/chunk.ts#L25)
 
 ***
 
@@ -38,7 +38,7 @@ Defined in: [packages/core/src/ner/chunk.ts:25](https://github.com/horozbabasi/p
 
 > `readonly` **coreStart**: `number`
 
-Defined in: [packages/core/src/ner/chunk.ts:24](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/ner/chunk.ts#L24)
+Defined in: [packages/core/src/ner/chunk.ts:24](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/ner/chunk.ts#L24)
 
 Core region (absolute offsets): this window owns midpoints in it.
 
@@ -48,7 +48,7 @@ Core region (absolute offsets): this window owns midpoints in it.
 
 > `readonly` **offset**: `number`
 
-Defined in: [packages/core/src/ner/chunk.ts:21](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/ner/chunk.ts#L21)
+Defined in: [packages/core/src/ner/chunk.ts:21](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/ner/chunk.ts#L21)
 
 Offset of this window's first character in the full text.
 
@@ -58,4 +58,4 @@ Offset of this window's first character in the full text.
 
 > `readonly` **text**: `string`
 
-Defined in: [packages/core/src/ner/chunk.ts:22](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/ner/chunk.ts#L22)
+Defined in: [packages/core/src/ner/chunk.ts:22](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/ner/chunk.ts#L22)

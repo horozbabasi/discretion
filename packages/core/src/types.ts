@@ -1,5 +1,5 @@
 /**
- * Shared types for the whole PrivacyShield project.
+ * Shared types for the whole Discretion project.
  *
  * These are contracts that later milestones (detectors, fusion, vault,
  * substitution, egress guard, extension, playground) depend on. This file

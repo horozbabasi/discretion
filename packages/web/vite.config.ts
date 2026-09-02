@@ -10,9 +10,9 @@ const pkg = (rel: string): string => fileURLToPath(new URL(rel, import.meta.url)
 export default defineConfig({
   resolve: {
     alias: {
-      '@privacyshield/data': pkg('../data/src/index.ts'),
-      '@privacyshield/core': pkg('../core/src/index.ts'),
-      '@privacyshield/eval': pkg('../eval/src/index.ts'),
+      '@discretion/data': pkg('../data/src/index.ts'),
+      '@discretion/core': pkg('../core/src/index.ts'),
+      '@discretion/eval': pkg('../eval/src/index.ts'),
     },
   },
   build: {

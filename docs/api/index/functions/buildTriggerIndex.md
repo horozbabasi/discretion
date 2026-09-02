@@ -1,14 +1,14 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / [index](../README.md) / buildTriggerIndex
+[@discretion/core](../../README.md) / [index](../README.md) / buildTriggerIndex
 
 # Function: buildTriggerIndex()
 
 > **buildTriggerIndex**(`lexicons`): [`TriggerIndex`](../interfaces/TriggerIndex.md)
 
-Defined in: [packages/core/src/context/triggers.ts:118](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/context/triggers.ts#L118)
+Defined in: [packages/core/src/context/triggers.ts:118](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/context/triggers.ts#L118)
 
 Compile per-language lexicons into one index.
 

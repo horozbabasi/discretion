@@ -1,12 +1,12 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / [index](../README.md) / StructuredSlot
+[@discretion/core](../../README.md) / [index](../README.md) / StructuredSlot
 
 # Interface: StructuredSlot
 
-Defined in: [packages/core/src/context/structure.ts:36](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/context/structure.ts#L36)
+Defined in: [packages/core/src/context/structure.ts:36](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/context/structure.ts#L36)
 
 A value position in the document, together with the key that labels it.
 
@@ -16,7 +16,7 @@ A value position in the document, together with the key that labels it.
 
 > `readonly` **key**: `string`
 
-Defined in: [packages/core/src/context/structure.ts:38](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/context/structure.ts#L38)
+Defined in: [packages/core/src/context/structure.ts:38](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/context/structure.ts#L38)
 
 The key/label text exactly as written, minus quotes and surrounding space.
 
@@ -26,7 +26,7 @@ The key/label text exactly as written, minus quotes and surrounding space.
 
 > `readonly` **kind**: [`StructureKind`](../type-aliases/StructureKind.md)
 
-Defined in: [packages/core/src/context/structure.ts:39](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/context/structure.ts#L39)
+Defined in: [packages/core/src/context/structure.ts:39](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/context/structure.ts#L39)
 
 ***
 
@@ -34,7 +34,7 @@ Defined in: [packages/core/src/context/structure.ts:39](https://github.com/horoz
 
 > `readonly` **valueEnd**: `number`
 
-Defined in: [packages/core/src/context/structure.ts:43](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/context/structure.ts#L43)
+Defined in: [packages/core/src/context/structure.ts:43](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/context/structure.ts#L43)
 
 End offset of the VALUE (exclusive).
 
@@ -44,6 +44,6 @@ End offset of the VALUE (exclusive).
 
 > `readonly` **valueStart**: `number`
 
-Defined in: [packages/core/src/context/structure.ts:41](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/context/structure.ts#L41)
+Defined in: [packages/core/src/context/structure.ts:41](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/context/structure.ts#L41)
 
 Start offset of the VALUE in the normalized text (inclusive).

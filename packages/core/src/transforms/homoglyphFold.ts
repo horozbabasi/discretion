@@ -35,7 +35,7 @@
  * after folding (see normalization.ts) so a folded character can compose
  * with a following combining mark exactly as it would have in pass one.
  */
-import { CONFUSABLES, type ConfusableEntry } from '@privacyshield/data';
+import { CONFUSABLES, type ConfusableEntry } from '@discretion/data';
 import { classifyCodePoint, scriptsCompatible } from '../scripts.js';
 import type { ScriptName } from '../types.js';
 import { MappedTextBuilder, type TransformStepResult, type StepChange } from '../offsetMap.js';

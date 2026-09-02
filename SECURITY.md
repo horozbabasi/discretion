@@ -1,6 +1,6 @@
 # Security
 
-PrivacyShield exists to keep sensitive text out of somewhere it should not go.
+Discretion exists to keep sensitive text out of somewhere it should not go.
 A vulnerability here is not an inconvenience — it is the failure of the one
 thing the tool does. This file says how to report one, what the extension
 claims, and how to check those claims yourself rather than take them on trust.
@@ -8,7 +8,7 @@ claims, and how to check those claims yourself rather than take them on trust.
 ## Reporting a vulnerability
 
 **Use GitHub's private vulnerability reporting** on
-`https://github.com/horozbabasi/privacyshield` → *Security* → *Report a
+`https://github.com/horozbabasi/discretion` → *Security* → *Report a
 vulnerability*. It is private until we agree it is not, and it does not require
 an email address either of us has to protect.
 

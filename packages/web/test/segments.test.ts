@@ -7,8 +7,8 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { Vault, generate, maskOriginal, normalize, runStage1 } from '@privacyshield/core';
-import type { Stage1Candidate } from '@privacyshield/core';
+import { Vault, generate, maskOriginal, normalize, runStage1 } from '@discretion/core';
+import type { Stage1Candidate } from '@discretion/core';
 import {
   buildInputSegments,
   buildOutputSegments,

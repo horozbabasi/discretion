@@ -6,7 +6,7 @@
  * neither the build nor the runtime ever needs network access; this script
  * exists to make the data reproducible and auditable.
  *
- * Run with:  npm run generate -w @privacyshield/data
+ * Run with:  npm run generate -w @discretion/data
  * (executes this file directly via Node's type stripping — Node 24+, see
  * .nvmrc — so paths below are relative to THIS source file's location).
  *
@@ -20,7 +20,7 @@
  *   3. Each entry is annotated with the script of its source character and
  *      of its skeleton, because selective folding needs to know what script
  *      it would be folding into. Script names mirror ScriptName in
- *      @privacyshield/core (kept in sync by convention; the unions are
+ *      @discretion/core (kept in sync by convention; the unions are
  *      structurally identical).
  *
  * REPRODUCIBILITY: the emitted module records the Unicode version AND the
@@ -68,7 +68,7 @@ const SCRIPT_PATTERNS: ReadonlyArray<readonly [ScriptName, RegExp]> = [
   ['arabic', /\p{Script=Arabic}/u],
   ['hebrew', /\p{Script=Hebrew}/u],
   // Script_Extensions (not Script) for Han/Kana — matches the runtime
-  // classifier in @privacyshield/core: shared CJK letters like U+30FC and
+  // classifier in @discretion/core: shared CJK letters like U+30FC and
   // U+3005 are Script=Common but belong to these scripts in practice.
   ['han', /\p{Script_Extensions=Han}/u],
   ['kana', /[\p{Script_Extensions=Hiragana}\p{Script_Extensions=Katakana}]/u],
@@ -207,7 +207,7 @@ lines.push(` *   after NFKC-normalizing skeletons, ${droppedEmpty} empty skeleto
 lines.push(` *   ${skippedLines} non-matching lines skipped)`);
 lines.push(' *');
 lines.push(' * Format: [source code point, source script, skeleton (NFKC), skeleton script].');
-lines.push(' * Script names mirror ScriptName in @privacyshield/core.');
+lines.push(' * Script names mirror ScriptName in @discretion/core.');
 lines.push(' *');
 lines.push(' * ── ATTRIBUTION ──────────────────────────────────────────────────────');
 lines.push(' * Derived from Unicode Character Database security data.');

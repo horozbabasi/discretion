@@ -11,7 +11,7 @@
  */
 
 import assert from 'node:assert/strict';
-import { protect } from '@privacyshield/core';
+import { protect } from '@discretion/core';
 
 const message = 'Card 5555341244441115 and IBAN DE44500105175407324931.';
 

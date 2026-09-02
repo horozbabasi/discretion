@@ -48,16 +48,16 @@ fi
 step "pack both packages"
 mkdir -p "$WORK/tarballs"
 for pkg in data core; do
-  if (npm.cmd pack --workspace "@privacyshield/$pkg" --pack-destination "$WORK/tarballs" \
-      || npm pack --workspace "@privacyshield/$pkg" --pack-destination "$WORK/tarballs") \
+  if (npm.cmd pack --workspace "@discretion/$pkg" --pack-destination "$WORK/tarballs" \
+      || npm pack --workspace "@discretion/$pkg" --pack-destination "$WORK/tarballs") \
       >>"$WORK/pack.log" 2>&1; then
-    ok "packed @privacyshield/$pkg"
+    ok "packed @discretion/$pkg"
   else
     fail "could not pack $pkg"; tail -10 "$WORK/pack.log"; exit 1
   fi
 done
-DATA_TGZ="$(ls "$WORK"/tarballs/privacyshield-data-*.tgz | head -1)"
-CORE_TGZ="$(ls "$WORK"/tarballs/privacyshield-core-*.tgz | head -1)"
+DATA_TGZ="$(ls "$WORK"/tarballs/discretion-data-*.tgz | head -1)"
+CORE_TGZ="$(ls "$WORK"/tarballs/discretion-core-*.tgz | head -1)"
 
 # THE PRECONDITION. If any of this resolved from the repo the test would prove
 # nothing, so the consumer project is created outside it, with its own registry
@@ -68,7 +68,7 @@ mkdir -p "$CONSUMER"
 cd "$CONSUMER" || exit 1
 cat > package.json <<'JSON'
 {
-  "name": "privacyshield-consumer-check",
+  "name": "discretion-consumer-check",
   "private": true,
   "version": "1.0.0",
   "type": "module"
@@ -137,7 +137,7 @@ net.Socket.prototype.connect = boom;
 net.connect = boom;
 globalThis.fetch = boom;
 
-const { protect, restore } = await import('@privacyshield/core');
+const { protect, restore } = await import('@discretion/core');
 const text = 'Card 5555341244441115 and IBAN DE44500105175407324931 and sk_live_7f3Kq2mNpX8vC1bWzR4tY6.';
 const result = await protect(text, { seed: 3 });
 assert.ok(result.entities.length >= 3, `expected 3+ entities, got ${result.entities.length}`);
@@ -174,7 +174,7 @@ fi
 
 step "TypeScript consumers get types"
 cat > types-check.ts <<'TS'
-import { protect, type ProtectResult, type ProtectedEntity } from '@privacyshield/core';
+import { protect, type ProtectResult, type ProtectedEntity } from '@discretion/core';
 export async function run(text: string): Promise<readonly ProtectedEntity[]> {
   const result: ProtectResult = await protect(text, { profile: 'strict', seed: 1 });
   return result.entities;

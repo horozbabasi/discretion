@@ -1,12 +1,12 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / [index](../README.md) / VaultEntry
+[@discretion/core](../../README.md) / [index](../README.md) / VaultEntry
 
 # Interface: VaultEntry
 
-Defined in: [packages/core/src/types.ts:178](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/types.ts#L178)
+Defined in: [packages/core/src/types.ts:178](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/types.ts#L178)
 
 One masked value held locally so the original can be restored later.
 
@@ -16,7 +16,7 @@ One masked value held locally so the original can be restored later.
 
 > `optional` **canonical?**: `string`
 
-Defined in: [packages/core/src/types.ts:195](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/types.ts#L195)
+Defined in: [packages/core/src/types.ts:195](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/types.ts#L195)
 
 Canonical form of the original (separators stripped, case-normalized by
 the detector) — the consistency key that makes "4111 1111…" and
@@ -30,7 +30,7 @@ bracket entries for unknown shapes have no canonical beyond the text.
 
 > **createdAt**: `number`
 
-Defined in: [packages/core/src/types.ts:187](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/types.ts#L187)
+Defined in: [packages/core/src/types.ts:187](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/types.ts#L187)
 
 Epoch milliseconds when the entry was created.
 
@@ -40,7 +40,7 @@ Epoch milliseconds when the entry was created.
 
 > `optional` **fallback?**: `boolean`
 
-Defined in: [packages/core/src/types.ts:201](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/types.ts#L201)
+Defined in: [packages/core/src/types.ts:201](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/types.ts#L201)
 
 True when no sensible surrogate could be produced and a bracket token
 was used instead — SPEC.md requires the fallback be recorded in the
@@ -52,7 +52,7 @@ session record. Added in M4.
 
 > **id**: `string`
 
-Defined in: [packages/core/src/types.ts:180](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/types.ts#L180)
+Defined in: [packages/core/src/types.ts:180](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/types.ts#L180)
 
 Stable unique id of this entry.
 
@@ -62,7 +62,7 @@ Stable unique id of this entry.
 
 > **original**: `string`
 
-Defined in: [packages/core/src/types.ts:183](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/types.ts#L183)
+Defined in: [packages/core/src/types.ts:183](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/types.ts#L183)
 
 The original text that was masked (first-seen writing).
 
@@ -72,7 +72,7 @@ The original text that was masked (first-seen writing).
 
 > **replacement**: `string`
 
-Defined in: [packages/core/src/types.ts:185](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/types.ts#L185)
+Defined in: [packages/core/src/types.ts:185](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/types.ts#L185)
 
 What it was replaced with (a surrogate value or an opaque token).
 
@@ -82,4 +82,4 @@ What it was replaced with (a surrogate value or an opaque token).
 
 > **type**: [`EntityType`](../type-aliases/EntityType.md)
 
-Defined in: [packages/core/src/types.ts:181](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/types.ts#L181)
+Defined in: [packages/core/src/types.ts:181](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/types.ts#L181)

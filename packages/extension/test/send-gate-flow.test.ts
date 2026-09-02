@@ -12,8 +12,8 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { generate } from '@privacyshield/core';
-import type { NerRecognizer } from '@privacyshield/core';
+import { generate } from '@discretion/core';
+import type { NerRecognizer } from '@discretion/core';
 
 import { ClaudeAdapter } from '../src/adapters/claude.js';
 import { InputWitness } from '../src/adapters/binding.js';
@@ -86,7 +86,7 @@ function harness(recognizer: NerRecognizer | null = SILENT_RECOGNIZER): Harness 
     composer,
     errors,
     pageSends,
-    state: () => document.querySelector('privacyshield-surface')?.getAttribute('data-state') ?? null,
+    state: () => document.querySelector('discretion-surface')?.getAttribute('data-state') ?? null,
   };
 }
 
@@ -535,7 +535,7 @@ describe('a transient health failure is not announced, and is still enforced', (
   // Measured live on claude.ai: within one page load, composer not-found at
   // 7ms, invariant-rejected at 434ms, resolved at 2325ms. Both failures were
   // real readings of a page still assembling itself, and announcing either
-  // says "PrivacyShield is not protecting this page" about a page that is fine.
+  // says "Discretion is not protecting this page" about a page that is fine.
 
   it('does NOT show degraded for a failure that has just started', async () => {
     const h = harness();

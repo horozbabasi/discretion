@@ -8,7 +8,7 @@
  */
 
 import assert from 'node:assert/strict';
-import { protect, restore, Restorer, Vault } from '@privacyshield/core';
+import { protect, restore, Restorer, Vault } from '@discretion/core';
 
 const IBAN = 'DE44500105175407324931';
 const vault = new Vault();

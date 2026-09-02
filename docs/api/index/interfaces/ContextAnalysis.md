@@ -1,12 +1,12 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / [index](../README.md) / ContextAnalysis
+[@discretion/core](../../README.md) / [index](../README.md) / ContextAnalysis
 
 # Interface: ContextAnalysis
 
-Defined in: [packages/core/src/context/score.ts:125](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/context/score.ts#L125)
+Defined in: [packages/core/src/context/score.ts:125](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/context/score.ts#L125)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [packages/core/src/context/score.ts:125](https://github.com/horozbab
 
 > `readonly` **profile**: [`DocumentProfile`](DocumentProfile.md)
 
-Defined in: [packages/core/src/context/score.ts:126](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/context/score.ts#L126)
+Defined in: [packages/core/src/context/score.ts:126](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/context/score.ts#L126)
 
 ***
 
@@ -22,7 +22,7 @@ Defined in: [packages/core/src/context/score.ts:126](https://github.com/horozbab
 
 > `readonly` **structure**: [`StructureIndex`](StructureIndex.md)
 
-Defined in: [packages/core/src/context/score.ts:127](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/context/score.ts#L127)
+Defined in: [packages/core/src/context/score.ts:127](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/context/score.ts#L127)
 
 ***
 
@@ -30,7 +30,7 @@ Defined in: [packages/core/src/context/score.ts:127](https://github.com/horozbab
 
 > `readonly` **triggers**: [`TriggerIndex`](TriggerIndex.md)
 
-Defined in: [packages/core/src/context/score.ts:128](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/context/score.ts#L128)
+Defined in: [packages/core/src/context/score.ts:128](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/context/score.ts#L128)
 
 ## Methods
 
@@ -38,7 +38,7 @@ Defined in: [packages/core/src/context/score.ts:128](https://github.com/horozbab
 
 > **score**(`candidates`): [`ContextScoredCandidate`](ContextScoredCandidate.md)[]
 
-Defined in: [packages/core/src/context/score.ts:132](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/context/score.ts#L132)
+Defined in: [packages/core/src/context/score.ts:132](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/context/score.ts#L132)
 
 Adjust and filter a candidate set.
 
@@ -58,7 +58,7 @@ readonly [`PipelineCandidate`](../type-aliases/PipelineCandidate.md)[]
 
 > **signalAt**(`start`, `end`, `type?`): [`ContextSignal`](ContextSignal.md) \| `undefined`
 
-Defined in: [packages/core/src/context/score.ts:130](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/context/score.ts#L130)
+Defined in: [packages/core/src/context/score.ts:130](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/context/score.ts#L130)
 
 Evidence for the Stage 1 runner's `contextFor` hook.
 

@@ -6,8 +6,8 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { normalize, runStage1 } from '@privacyshield/core';
-import { LANGUAGES } from '@privacyshield/eval';
+import { normalize, runStage1 } from '@discretion/core';
+import { LANGUAGES } from '@discretion/eval';
 import { buildExamples } from '../src/examples.js';
 
 describe('buildExamples', () => {

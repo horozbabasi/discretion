@@ -17,8 +17,8 @@
  * ─────────────────────────────────────────────────────────────────────────
  */
 
-import type { EntityType } from '@privacyshield/core';
-import { labelOf } from '@privacyshield/core';
+import type { EntityType } from '@discretion/core';
+import { labelOf } from '@discretion/core';
 
 import type { Catalogue, MessageKey, Plural } from './catalogue.js';
 import { EN_CATALOGUE } from './catalogue.js';

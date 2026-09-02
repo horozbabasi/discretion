@@ -10,7 +10,7 @@
  * exercises the offset map end to end.
  */
 
-import { generate } from '@privacyshield/core';
+import { generate } from '@discretion/core';
 import type { DocType, GroundTruthEntity, LabeledDocument } from './types.js';
 import { DOC_TYPES } from './types.js';
 import type { EntityKind } from './entityBank.js';

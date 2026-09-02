@@ -1,12 +1,12 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / [index](../README.md) / MaskedEntity
+[@discretion/core](../../README.md) / [index](../README.md) / MaskedEntity
 
 # Interface: MaskedEntity
 
-Defined in: [packages/core/src/mask/masker.ts:47](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/mask/masker.ts#L47)
+Defined in: [packages/core/src/mask/masker.ts:47](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/mask/masker.ts#L47)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [packages/core/src/mask/masker.ts:47](https://github.com/horozbabasi
 
 > `readonly` **fallback**: `boolean`
 
-Defined in: [packages/core/src/mask/masker.ts:54](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/mask/masker.ts#L54)
+Defined in: [packages/core/src/mask/masker.ts:54](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/mask/masker.ts#L54)
 
 ***
 
@@ -22,7 +22,7 @@ Defined in: [packages/core/src/mask/masker.ts:54](https://github.com/horozbabasi
 
 > `readonly` **original**: `string`
 
-Defined in: [packages/core/src/mask/masker.ts:51](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/mask/masker.ts#L51)
+Defined in: [packages/core/src/mask/masker.ts:51](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/mask/masker.ts#L51)
 
 ***
 
@@ -30,7 +30,7 @@ Defined in: [packages/core/src/mask/masker.ts:51](https://github.com/horozbabasi
 
 > `readonly` **originalEnd**: `number`
 
-Defined in: [packages/core/src/mask/masker.ts:50](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/mask/masker.ts#L50)
+Defined in: [packages/core/src/mask/masker.ts:50](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/mask/masker.ts#L50)
 
 ***
 
@@ -38,7 +38,7 @@ Defined in: [packages/core/src/mask/masker.ts:50](https://github.com/horozbabasi
 
 > `readonly` **originalStart**: `number`
 
-Defined in: [packages/core/src/mask/masker.ts:49](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/mask/masker.ts#L49)
+Defined in: [packages/core/src/mask/masker.ts:49](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/mask/masker.ts#L49)
 
 ***
 
@@ -46,7 +46,7 @@ Defined in: [packages/core/src/mask/masker.ts:49](https://github.com/horozbabasi
 
 > `readonly` **replacement**: `string`
 
-Defined in: [packages/core/src/mask/masker.ts:52](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/mask/masker.ts#L52)
+Defined in: [packages/core/src/mask/masker.ts:52](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/mask/masker.ts#L52)
 
 ***
 
@@ -54,7 +54,7 @@ Defined in: [packages/core/src/mask/masker.ts:52](https://github.com/horozbabasi
 
 > `readonly` **type**: [`EntityType`](../type-aliases/EntityType.md)
 
-Defined in: [packages/core/src/mask/masker.ts:48](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/mask/masker.ts#L48)
+Defined in: [packages/core/src/mask/masker.ts:48](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/mask/masker.ts#L48)
 
 ***
 
@@ -62,4 +62,4 @@ Defined in: [packages/core/src/mask/masker.ts:48](https://github.com/horozbabasi
 
 > `readonly` **vaultId**: `string`
 
-Defined in: [packages/core/src/mask/masker.ts:53](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/mask/masker.ts#L53)
+Defined in: [packages/core/src/mask/masker.ts:53](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/mask/masker.ts#L53)

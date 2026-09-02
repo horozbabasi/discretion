@@ -1,12 +1,12 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / [index](../README.md) / ProtectResult
+[@discretion/core](../../README.md) / [index](../README.md) / ProtectResult
 
 # Interface: ProtectResult
 
-Defined in: [packages/core/src/protect.ts:138](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/protect.ts#L138)
+Defined in: [packages/core/src/protect.ts:138](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/protect.ts#L138)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [packages/core/src/protect.ts:138](https://github.com/horozbabasi/pr
 
 > `readonly` **entities**: readonly [`ProtectedEntity`](ProtectedEntity.md)[]
 
-Defined in: [packages/core/src/protect.ts:141](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/protect.ts#L141)
+Defined in: [packages/core/src/protect.ts:141](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/protect.ts#L141)
 
 ***
 
@@ -22,7 +22,7 @@ Defined in: [packages/core/src/protect.ts:141](https://github.com/horozbabasi/pr
 
 > `readonly` **exposure**: [`ExposureReport`](ExposureReport.md)
 
-Defined in: [packages/core/src/protect.ts:143](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/protect.ts#L143)
+Defined in: [packages/core/src/protect.ts:143](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/protect.ts#L143)
 
 How exposed the document was, before masking.
 
@@ -32,7 +32,7 @@ How exposed the document was, before masking.
 
 > `readonly` **maskedText**: `string`
 
-Defined in: [packages/core/src/protect.ts:140](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/protect.ts#L140)
+Defined in: [packages/core/src/protect.ts:140](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/protect.ts#L140)
 
 The input with every reported value replaced. Safe to send.
 
@@ -42,7 +42,7 @@ The input with every reported value replaced. Safe to send.
 
 > `readonly` **stagesRun**: readonly [`DetectionStage`](../type-aliases/DetectionStage.md)[]
 
-Defined in: [packages/core/src/protect.ts:151](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/protect.ts#L151)
+Defined in: [packages/core/src/protect.ts:151](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/protect.ts#L151)
 
 Which stages actually ran.
 
@@ -56,7 +56,7 @@ caller knows names were not looked for.
 
 > `readonly` **vault**: [`Vault`](../classes/Vault.md)
 
-Defined in: [packages/core/src/protect.ts:159](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/protect.ts#L159)
+Defined in: [packages/core/src/protect.ts:159](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/protect.ts#L159)
 
 The vault holding the originals. Pass it to `restore()` to reverse this.
 

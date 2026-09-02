@@ -2,7 +2,7 @@
 
 ## Orientation
 
-privacyshield is a browser extension that detects and redacts sensitive information (PII, credentials, secrets) in text before it reaches AI chat interfaces (ChatGPT, Claude, Gemini). Everything runs client-side in the browser — no backend, no server-side detection, no telemetry.
+discretion is a browser extension that detects and redacts sensitive information (PII, credentials, secrets) in text before it reaches AI chat interfaces (ChatGPT, Claude, Gemini). Everything runs client-side in the browser — no backend, no server-side detection, no telemetry.
 
 - **SPEC.md** is authoritative for design. Read it before starting any milestone.
 - **ARCHITECTURE.md** records decisions made while implementing SPEC.md and the reasoning behind them — append to it, don't just read it.
@@ -19,7 +19,7 @@ privacyshield is a browser extension that detects and redacts sensitive informat
 5. **THE REPOSITORY IS PRIVATE** (`gh repo view --json isPrivate` -> true), and several things assume it is not: the store-required PRIVACY.md URL, the listing homepage/support links, the "OPEN SOURCE" paragraph, and every github.com link in `packages/core/README.md` which would ship to npm as dead links. **It also qualifies M11's fresh-clone result**: `git clone` used the local credential helper, so that check proved the BUILD works from a clean tree, not that a stranger can obtain the source. `verify-fresh-clone.sh` now asks anonymously and labels the clone AUTHENTICATED; `publish.yml` blocks publishing from a private repo, checking with plain curl rather than the runner token because the token would hide the failure (D62).
    Note: RTL layout is no longer exercised end-to-end by any SHIPPED locale, since `ar` is dropped. `verify-options.py --locale ar` reports that as NOT RUN rather than passing over it (D60).
 6. **The npm publish workflow has NEVER EXECUTED.** `.github/workflows/publish.yml` is the one M12 deliverable that is written rather than verified: this repo has no other CI, so nothing has exercised the workspace publish order, the registry-visibility wait, or the provenance attestation. Its `workflow_dispatch` input defaults to a dry run for that reason. Treat the first real tag as a test of the workflow, not only of the release (D59).
-7. **The package name is coupled to an unsettled product name.** SPEC records that "PrivacyShield" is still an open pre-public question, and the packages are `@privacyshield/core` / `@privacyshield/data` (both verified unregistered). Renaming an UNPUBLISHED package is free; npm has no rename afterwards, only deprecate-and-republish. **Settle the product name BEFORE the first publish, not before the first release** (D59).
+7. **The package name is coupled to an unsettled product name.** SPEC records that "Discretion" is still an open pre-public question, and the packages are `@discretion/core` / `@discretion/data` (both verified unregistered). Renaming an UNPUBLISHED package is free; npm has no rename afterwards, only deprecate-and-republish. **Settle the product name BEFORE the first publish, not before the first release** (D59).
 
 **THIS MACHINE HAS TWO CHECKOUTS**, and only one of them is current. The live tree holds all work from M2 onward; the other is frozen at M1 (`f4c9a6f`) with `packages/extension` still an empty placeholder, and some tooling reports THAT one as the working directory. **Run `git log --oneline -1` before trusting the tree you are in** - if it says `f4c9a6f`, you are in the stale one. (Absolute paths deliberately omitted: this file is public.)
 

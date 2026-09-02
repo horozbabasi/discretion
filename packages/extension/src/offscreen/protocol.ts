@@ -35,10 +35,10 @@
  * ─────────────────────────────────────────────────────────────────────────
  */
 
-import type { NerSpan } from '@privacyshield/core';
+import type { NerSpan } from '@discretion/core';
 
 /** The one channel name the offscreen document accepts. */
-export const NER_CHANNEL = 'privacyshield-ner';
+export const NER_CHANNEL = 'discretion-ner';
 
 /** Sent to the service worker to provision the offscreen document. */
 export interface EnsureOffscreenMessage {

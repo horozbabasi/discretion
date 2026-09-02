@@ -1,14 +1,14 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / [index](../README.md) / resolveOverlaps
+[@discretion/core](../../README.md) / [index](../README.md) / resolveOverlaps
 
 # Function: resolveOverlaps()
 
 > **resolveOverlaps**(`items`): [`ResolutionResult`](../interfaces/ResolutionResult.md)
 
-Defined in: [packages/core/src/fuse/resolve.ts:146](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/fuse/resolve.ts#L146)
+Defined in: [packages/core/src/fuse/resolve.ts:146](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/fuse/resolve.ts#L146)
 
 Resolve a candidate set into a non-overlapping one.
 

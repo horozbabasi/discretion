@@ -9,8 +9,8 @@
  * through the Stage 0 offset map, consumed with String.slice only.
  */
 
-import { resolveForMasking } from '@privacyshield/core';
-import type { MaskedEntity, Stage1Candidate } from '@privacyshield/core';
+import { resolveForMasking } from '@discretion/core';
+import type { MaskedEntity, Stage1Candidate } from '@discretion/core';
 
 export interface InputSegment {
   readonly text: string;

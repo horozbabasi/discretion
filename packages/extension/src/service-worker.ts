@@ -68,10 +68,10 @@ function setBadge(tabId: number, degraded: boolean): void {
     void chrome.action.setBadgeBackgroundColor({ tabId, color: DEGRADED_COLOUR });
     void chrome.action.setTitle({
       tabId,
-      title: 'PrivacyShield: this site\'s layout changed and protection is unavailable. Sends are blocked.',
+      title: 'Discretion: this site\'s layout changed and protection is unavailable. Sends are blocked.',
     });
   } else {
-    void chrome.action.setTitle({ tabId, title: 'PrivacyShield' });
+    void chrome.action.setTitle({ tabId, title: 'Discretion' });
   }
 }
 

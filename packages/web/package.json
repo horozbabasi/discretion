@@ -1,9 +1,9 @@
 {
-  "name": "@privacyshield/web",
+  "name": "@discretion/web",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "PrivacyShield playground — standalone client-side demo of detection and masking (Stages 0–1 + substitution)",
+  "description": "Discretion playground — standalone client-side demo of detection and masking (Stages 0–1 + substitution)",
   "license": "MIT",
   "scripts": {
     "dev": "vite",
@@ -11,8 +11,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@privacyshield/core": "*",
-    "@privacyshield/eval": "*"
+    "@discretion/core": "*",
+    "@discretion/eval": "*"
   },
   "devDependencies": {
     "@fontsource/fraunces": "^5.1.0",

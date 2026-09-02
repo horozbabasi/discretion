@@ -1,13 +1,13 @@
 {
-  "name": "@privacyshield/eval",
+  "name": "@discretion/eval",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "PrivacyShield evaluation harness: labeled synthetic corpus, hard negatives, metrics, error analysis, regression gates",
+  "description": "Discretion evaluation harness: labeled synthetic corpus, hard negatives, metrics, error analysis, regression gates",
   "license": "MIT",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "dependencies": {
-    "@privacyshield/core": "*"
+    "@discretion/core": "*"
   }
 }

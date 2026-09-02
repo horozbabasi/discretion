@@ -11,7 +11,7 @@
  * it. The prose cases below are guards against exactly that.
  */
 import { describe, expect, it } from 'vitest';
-import { DOMAIN_LEXICONS } from '@privacyshield/data';
+import { DOMAIN_LEXICONS } from '@discretion/data';
 import { profileDocument } from '../src/context/documentProfile.js';
 
 const profile = (text: string) => profileDocument(text, { domainLexicon: DOMAIN_LEXICONS });

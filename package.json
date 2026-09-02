@@ -1,9 +1,9 @@
 {
-  "name": "privacyshield",
+  "name": "discretion",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "PrivacyShield monorepo \u2014 local-first PII detection and masking",
+  "description": "Discretion monorepo \u2014 local-first PII detection and masking",
   "license": "MIT",
   "engines": {
     "node": ">=20"
@@ -12,7 +12,7 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "tsc -b && npm run build --workspace @privacyshield/web && npm run build --workspace @privacyshield/extension",
+    "build": "tsc -b && npm run build --workspace @discretion/web && npm run build --workspace @discretion/extension",
     "build:ts": "tsc -b",
     "typecheck": "tsc -b --force && tsc -p tsconfig.test.json",
     "test": "vitest run",
@@ -21,10 +21,10 @@
     "format": "prettier --write .",
     "bench": "tsc -b && node packages/core/dist/bench/normalization.bench.js",
     "eval": "tsc -b && node packages/eval/dist/cli.js",
-    "web:dev": "npm run dev --workspace @privacyshield/web",
-    "web:build": "npm run build --workspace @privacyshield/web",
-    "web:preview": "npm run preview --workspace @privacyshield/web",
-    "ext:build": "npm run build --workspace @privacyshield/extension",
+    "web:dev": "npm run dev --workspace @discretion/web",
+    "web:build": "npm run build --workspace @discretion/web",
+    "web:preview": "npm run preview --workspace @discretion/web",
+    "ext:build": "npm run build --workspace @discretion/extension",
     "typecheck:tests": "tsc -p tsconfig.test.json",
     "ext:fetch-model": "node packages/extension/scripts/fetch-model.mjs",
     "docs:api": "typedoc",

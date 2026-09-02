@@ -57,7 +57,7 @@
  * ─────────────────────────────────────────────────────────────────────────
  */
 
-import type { Vault } from '@privacyshield/core';
+import type { Vault } from '@discretion/core';
 
 import { isEditableSurface } from '../adapters/index.js';
 

@@ -1,14 +1,14 @@
-[**@privacyshield/core**](../../../../README.md)
+[**@discretion/core**](../../../../README.md)
 
 ***
 
-[@privacyshield/core](../../../../README.md) / [index](../../../README.md) / [checksums](../README.md) / mrzCheckValid
+[@discretion/core](../../../../README.md) / [index](../../../README.md) / [checksums](../README.md) / mrzCheckValid
 
 # Function: mrzCheckValid()
 
 > **mrzCheckValid**(`field`, `check`): `boolean`
 
-Defined in: [packages/core/src/checksums/icao9303.ts:47](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/checksums/icao9303.ts#L47)
+Defined in: [packages/core/src/checksums/icao9303.ts:47](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/checksums/icao9303.ts#L47)
 
 Verify a field against its trailing check character.
 

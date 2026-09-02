@@ -1,12 +1,12 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / [index](../README.md) / NegativeRule
+[@discretion/core](../../README.md) / [index](../README.md) / NegativeRule
 
 # Interface: NegativeRule
 
-Defined in: [packages/core/src/context/types.ts:135](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/context/types.ts#L135)
+Defined in: [packages/core/src/context/types.ts:135](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/context/types.ts#L135)
 
 A negative-context rule.
 
@@ -25,7 +25,7 @@ rule is how leaks get shipped.
 
 > `readonly` **action**: `number` \| `"suppress"`
 
-Defined in: [packages/core/src/context/types.ts:144](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/context/types.ts#L144)
+Defined in: [packages/core/src/context/types.ts:144](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/context/types.ts#L144)
 
 `'suppress'` drops the candidate; a negative number reduces confidence.
 Prefer a penalty over suppression unless the evidence is conclusive.
@@ -36,7 +36,7 @@ Prefer a penalty over suppression unless the evidence is conclusive.
 
 > `readonly` **appliesTo**: readonly [`EntityType`](../type-aliases/EntityType.md)[] \| `"all"`
 
-Defined in: [packages/core/src/context/types.ts:139](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/context/types.ts#L139)
+Defined in: [packages/core/src/context/types.ts:139](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/context/types.ts#L139)
 
 Entity types this rule may act on, or `'all'`.
 
@@ -46,7 +46,7 @@ Entity types this rule may act on, or `'all'`.
 
 > `readonly` **id**: `string`
 
-Defined in: [packages/core/src/context/types.ts:137](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/context/types.ts#L137)
+Defined in: [packages/core/src/context/types.ts:137](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/context/types.ts#L137)
 
 Stable id, surfaced as `negative:<id>` in contributions.
 
@@ -56,7 +56,7 @@ Stable id, surfaced as `negative:<id>` in contributions.
 
 > `readonly` **principle**: `string`
 
-Defined in: [packages/core/src/context/types.ts:146](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/context/types.ts#L146)
+Defined in: [packages/core/src/context/types.ts:146](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/context/types.ts#L146)
 
 The general principle, quoted into ARCHITECTURE.md and reviewable.
 
@@ -66,7 +66,7 @@ The general principle, quoted into ARCHITECTURE.md and reviewable.
 
 > `readonly` **risk**: `string`
 
-Defined in: [packages/core/src/context/types.ts:148](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/context/types.ts#L148)
+Defined in: [packages/core/src/context/types.ts:148](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/context/types.ts#L148)
 
 What real positive this could wrongly suppress. Required, not optional.
 
@@ -76,7 +76,7 @@ What real positive this could wrongly suppress. Required, not optional.
 
 > **test**(`ctx`): `boolean`
 
-Defined in: [packages/core/src/context/types.ts:149](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/context/types.ts#L149)
+Defined in: [packages/core/src/context/types.ts:149](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/context/types.ts#L149)
 
 #### Parameters
 

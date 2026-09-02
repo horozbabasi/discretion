@@ -43,7 +43,7 @@ describe('a message never renders as nothing', () => {
   it('falls back when there is no chrome at all', () => {
     // The playground, a test, an options page opened as a file.
     vi.stubGlobal('chrome', undefined);
-    expect(t('panel.degraded.sendTitle')).toBe('PrivacyShield did not send this message');
+    expect(t('panel.degraded.sendTitle')).toBe('Discretion did not send this message');
   });
 
   it('prefers a real translation when chrome.i18n has one', () => {

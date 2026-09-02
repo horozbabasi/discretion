@@ -112,7 +112,7 @@ def document(width: int, height: int, scale: float) -> str:
 </style></head><body>
   <div class="mark">{shield(96 * scale)}</div>
   <div class="body">
-    <h1>PrivacyShield</h1>
+    <h1>Discretion</h1>
     <p class="tag">Masks passwords, keys and ID numbers before they reach ChatGPT, Claude or Gemini.</p>
     <div class="demo">
       <div class="row"><span class="label">You type</span>

@@ -1,12 +1,12 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / [index](../README.md) / NerRecognizer
+[@discretion/core](../../README.md) / [index](../README.md) / NerRecognizer
 
 # Interface: NerRecognizer
 
-Defined in: [packages/core/src/ner/types.ts:82](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/ner/types.ts#L82)
+Defined in: [packages/core/src/ner/types.ts:82](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/ner/types.ts#L82)
 
 What Stage 2 needs from whatever performs recognition.
 
@@ -28,7 +28,7 @@ runs detection, including the one that has no model at all.
 
 > `readonly` **id**: `string`
 
-Defined in: [packages/core/src/ner/types.ts:84](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/ner/types.ts#L84)
+Defined in: [packages/core/src/ner/types.ts:84](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/ner/types.ts#L84)
 
 Model identity, recorded on every candidate this produces.
 
@@ -38,7 +38,7 @@ Model identity, recorded on every candidate this produces.
 
 > **recognize**(`text`): `Promise`\<[`NerSpan`](NerSpan.md)[]\>
 
-Defined in: [packages/core/src/ner/types.ts:88](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/ner/types.ts#L88)
+Defined in: [packages/core/src/ner/types.ts:88](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/ner/types.ts#L88)
 
 Spans in the given text's own coordinates.
 
@@ -58,7 +58,7 @@ Spans in the given text's own coordinates.
 
 > **warmup**(): `Promise`\<`void`\>
 
-Defined in: [packages/core/src/ner/types.ts:86](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/ner/types.ts#L86)
+Defined in: [packages/core/src/ner/types.ts:86](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/ner/types.ts#L86)
 
 Pay initialization cost before first real use.
 

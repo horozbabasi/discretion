@@ -1,6 +1,6 @@
 # Privacy policy
 
-**PrivacyShield browser extension**
+**Discretion browser extension**
 
 Last updated: 2 September 2026
 
@@ -8,7 +8,7 @@ Last updated: 2 September 2026
 
 ## The short version
 
-**PrivacyShield does not collect, transmit, or store your data. It makes no
+**Discretion does not collect, transmit, or store your data. It makes no
 network requests of any kind after it is installed.**
 
 There is no account, no sign-in, no server, and no analytics. Nothing you type
@@ -21,7 +21,7 @@ the answer to every "do you collect X" question is no.
 
 ## What the extension reads
 
-To do its job, PrivacyShield reads the text you type or paste into the message
+To do its job, Discretion reads the text you type or paste into the message
 box on three websites:
 
 - `chatgpt.com`
@@ -69,7 +69,7 @@ away or close the tab. They are never written to `storage.local`,
 
 ## Network requests
 
-**None.** After installation, PrivacyShield makes no outbound network request
+**None.** After installation, Discretion makes no outbound network request
 of any kind — not for detection, not for telemetry, not for crash reports, not
 to update a word list, not to check for a licence.
 
@@ -139,8 +139,8 @@ applied retroactively to data already collected — there is none.
 Questions, or a report of anything in the extension that contradicts this
 policy:
 
-- Issues: <https://github.com/horozbabasi/privacyshield/issues>
-- Source: <https://github.com/horozbabasi/privacyshield>
+- Issues: <https://github.com/horozbabasi/discretion/issues>
+- Source: <https://github.com/horozbabasi/discretion>
 
 The full technical security model, including the threat model and the things
 the extension deliberately does **not** protect against, is in
@@ -151,7 +151,7 @@ the extension deliberately does **not** protect against, is in
 For honesty, and because a privacy policy that only lists strengths is not
 informative:
 
-- PrivacyShield **will miss sensitive values**. It is a safety net, not a
+- Discretion **will miss sensitive values**. It is a safety net, not a
   guarantee, and it is not a compliance control.
 - It does not protect files, images, or screenshots you attach to a message.
 - The site can see what is in the message box while you type. Only what you

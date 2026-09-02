@@ -37,7 +37,7 @@
  * ─────────────────────────────────────────────────────────────────────────
  */
 
-import type { EntityType } from '@privacyshield/core';
+import type { EntityType } from '@discretion/core';
 
 /** A message with one form. */
 export type Simple = string;
@@ -67,12 +67,12 @@ export interface Plural {
  */
 export const EN = {
   // ── the store listing (read from the manifest via __MSG_…__) ──
-  'appName': 'PrivacyShield',
+  'appName': 'Discretion',
   'appDescription':
     'Detects and redacts sensitive information in text before it reaches AI chat interfaces. Runs entirely on your device.',
 
   // ── the review panel ──
-  'panel.review.aria': 'PrivacyShield: review what will be masked before sending',
+  'panel.review.aria': 'Discretion: review what will be masked before sending',
   'panel.review.title': { one: '$1 item to mask', other: '$1 items to mask' },
   'panel.exposure': 'exposure $1/100',
   'panel.action.cancel': 'Cancel',
@@ -87,12 +87,12 @@ export const EN = {
   // ── D29: the composer nobody was seen typing into ──
   'panel.unwitnessed.title': 'Check this is your message',
   'panel.unwitnessed.body':
-    'This text was already in the box - PrivacyShield did not see you type it. That is normal for a saved draft, a link that fills the box for you, or a suggested prompt.',
+    'This text was already in the box - Discretion did not see you type it. That is normal for a saved draft, a link that fills the box for you, or a suggested prompt.',
 
   // ── findings, shown while typing ──
   'panel.findings.aria': {
-    one: 'PrivacyShield: $1 sensitive item detected in this message',
-    other: 'PrivacyShield: $1 sensitive items detected in this message',
+    one: 'Discretion: $1 sensitive item detected in this message',
+    other: 'Discretion: $1 sensitive items detected in this message',
   },
   'panel.findings.title': { one: '$1 item detected', other: '$1 items detected' },
   'panel.findings.note': 'When you send, these will be replaced and you will be asked to confirm first.',
@@ -107,8 +107,8 @@ export const EN = {
   'panel.paste.countOfType': { one: '$1 $2', other: '$1 $2s' },
 
   // ── degraded ──
-  'panel.degraded.pageTitle': 'PrivacyShield is not protecting this page',
-  'panel.degraded.sendTitle': 'PrivacyShield did not send this message',
+  'panel.degraded.pageTitle': 'Discretion is not protecting this page',
+  'panel.degraded.sendTitle': 'Discretion did not send this message',
   'panel.degraded.couldNotFind': 'Could not find: $1.',
   'panel.degraded.noReason': 'The extension reported a problem without saying what it was.',
 
@@ -132,13 +132,13 @@ export const EN = {
    */
   'ui.dir': 'ltr',
 
-  'popup.title': 'PrivacyShield',
+  'popup.title': 'Discretion',
   'popup.tab.status': 'Status',
   'popup.tab.quickRedact': 'Quick Redact',
   'popup.tab.insights': 'Insights',
   'popup.status.protected': 'Protecting this page',
   'popup.status.unprotected': 'Not protecting this page',
-  'popup.status.unsupported': 'PrivacyShield does not run on this site',
+  'popup.status.unsupported': 'Discretion does not run on this site',
   'popup.status.sessionCounts': 'Masked this session',
   'popup.status.sessionExposure': 'Session exposure',
   'popup.status.profile': 'Sensitivity',
@@ -194,7 +194,7 @@ export const EN = {
   'family.person': 'Names',
   'family.other': 'Other',
 
-  'options.title': 'PrivacyShield settings',
+  'options.title': 'Discretion settings',
   'options.section.detection': 'What to detect',
   'options.section.substitution': 'Replacement style',
   'options.section.lists': 'Always and never',

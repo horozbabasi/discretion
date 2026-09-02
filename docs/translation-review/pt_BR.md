@@ -2,7 +2,7 @@
 
 **Status: NOT REVIEWED — this locale is not shipped**
 
-Digest of the strings below: `77e91713`
+Digest of the strings below: `4f8031b3`
 
 ---
 
@@ -39,18 +39,18 @@ A stiff translation ships; a misleading one does not.
 | `panel.action.protectAndSend` | Protect and send | **Proteger e enviar** | Same as above; this is the wording used when items are being replaced. | | |
 | `panel.item.keepOriginal` | Keep original | **Manter original** | If this and "mask this" read as each other, the user LEAVES A SECRET IN PLAINTEXT believing they masked it. | | |
 | `panel.item.maskThis` | Mask this | **Mascarar este** | If this and "keep original" read as each other, the user leaves a secret in plaintext believing they masked it. | | |
-| `panel.degraded.pageTitle` | PrivacyShield is not protecting this page | **O PrivacyShield não está protegendo esta página** | Says the extension is NOT protecting this page. If it reads as protected, the user trusts a page that is not guarded. | | |
-| `panel.degraded.sendTitle` | PrivacyShield did not send this message | **O PrivacyShield não enviou esta mensagem** | Says the message was NOT sent. If it reads as sent, the user believes something left that did not - or the reverse. | | |
+| `panel.degraded.pageTitle` | Discretion is not protecting this page | **O Discretion não está protegendo esta página** | Says the extension is NOT protecting this page. If it reads as protected, the user trusts a page that is not guarded. | | |
+| `panel.degraded.sendTitle` | Discretion did not send this message | **O Discretion não enviou esta mensagem** | Says the message was NOT sent. If it reads as sent, the user believes something left that did not - or the reverse. | | |
 | `panel.degraded.couldNotFind` | Could not find: $1. | **Não encontrado: $1.** | Names what the extension could not locate. Must read as a failure, not as a result. | | |
 | `panel.degraded.noReason` | The extension reported a problem without saying what it was. | **A extensão relatou um problema sem dizer qual era.** | Says the extension failed without explaining why. Must not read as "nothing was found". | | |
 | `panel.unwitnessed.title` | Check this is your message | **Confirme que esta mensagem é sua** | Warns the message may not be what the user wrote. Must read as a warning. | | |
-| `panel.unwitnessed.body` | This text was already in the box - PrivacyShield did not see you type it. That is normal for a saved draft, a link that fills the box for you, or a suggested prompt. | **Este texto já estava na caixa — o PrivacyShield não viu você digitá-lo. Isso é normal em um rascunho salvo, em um link que preenche a caixa por você ou em uma sugestão.** | Explains that warning. Must not read as reassurance. | | |
+| `panel.unwitnessed.body` | This text was already in the box - Discretion did not see you type it. That is normal for a saved draft, a link that fills the box for you, or a suggested prompt. | **Este texto já estava na caixa — o Discretion não viu você digitá-lo. Isso é normal em um rascunho salvo, em um link que preenche a caixa por você ou em uma sugestão.** | Explains that warning. Must not read as reassurance. | | |
 | `panel.findings.note` | When you send, these will be replaced and you will be asked to confirm first. | **Ao enviar, eles serão substituídos e sua confirmação será pedida antes.** | Promises that these items WILL be replaced on send, and that the user will be asked first. A wrong tense or a negation changes what the user expects to happen. | | |
 | `panel.paste.body` | These will be masked when you send. You can mask them now instead. | **Serão mascarados ao enviar. Você também pode mascará-los agora.** | Says pasted items will be masked when sending, and can be masked now instead. Must not read as "already masked". | | |
 | `panel.paste.none` | Nothing sensitive was found in it. | **Nada sensível foi encontrado.** | Says nothing sensitive was found. If this reads as an error, the user distrusts a correct result; if an error reads as this, they trust a failure. | | |
 | `popup.status.protected` | Protecting this page | **Protegendo esta página** | Says this page IS protected. Must not be confusable with the next string. | | |
 | `popup.status.unprotected` | Not protecting this page | **Não está protegendo esta página** | Says this page is NOT protected. If these two read alike, the status display is worse than none. | | |
-| `popup.status.unsupported` | PrivacyShield does not run on this site | **O PrivacyShield não funciona neste site** | Says the extension does not run here at all. Must not read as "protected". | | |
+| `popup.status.unsupported` | Discretion does not run on this site | **O Discretion não funciona neste site** | Says the extension does not run here at all. Must not read as "protected". | | |
 | `quick.action.mask` | Mask | **Mascarar** | Turns text into masked text. If it swaps with "restore", the user reveals values they meant to hide. | | |
 | `quick.action.restore` | Restore | **Restaurar** | Turns masked text back into the real values. If it swaps with "mask", the user reveals values they meant to hide. | | |
 | `quick.unavailable` | Masking is unavailable right now, so nothing was changed. | **O mascaramento está indisponível agora, então nada foi alterado.** | Says masking did NOT happen and nothing was changed. If it reads as success, the user copies unmasked text believing it is safe. | | |
@@ -70,7 +70,7 @@ When every row is marked, add to `packages/extension/src/i18n/reviewed.ts`:
   reviewer: '<name>',
   relationship: '<native speaker / fluent, how long>',
   date: '<YYYY-MM-DD>',
-  digest: '77e91713',
+  digest: '4f8031b3',
 },
 ```
 

@@ -1,12 +1,12 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / [index](../README.md) / GazetteerHit
+[@discretion/core](../../README.md) / [index](../README.md) / GazetteerHit
 
 # Interface: GazetteerHit
 
-Defined in: [packages/core/src/gazetteer/index.ts:95](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/gazetteer/index.ts#L95)
+Defined in: [packages/core/src/gazetteer/index.ts:95](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/gazetteer/index.ts#L95)
 
 How a value matched the gazetteer.
 
@@ -16,7 +16,7 @@ How a value matched the gazetteer.
 
 > `readonly` **matchedWords**: `number`
 
-Defined in: [packages/core/src/gazetteer/index.ts:100](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/gazetteer/index.ts#L100)
+Defined in: [packages/core/src/gazetteer/index.ts:100](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/gazetteer/index.ts#L100)
 
 Number of the value's words that matched, for multi-word names.
 
@@ -26,7 +26,7 @@ Number of the value's words that matched, for multi-word names.
 
 > `readonly` **totalWords**: `number`
 
-Defined in: [packages/core/src/gazetteer/index.ts:101](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/gazetteer/index.ts#L101)
+Defined in: [packages/core/src/gazetteer/index.ts:101](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/gazetteer/index.ts#L101)
 
 ***
 
@@ -34,7 +34,7 @@ Defined in: [packages/core/src/gazetteer/index.ts:101](https://github.com/horozb
 
 > `readonly` **type**: [`GazetteerType`](../type-aliases/GazetteerType.md)
 
-Defined in: [packages/core/src/gazetteer/index.ts:96](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/gazetteer/index.ts#L96)
+Defined in: [packages/core/src/gazetteer/index.ts:96](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/gazetteer/index.ts#L96)
 
 ***
 
@@ -42,6 +42,6 @@ Defined in: [packages/core/src/gazetteer/index.ts:96](https://github.com/horozba
 
 > `readonly` **whole**: `boolean`
 
-Defined in: [packages/core/src/gazetteer/index.ts:98](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/gazetteer/index.ts#L98)
+Defined in: [packages/core/src/gazetteer/index.ts:98](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/gazetteer/index.ts#L98)
 
 True when the whole value matched, rather than one of its words.

@@ -29,8 +29,8 @@
  * ─────────────────────────────────────────────────────────────────────────
  */
 
-import { Vault } from '@privacyshield/core';
-import type { SubstitutionMode } from '@privacyshield/core';
+import { Vault } from '@discretion/core';
+import type { SubstitutionMode } from '@discretion/core';
 
 import { SessionLog } from './sessionLog.js';
 

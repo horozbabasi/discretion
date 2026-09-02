@@ -1,4 +1,4 @@
-# @privacyshield/core
+# @discretion/core
 
 Finds sensitive values in text — credentials, card and bank numbers, national
 and tax IDs, contact details, names — and replaces them with realistic
@@ -9,7 +9,7 @@ DOM dependency and no Node built-in dependency, so the same code runs in
 Node, a browser, a worker, Deno or Bun.
 
 ```bash
-npm install @privacyshield/core
+npm install @discretion/core
 ```
 
 ---
@@ -17,7 +17,7 @@ npm install @privacyshield/core
 ## Quick start
 
 ```js
-import { protect, restore } from '@privacyshield/core';
+import { protect, restore } from '@discretion/core';
 
 const message = 'Wire it to DE44500105175407324931 and use key sk_live_7f3Kq2mNpX8vC1bWzR4tY6.';
 
@@ -55,7 +55,7 @@ the surrounding text is scored, so `sk_test_...` in a code fence is treated
 differently from the same shape in a sentence about production.
 
 ```js
-import { detectableEntityTypes } from '@privacyshield/core';
+import { detectableEntityTypes } from '@discretion/core';
 
 console.log(detectableEntityTypes().length); // 34
 ```
@@ -63,7 +63,7 @@ console.log(detectableEntityTypes().length); // 34
 Confidence is **calibrated against a held-out set**, so 0.8 means roughly 80%
 — expected calibration error 2.63%, against 12.33% for the raw scores. Full
 per-type precision and recall are in
-[BENCHMARKS.md](https://github.com/horozbabasi/privacyshield/blob/main/BENCHMARKS.md),
+[BENCHMARKS.md](https://github.com/horozbabasi/discretion/blob/main/BENCHMARKS.md),
 including the types that do badly.
 
 ---
@@ -99,7 +99,7 @@ cannot mask, do not send.
 `protect()` returns the `vault` that holds the originals. `restore()` needs it.
 
 ```js
-import { protect, restore, Vault } from '@privacyshield/core';
+import { protect, restore, Vault } from '@discretion/core';
 
 // One vault across a whole conversation, so a value seen twice gets the same
 // stand-in and a reply mentioning it can still be restored.
@@ -122,7 +122,7 @@ For streamed responses use the `Restorer` class, which buffers across chunk
 boundaries so a surrogate split between two chunks is still replaced:
 
 ```js
-import { Restorer } from '@privacyshield/core';
+import { Restorer } from '@discretion/core';
 
 const restorer = new Restorer(vault);
 for await (const chunk of stream) process.stdout.write(restorer.push(chunk));
@@ -181,8 +181,8 @@ npm install @huggingface/transformers   # only if you want Stage 2
 ```
 
 ```js
-import { protect, NerEngine } from '@privacyshield/core';
-import { createTransformersClassifier } from '@privacyshield/core/ner-transformers';
+import { protect, NerEngine } from '@discretion/core';
+import { createTransformersClassifier } from '@discretion/core/ner-transformers';
 
 const classifier = await createTransformersClassifier({
   model: 'jiting/xlm-roberta-base-ner-hrl_onnx',
@@ -215,7 +215,7 @@ Adding one is a single object. It joins the same validation, context scoring
 and fusion as the built-ins.
 
 ```js
-import { registerDetector, CONFIDENCE, GLOBAL_REGION, valid, invalid } from '@privacyshield/core';
+import { registerDetector, CONFIDENCE, GLOBAL_REGION, valid, invalid } from '@discretion/core';
 
 registerDetector({
   id: 'acme-employee-id',
@@ -253,7 +253,7 @@ NFKC applied, homoglyphs folded), and offsets into it are not offsets into
 your original string.
 
 ```js
-import { normalize, runStage1, mapNormalizedSpan } from '@privacyshield/core';
+import { normalize, runStage1, mapNormalizedSpan } from '@discretion/core';
 
 const normalization = normalize(original);
 for (const candidate of runStage1(normalization, {})) {
@@ -283,7 +283,7 @@ string's coordinates.
 
 The measured numbers behind all of this, including where it does badly, are
 published in
-[BENCHMARKS.md](https://github.com/horozbabasi/privacyshield/blob/main/BENCHMARKS.md).
+[BENCHMARKS.md](https://github.com/horozbabasi/discretion/blob/main/BENCHMARKS.md).
 Nothing above is asserted without a measurement behind it.
 
 ---
@@ -296,7 +296,7 @@ With Stage 2 enabled: **p50 255.8 ms**, almost all of it inference.
 Measured with a machine-health canary that marks a run degraded when the
 machine itself is slow, so published figures are not compared against numbers
 taken under load. See
-[BENCHMARKS.md](https://github.com/horozbabasi/privacyshield/blob/main/BENCHMARKS.md).
+[BENCHMARKS.md](https://github.com/horozbabasi/discretion/blob/main/BENCHMARKS.md).
 
 ---
 
@@ -311,9 +311,9 @@ context scoring, calibration or profile decision. It exists for the Stage-1
 baseline in the evaluation harness.
 
 Versioning policy, including what 0.x means here:
-[VERSIONING.md](https://github.com/horozbabasi/privacyshield/blob/main/VERSIONING.md).
+[VERSIONING.md](https://github.com/horozbabasi/discretion/blob/main/VERSIONING.md).
 
 ## Licence
 
 MIT. Unicode data under the Unicode licence — see `THIRD_PARTY_NOTICES.md` in
-`@privacyshield/data`.
+`@discretion/data`.

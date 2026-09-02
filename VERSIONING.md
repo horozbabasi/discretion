@@ -1,7 +1,7 @@
 # Versioning policy
 
-Applies to the published packages — `@privacyshield/core` and
-`@privacyshield/data`. The extension is versioned separately and is not on npm.
+Applies to the published packages — `@discretion/core` and
+`@discretion/data`. The extension is versioned separately and is not on npm.
 
 ## Where we are: 0.x, and what that means here
 
@@ -25,10 +25,10 @@ additive becomes minor.
 
 Exactly what `packages/core/src/index.ts` exports, and nothing else.
 
-- Deep imports (`@privacyshield/core/dist/src/…`) are not supported and can
+- Deep imports (`@discretion/core/dist/src/…`) are not supported and can
   change in any release. The `exports` map blocks them.
 - The `./ner-transformers` subpath is public and covered by this policy.
-- `@privacyshield/data` is a **generated** package. Its contents change with
+- `@discretion/data` is a **generated** package. Its contents change with
   every corpus and model refit. Treat its data as versioned but not stable in
   value: a confusables entry or a calibration curve can change in a patch. Its
   *type* surface follows the table above.

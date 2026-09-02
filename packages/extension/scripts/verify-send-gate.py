@@ -121,7 +121,7 @@ def verify(ctx, site, glob, url, fixture_name):
         # witness (D26 construction #3) is built to reject.
         composer.type(MESSAGE, delay=12)
 
-        host = page.locator('privacyshield-surface')
+        host = page.locator('discretion-surface')
         if wait_for_state(page, host, 'findings') != 'findings':
             fail(site, f'no findings panel while typing (state={state_of(host)!r})')
             return

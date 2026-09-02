@@ -25,7 +25,7 @@ import {
   type NerRecognizer,
   type NerSpan,
 } from '../src/index.js';
-import { CALIBRATION_MODEL } from '@privacyshield/data';
+import { CALIBRATION_MODEL } from '@discretion/data';
 
 /** A card and an IBAN that are valid, and are not published test vectors. */
 function sensitiveText(seed: number): { text: string; pan: string; iban: string } {

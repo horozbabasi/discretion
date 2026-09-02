@@ -1,9 +1,9 @@
-# @privacyshield/data
+# @discretion/data
 
-Generated data tables for [`@privacyshield/core`](https://www.npmjs.com/package/@privacyshield/core).
+Generated data tables for [`@discretion/core`](https://www.npmjs.com/package/@discretion/core).
 
 **You almost certainly do not want to install this directly.** It is a
-dependency of `@privacyshield/core`, published separately only so that core can
+dependency of `@discretion/core`, published separately only so that core can
 pin it at an exact version. Install core.
 
 ## What is in it
@@ -26,7 +26,7 @@ entry, a gazetteer name, or a calibration curve refitted after a corpus
 change.
 
 The package version tracks the *type* surface, which follows
-[VERSIONING.md](https://github.com/horozbabasi/privacyshield/blob/main/VERSIONING.md).
+[VERSIONING.md](https://github.com/horozbabasi/discretion/blob/main/VERSIONING.md).
 Do not build anything that depends on a specific numeric value in
 `CALIBRATION_MODEL` or a specific entry in `CONFUSABLES` surviving an upgrade.
 

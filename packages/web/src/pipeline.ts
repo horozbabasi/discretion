@@ -23,16 +23,16 @@ import {
   normalize,
   resolveOverlaps,
   runStage1,
-} from '@privacyshield/core';
-import { CALIBRATION_MODEL } from '@privacyshield/data';
+} from '@discretion/core';
+import { CALIBRATION_MODEL } from '@discretion/data';
 import type {
   CalibrationModel,
   ExposureReport,
   MaskResult,
   Stage1Candidate,
   SubstitutionMode,
-} from '@privacyshield/core';
-import { Vault } from '@privacyshield/core';
+} from '@discretion/core';
+import { Vault } from '@discretion/core';
 
 export interface AnalysisResult {
   readonly original: string;

@@ -1,12 +1,12 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / [index](../README.md) / Stage1Options
+[@discretion/core](../../README.md) / [index](../README.md) / Stage1Options
 
 # Interface: Stage1Options
 
-Defined in: [packages/core/src/detect/runner.ts:54](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/runner.ts#L54)
+Defined in: [packages/core/src/detect/runner.ts:54](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/runner.ts#L54)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [packages/core/src/detect/runner.ts:54](https://github.com/horozbaba
 
 > `readonly` `optional` **budgetMs?**: `number`
 
-Defined in: [packages/core/src/detect/runner.ts:67](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/runner.ts#L67)
+Defined in: [packages/core/src/detect/runner.ts:67](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/runner.ts#L67)
 
 Wall-clock budget in milliseconds. Exceeding it throws.
 
@@ -24,7 +24,7 @@ Wall-clock budget in milliseconds. Exceeding it throws.
 
 > `readonly` `optional` **contextFor?**: (`start`, `end`) => [`ContextSignal`](ContextSignal.md) \| `undefined`
 
-Defined in: [packages/core/src/detect/runner.ts:69](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/runner.ts#L69)
+Defined in: [packages/core/src/detect/runner.ts:69](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/runner.ts#L69)
 
 Stage 3 evidence, per candidate span. Absent until M7.
 
@@ -48,7 +48,7 @@ Stage 3 evidence, per candidate span. Absent until M7.
 
 > `readonly` `optional` **defaultRegion?**: `string`
 
-Defined in: [packages/core/src/detect/runner.ts:63](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/runner.ts#L63)
+Defined in: [packages/core/src/detect/runner.ts:63](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/runner.ts#L63)
 
 The user's default region, passed to validators for ambiguous formats
  such as phone numbers.
@@ -59,7 +59,7 @@ The user's default region, passed to validators for ambiguous formats
 
 > `readonly` `optional` **detectors?**: readonly [`Detector`](Detector.md)[]
 
-Defined in: [packages/core/src/detect/runner.ts:65](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/runner.ts#L65)
+Defined in: [packages/core/src/detect/runner.ts:65](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/runner.ts#L65)
 
 Explicit detector set, overriding the registry. For focused tests.
 
@@ -69,7 +69,7 @@ Explicit detector set, overriding the registry. For focused tests.
 
 > `readonly` `optional` **region?**: `string`
 
-Defined in: [packages/core/src/detect/runner.ts:60](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/runner.ts#L60)
+Defined in: [packages/core/src/detect/runner.ts:60](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/runner.ts#L60)
 
 Restrict to detectors applicable to this region, plus all GLOBAL ones.
 Omit to run every detector, which is the right default — a user pasting a

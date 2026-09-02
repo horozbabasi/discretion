@@ -19,7 +19,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import process from 'node:process';
 
-import { NerEngine, detect, normalize } from '@privacyshield/core';
+import { NerEngine, detect, normalize } from '@discretion/core';
 import type { LabeledDocument } from './corpus/types.js';
 import { generateCorpus } from './corpus/builder.js';
 import { generateHardNegatives } from './corpus/hardNegatives.js';
@@ -117,7 +117,7 @@ async function main(): Promise<void> {
   // ── Combined Stage 1 + Stage 2 run ────────────────────────────────────────
   const dtype = arg('dtype', 'q8')!;
   const cacheDir = resolve(arg('cache', '.hf-cache')!);
-  const { createTransformersClassifier } = await import('@privacyshield/core/ner-transformers');
+  const { createTransformersClassifier } = await import('@discretion/core/ner-transformers');
   const classifier = await createTransformersClassifier({
     model: nerModel,
     dtype,

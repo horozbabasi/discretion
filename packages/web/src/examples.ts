@@ -11,8 +11,8 @@
  * can never drift from what the eval corpus actually produces.
  */
 
-import { LANGUAGES, generateCorpus } from '@privacyshield/eval';
-import type { LabeledDocument } from '@privacyshield/eval';
+import { LANGUAGES, generateCorpus } from '@discretion/eval';
+import type { LabeledDocument } from '@discretion/eval';
 
 /** Pinned so the playground shows the same examples on every load. */
 const EXAMPLES_SEED = 7;

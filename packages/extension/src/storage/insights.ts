@@ -30,8 +30,8 @@
  * ─────────────────────────────────────────────────────────────────────────
  */
 
-import type { EntityFamily, EntityType } from '@privacyshield/core';
-import { familyOf } from '@privacyshield/core';
+import type { EntityFamily, EntityType } from '@discretion/core';
+import { familyOf } from '@discretion/core';
 
 import type { StorageArea } from './area.js';
 import { defaultArea } from './area.js';

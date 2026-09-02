@@ -1,8 +1,8 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / ner/transformersClassifier
+[@discretion/core](../../README.md) / ner/transformersClassifier
 
 # ner/transformersClassifier
 

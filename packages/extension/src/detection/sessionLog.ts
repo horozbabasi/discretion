@@ -30,7 +30,7 @@
  * ─────────────────────────────────────────────────────────────────────────
  */
 
-import type { EntityType } from '@privacyshield/core';
+import type { EntityType } from '@discretion/core';
 
 /** One masked detection, reduced to what may be recorded. */
 export interface LoggedEntity {

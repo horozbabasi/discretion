@@ -7,7 +7,7 @@
  * re-mapping step that could itself be wrong.
  */
 
-import type { EntityType } from '@privacyshield/core';
+import type { EntityType } from '@discretion/core';
 
 export type DocType =
   | 'prose'

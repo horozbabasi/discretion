@@ -1,14 +1,14 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / [index](../README.md) / resolveForMasking
+[@discretion/core](../../README.md) / [index](../README.md) / resolveForMasking
 
 # Function: resolveForMasking()
 
 > **resolveForMasking**\<`C`\>(`candidates`): `C`[]
 
-Defined in: [packages/core/src/mask/masker.ts:74](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/mask/masker.ts#L74)
+Defined in: [packages/core/src/mask/masker.ts:74](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/mask/masker.ts#L74)
 
 Pre-fusion overlap resolution: greedily keep non-overlapping candidates,
 preferring higher confidence, then longer span, then a stable detector id

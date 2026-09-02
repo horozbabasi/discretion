@@ -1,5 +1,5 @@
 /**
- * PrivacyShield — IME composition diagnostic.
+ * Discretion — IME composition diagnostic.
  *
  * Paste this into the DevTools console on a signed-in chatgpt.com tab, then
  * follow docs/manual-checks/isComposing.md. It answers one question:
@@ -25,7 +25,7 @@
     document.querySelector('textarea');
 
   if (composer === null) {
-    console.error('[PrivacyShield] No composer found. Click into the message box and re-paste.');
+    console.error('[Discretion] No composer found. Click into the message box and re-paste.');
     return;
   }
 
@@ -61,7 +61,7 @@
     // isComposing. Recording both means the report can tell you which signal
     // the site could have used.
     console.log(
-      `[PrivacyShield] Enter — isComposing=${record.isComposing} keyCode=${record.keyCode} trusted=${record.trusted}`,
+      `[Discretion] Enter — isComposing=${record.isComposing} keyCode=${record.keyCode} trusted=${record.trusted}`,
     );
   };
 
@@ -84,7 +84,7 @@
         clearedFrom: lastText.length,
       });
       console.log(
-        `[PrivacyShield] composer cleared — a send followed an Enter with isComposing=${String(lastEnterWasComposing)}`,
+        `[Discretion] composer cleared — a send followed an Enter with isComposing=${String(lastEnterWasComposing)}`,
       );
     }
     lastText = now;
@@ -100,7 +100,7 @@
     composer.removeEventListener('keydown', onKeydown, true);
     composer.removeEventListener('compositionstart', onCompositionStart, true);
     observer.disconnect();
-    console.log('[PrivacyShield] diagnostic removed.');
+    console.log('[Discretion] diagnostic removed.');
   };
 
   window.__psImeReport = () => {
@@ -133,13 +133,13 @@
       allEntersTrusted: state.enters.every((e) => e.trusted),
       startedAt: state.startedAt,
     };
-    console.log('[PrivacyShield] ' + verdict);
+    console.log('[Discretion] ' + verdict);
     console.table(state.enters);
     return report;
   };
 
   console.log(
-    '[PrivacyShield] IME diagnostic armed on',
+    '[Discretion] IME diagnostic armed on',
     composer.tagName.toLowerCase() +
       (composer.id ? '#' + composer.id : ''),
     '\nSwitch to a CJK IME, type something that opens the candidate window, and press Enter to commit it.',

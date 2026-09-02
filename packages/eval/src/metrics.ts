@@ -20,8 +20,8 @@
  * Real calibration arrives with Stage 4 fusion in M8.
  */
 
-import { normalize, runStage1 } from '@privacyshield/core';
-import type { Stage1Candidate } from '@privacyshield/core';
+import { normalize, runStage1 } from '@discretion/core';
+import type { Stage1Candidate } from '@discretion/core';
 import type { GroundTruthEntity, LabeledDocument } from './corpus/types.js';
 
 export interface TypeMetrics {

@@ -1,12 +1,12 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / [index](../README.md) / ProtectOptions
+[@discretion/core](../../README.md) / [index](../README.md) / ProtectOptions
 
 # Interface: ProtectOptions
 
-Defined in: [packages/core/src/protect.ts:71](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/protect.ts#L71)
+Defined in: [packages/core/src/protect.ts:71](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/protect.ts#L71)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [packages/core/src/protect.ts:71](https://github.com/horozbabasi/pri
 
 > `readonly` `optional` **calibration?**: [`CalibrationModel`](CalibrationModel.md)
 
-Defined in: [packages/core/src/protect.ts:113](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/protect.ts#L113)
+Defined in: [packages/core/src/protect.ts:113](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/protect.ts#L113)
 
 Overrides the shipped calibration model. For eval work, not for use.
 
@@ -24,7 +24,7 @@ Overrides the shipped calibration model. For eval work, not for use.
 
 > `readonly` `optional` **defaultRegion?**: `string`
 
-Defined in: [packages/core/src/protect.ts:87](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/protect.ts#L87)
+Defined in: [packages/core/src/protect.ts:87](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/protect.ts#L87)
 
 The region used for identifiers that are ambiguous without one.
 
@@ -38,7 +38,7 @@ its confidence — the detector reports nothing.
 
 > `readonly` `optional` **lists?**: [`UserLists`](UserLists.md)
 
-Defined in: [packages/core/src/protect.ts:79](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/protect.ts#L79)
+Defined in: [packages/core/src/protect.ts:79](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/protect.ts#L79)
 
 Values to always report (`deny`) or never report (`allow`).
 
@@ -48,7 +48,7 @@ Values to always report (`deny`) or never report (`allow`).
 
 > `readonly` `optional` **mode?**: [`SubstitutionMode`](../type-aliases/SubstitutionMode.md)
 
-Defined in: [packages/core/src/protect.ts:91](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/protect.ts#L91)
+Defined in: [packages/core/src/protect.ts:91](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/protect.ts#L91)
 
 `'surrogate'` (realistic stand-ins, default) or `'token'` (`[EMAIL_1]`).
 
@@ -58,7 +58,7 @@ Defined in: [packages/core/src/protect.ts:91](https://github.com/horozbabasi/pri
 
 > `readonly` `optional` **ner?**: [`NerRecognizer`](NerRecognizer.md)
 
-Defined in: [packages/core/src/protect.ts:111](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/protect.ts#L111)
+Defined in: [packages/core/src/protect.ts:111](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/protect.ts#L111)
 
 Stage 2. Omit to run Stages 0, 1, 3 and 4 only.
 
@@ -72,7 +72,7 @@ of the usage guide.
 
 > `readonly` `optional` **profile?**: [`ProfileName`](../type-aliases/ProfileName.md) \| [`SensitivityProfile`](SensitivityProfile.md)
 
-Defined in: [packages/core/src/protect.ts:77](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/protect.ts#L77)
+Defined in: [packages/core/src/protect.ts:77](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/protect.ts#L77)
 
 Which findings are worth reporting. A `ProfileName` selects one of the
 three SPEC profiles; a `SensitivityProfile` supplies your own.
@@ -84,7 +84,7 @@ Default: `'balanced'`.
 
 > `readonly` `optional` **seed?**: `number`
 
-Defined in: [packages/core/src/protect.ts:93](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/protect.ts#L93)
+Defined in: [packages/core/src/protect.ts:93](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/protect.ts#L93)
 
 Varies surrogate selection. Fixed input plus fixed seed is reproducible.
 
@@ -94,7 +94,7 @@ Varies surrogate selection. Fixed input plus fixed seed is reproducible.
 
 > `readonly` `optional` **typeAllowed?**: (`type`) => `boolean`
 
-Defined in: [packages/core/src/protect.ts:89](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/protect.ts#L89)
+Defined in: [packages/core/src/protect.ts:89](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/protect.ts#L89)
 
 Per-type opt-out, applied before a surrogate is minted.
 
@@ -114,7 +114,7 @@ Per-type opt-out, applied before a surrogate is minted.
 
 > `readonly` `optional` **vault?**: [`Vault`](../classes/Vault.md)
 
-Defined in: [packages/core/src/protect.ts:103](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/protect.ts#L103)
+Defined in: [packages/core/src/protect.ts:103](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/protect.ts#L103)
 
 The vault that remembers which surrogate stood in for which value.
 

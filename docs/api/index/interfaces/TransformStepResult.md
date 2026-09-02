@@ -1,12 +1,12 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / [index](../README.md) / TransformStepResult
+[@discretion/core](../../README.md) / [index](../README.md) / TransformStepResult
 
 # Interface: TransformStepResult
 
-Defined in: [packages/core/src/offsetMap.ts:190](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/offsetMap.ts#L190)
+Defined in: [packages/core/src/offsetMap.ts:190](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/offsetMap.ts#L190)
 
 What every transform returns; null means "nothing to do" (identity).
 
@@ -16,7 +16,7 @@ What every transform returns; null means "nothing to do" (identity).
 
 > **changes**: [`StepChange`](StepChange.md)[]
 
-Defined in: [packages/core/src/offsetMap.ts:194](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/offsetMap.ts#L194)
+Defined in: [packages/core/src/offsetMap.ts:194](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/offsetMap.ts#L194)
 
 ***
 
@@ -24,7 +24,7 @@ Defined in: [packages/core/src/offsetMap.ts:194](https://github.com/horozbabasi/
 
 > **map**: `Int32Array`
 
-Defined in: [packages/core/src/offsetMap.ts:193](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/offsetMap.ts#L193)
+Defined in: [packages/core/src/offsetMap.ts:193](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/offsetMap.ts#L193)
 
 output index → input index, with sentinel (length text.length + 1).
 
@@ -34,4 +34,4 @@ output index → input index, with sentinel (length text.length + 1).
 
 > **text**: `string`
 
-Defined in: [packages/core/src/offsetMap.ts:191](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/offsetMap.ts#L191)
+Defined in: [packages/core/src/offsetMap.ts:191](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/offsetMap.ts#L191)

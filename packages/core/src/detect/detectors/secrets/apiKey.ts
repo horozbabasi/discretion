@@ -2,7 +2,7 @@
  * API_KEY — known-prefix provider tokens, driven by the data-file table.
  *
  * SPEC.md wants providers addable "without code changes", so this single
- * detector reads @privacyshield/data's SECRET_PROVIDERS. The pattern is the
+ * detector reads @discretion/data's SECRET_PROVIDERS. The pattern is the
  * alternation of every prefix; the validator resolves the longest matching
  * prefix, checks the body charset and length, and runs the provider's
  * checksum where one exists (GitHub's base62 CRC32).
@@ -11,8 +11,8 @@
  * sibling of the live prefixes: detected so eval sees them, never masked.
  */
 
-import { SECRET_PROVIDERS, SECRET_CHARSET_PATTERN } from '@privacyshield/data';
-import type { SecretProvider } from '@privacyshield/data';
+import { SECRET_PROVIDERS, SECRET_CHARSET_PATTERN } from '@discretion/data';
+import type { SecretProvider } from '@discretion/data';
 import { registerDetector } from '../../registry.js';
 import { CONFIDENCE, GLOBAL_REGION, invalid, valid } from '../../types.js';
 import type { ValidationContext, ValidationResult } from '../../types.js';

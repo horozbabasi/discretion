@@ -29,7 +29,7 @@ BUILD = ROOT / 'build'
 FIXTURE = ROOT / 'test' / 'fixtures' / 'claude' / 'composer.html'
 
 if not (BUILD / 'content.js').is_file():
-    print(f'FAIL: no build at {BUILD}. Run: npm run build --workspace @privacyshield/extension')
+    print(f'FAIL: no build at {BUILD}. Run: npm run build --workspace @discretion/extension')
     sys.exit(1)
 
 fixture_html = FIXTURE.read_text(encoding='utf-8')

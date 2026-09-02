@@ -1,14 +1,14 @@
-[**@privacyshield/core**](../../../../README.md)
+[**@discretion/core**](../../../../README.md)
 
 ***
 
-[@privacyshield/core](../../../../README.md) / [index](../../../README.md) / [checksums](../README.md) / luhnCheckDigit
+[@discretion/core](../../../../README.md) / [index](../../../README.md) / [checksums](../README.md) / luhnCheckDigit
 
 # Function: luhnCheckDigit()
 
 > **luhnCheckDigit**(`payload`): `number` \| `null`
 
-Defined in: [packages/core/src/checksums/luhn.ts:39](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/checksums/luhn.ts#L39)
+Defined in: [packages/core/src/checksums/luhn.ts:39](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/checksums/luhn.ts#L39)
 
 The Luhn check digit for a payload that does NOT yet include one.
 

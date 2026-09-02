@@ -14,7 +14,7 @@
  *
  * So the popup sends one message to the active tab and lets whoever is running
  * there answer. A content script replies with its own site id; a site with no
- * content script does not reply at all, and that silence IS the "PrivacyShield
+ * content script does not reply at all, and that silence IS the "Discretion
  * does not run on this site" state. `tabs.query` is still used, but only for
  * the tab ID, which needs no permission and carries nothing.
  *
@@ -23,8 +23,8 @@
  * ─────────────────────────────────────────────────────────────────────────
  */
 
-import type { EntityFamily } from '@privacyshield/core';
-import { PROFILES } from '@privacyshield/core';
+import type { EntityFamily } from '@discretion/core';
+import { PROFILES } from '@discretion/core';
 
 import { PortNerRecognizer } from '../detection/portRecognizer.js';
 import { entityLabel, isRtl, plural, t, uiLocale } from '../i18n/index.js';

@@ -24,7 +24,7 @@ await build({
       entry: join(ROOT, 'src/devtools/liveProbe.ts'),
       formats: ['iife'],
       fileName: () => 'live-probe.js',
-      name: 'PrivacyShieldLiveProbe',
+      name: 'DiscretionLiveProbe',
     },
     rollupOptions: { external: [] },
   },

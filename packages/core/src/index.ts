@@ -1,5 +1,5 @@
 /**
- * @privacyshield/core — public API.
+ * @discretion/core — public API.
  *
  * M1 surface: shared types, script detection, Stage 0 normalization with an
  * exact bidirectional offset map.
@@ -180,7 +180,7 @@ export type { CalibrationConversion, GeneratedCalibrationModel } from './fuse/de
 // Both of these were named in a public signature but not exported, so a
 // consumer could receive one and had no way to name its type.
 //   SeverityCategory  reached through ExposureReport, which computeExposure()
-//                     returns; it originates in @privacyshield/data.
+//                     returns; it originates in @discretion/data.
 //   PersonPool        the element type of the exported PERSON_POOLS.
-export type { SeverityCategory } from '@privacyshield/data';
+export type { SeverityCategory } from '@discretion/data';
 export type { PersonPool } from './mask/surrogatePools.js';

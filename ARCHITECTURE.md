@@ -1,4 +1,4 @@
-# PrivacyShield — Architecture Notes
+# Discretion — Architecture Notes
 
 Working notes on ratified design decisions. SPEC.md is the product
 specification; this file records the _why_ behind decisions the spec states
@@ -467,7 +467,7 @@ environment-agnostic, same rule as every stage before it.
 **Injected classifier.** Core's NER logic (`packages/core/src/ner/`)
 depends on a three-member `TokenClassifier` interface — id, window size,
 `classify(text)` — not on Transformers.js. The ONNX-backed implementation
-lives behind the dedicated `@privacyshield/core/ner-transformers` subpath
+lives behind the dedicated `@discretion/core/ner-transformers` subpath
 export, so consumers that never run Stage 2 never load the ONNX runtime,
 and alignment/decoding/chunking/engine logic is tested against a
 deterministic mock without model weights. This is also what keeps the
@@ -1113,7 +1113,7 @@ script was `tsc -b`, which does not build the web bundle, so
 `npm run build` did not produce what its name implies and a browser check
 run after it could test a stale bundle — which is exactly what happened
 once during M8 before the screenshot caught it. Now
-`tsc -b && npm run build --workspace @privacyshield/web`; `build:ts`
+`tsc -b && npm run build --workspace @discretion/web`; `build:ts`
 keeps the fast path for `eval` and `bench`, which have no use for the
 bundle.
 
@@ -4855,7 +4855,7 @@ Every other code still refuses outright, because each means we do not know
 WHICH element is being submitted, and no question to a user can establish that:
 `undecidable`, `identity-mismatch`, `detached`.
 
-The panel gains a notice - "Check this is your message... PrivacyShield did not
+The panel gains a notice - "Check this is your message... Discretion did not
 see you type it" - and the primary action is relabelled **"Protect and send"**.
 The label is the answer to the question above it; "Mask and send" would read as
 the same routine confirmation as every other send, which is exactly what this
@@ -5003,7 +5003,7 @@ DEGRADED is a different thing from the one that was removed.
   before   reading #1 at   7 ms, 126 elements,  0 controls, 1 custom -> PAINTED
   after    reading #1 at  15 ms, 764 elements, 39 controls, 0 custom -> PAINTED
 
-`0 custom elements` is the fix: our own `privacyshield-surface` no longer
+`0 custom elements` is the fix: our own `discretion-surface` no longer
 counts as evidence that the page painted. The 126-element shell reading is gone
 entirely.
 
@@ -5087,7 +5087,7 @@ after it is explained by neither.
 
 **Defect 1: the paint gate counted our own element as evidence the page had
 painted** (D49). `paintEvidence` summed custom elements, and
-`privacyshield-surface` is mounted by this extension on every page before
+`discretion-surface` is mounted by this extension on every page before
 anything is measured - so `painted` was true BY CONSTRUCTION and the gate could
 never report NOT PAINTED once we had attached. It declared a 126-element shell
 PAINTED at 7 ms on the strength of "1 custom element", which was us. Circular
@@ -6273,7 +6273,7 @@ that happens to be right today are indistinguishable.
 #### The cast that was hiding a question
 
 Every consumer converted the fitted calibration model with
-`as unknown as CalibrationModel`, because `@privacyshield/data` types its keys
+`as unknown as CalibrationModel`, because `@discretion/data` types its keys
 as `Record<string, …>` - the generator has no access to the union.
 
 The cast asserts the keys are valid entity types without checking. A model
@@ -6315,8 +6315,8 @@ root by npm, which is fragile independently of this change.
 
 #### The package would not have installed at all
 
-Both packages were `private: true`, and core pinned `@privacyshield/data` at
-`*`. Published as-is, npm would have tried to resolve `@privacyshield/data@*`
+Both packages were `private: true`, and core pinned `@discretion/data` at
+`*`. Published as-is, npm would have tried to resolve `@discretion/data@*`
 from the public registry, where it does not exist - and where the name is
 UNCLAIMED. That is not merely a broken install; an unclaimed name that a
 published package tries to resolve is a supply-chain hazard. `data` is now
@@ -6324,12 +6324,12 @@ published alongside core at an exact pin.
 
 #### The name, which SPEC asked to be decided here
 
-`@privacyshield/core` and `@privacyshield/data`. Checked against the registry
+`@discretion/core` and `@discretion/data`. Checked against the registry
 rather than assumed: both return E404, and the same run resolves a package that
 does exist, so E404 means absent rather than unreachable.
 
 The decision has a real dependency worth stating: SPEC records that the
-PrivacyShield product name is still an open pre-public question, and the scoped
+Discretion product name is still an open pre-public question, and the scoped
 package name is coupled to it. That coupling costs nothing while nothing is
 published - renaming an unpublished package is free - and becomes expensive
 immediately afterwards, because npm has no rename, only deprecate-and-republish.
@@ -6649,7 +6649,7 @@ Found by fetching the privacy-policy URL that the previous commit had just
 recorded as **DONE**, instead of trusting the entry that said so.
 
 ```
-https://github.com/horozbabasi/privacyshield/blob/main/PRIVACY.md   404
+https://github.com/horozbabasi/discretion/blob/main/PRIVACY.md   404
 https://raw.githubusercontent.com/.../main/README.md                404
 git ls-remote without credentials                                   refused
 gh repo view --json isPrivate                                       true
@@ -6720,7 +6720,7 @@ stretch of work, and the same lesson each time: a check built on what the
 output LOOKS like rather than on the property being claimed.
 
 The screenshot itself was dropped rather than recaptioned. Framing a popup that
-reads "PrivacyShield does not run on this site" under a caption about pages
+reads "Discretion does not run on this site" under a caption about pages
 being protected would sell the product with a picture of it doing nothing. An
 honest "Protecting this page" capture needs the popup opened while a supported
 site is the ACTIVE TAB, which this harness cannot arrange - the popup asks the
@@ -6804,6 +6804,72 @@ the STOP button. Both remain documented limitations (D57b), unchanged.
 One `こんにちは` was sent to each of the three accounts, with the user's
 explicit prior agreement. That is the control step, and it is the reason the
 negative results mean anything.
+
+### D64 - The product is called Discretion
+
+"PrivacyShield" collides with the EU-US Privacy Shield, the data-transfer
+framework struck down by Schrems II in 2020 and replaced by the Data Privacy
+Framework. For a privacy tool that is the worst possible collision: searching
+the name returns a legal instrument, and an invalidated one.
+
+**Discretion** carries two meanings and both are true of this product. It is
+the quality of keeping confidences, and it is the power to decide - and the
+review panel exists precisely so that the USER decides, item by item, what gets
+masked. The product's central design choice is in the name.
+
+It is also an ordinary word used arbitrarily for software, which is the strong
+trademark posture (Signal, Slack, Notion) rather than the descriptive one that
+"PrivacyShield" had.
+
+#### Three finalists rejected for concrete reasons
+
+- **understudy** - the best metaphor available, a stand-in indistinguishable
+  from the principal. Rejected because the npm package under that name is "an
+  action interceptor for dynamic extensible systems": a package in an adjacent
+  domain, which makes `@understudy/*` actively confusing.
+- **antechamber** - the room where something waits before being admitted, which
+  is exactly what the send gate does. Rejected because *Antichamber* is a
+  well-known puzzle game one letter away. A name that loses its own search
+  results is not a name.
+- **stuntdouble** - vivid and free. Rejected twice over: "double" is
+  established software-testing vocabulary (test doubles, mocks, fakes), so a
+  library called `@stuntdouble/core` misdirects developers; and the
+  playfulness is wrong for an audience that includes lawyers and clinicians
+  handling client data.
+
+#### What was checked
+
+npm, against the live registry: `discretion` free as a plain package AND as the
+`@discretion` scope, with `discretions`, `discretion-core` and `discretionary`
+also free. Chrome Web Store: no extension under the name. GitHub:
+`horozbabasi/discretion` free.
+
+**Trademark was NOT cleared, and that is stated rather than implied.** A web
+search surfaced no software mark, which is not the same as clearance - that
+needs USPTO and EUIPO database checks and probably counsel. What can be said is
+that nothing obvious collides.
+
+#### The rename touched a safety-critical surface
+
+Four of the 21 safety-critical strings contain the product name -
+`panel.degraded.pageTitle`, `panel.degraded.sendTitle`,
+`popup.status.unsupported` and `panel.unwitnessed.body` - so every locale's
+digest changed and the review sheets were regenerated.
+
+Nothing was invalidated, because no locale had a sign-off. But it is worth
+naming what WOULD have happened: a signed-off locale would have dropped out of
+the build automatically, because the reviewer approved different words. That is
+the digest mechanism doing exactly the job it was built for, on a change nobody
+would have thought to re-review.
+
+#### What was deliberately not changed
+
+The shield icon. It carries no text, and a shield remains a conventional,
+non-misleading mark for a privacy tool even though the name no longer says
+"shield". Redrawing it is a design decision, not a rename consequence.
+
+The four absolute paths in old commits. Rewriting 155 pushed commits to erase a
+generic Windows username was judged not worth invalidating every SHA.
 
 ## Status after M11
 
@@ -6907,7 +6973,7 @@ package and run detection and masking from the docs alone."
 | npm publish workflow with provenance | **WRITTEN, NOT EXERCISED.** `.github/workflows/publish.yml`. It has never run - the repo has no other CI, so its first execution will be its first test (see below) |
 | Standalone usage guide, independent of the extension | **DONE.** The README plus five runnable examples, executed against the packed tarball |
 | CHANGELOG | **DONE** |
-| Package name decided | **DONE.** `@privacyshield/core`, `@privacyshield/data`; both verified unregistered |
+| Package name decided | **DONE.** `@discretion/core`, `@discretion/data`; both verified unregistered |
 | Acceptance test | **DONE, and it passes.** `verify-standalone-consumer.sh` |
 
 ### What the numbers say now

@@ -1,12 +1,12 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / [index](../README.md) / Stage1Candidate
+[@discretion/core](../../README.md) / [index](../README.md) / Stage1Candidate
 
 # Interface: Stage1Candidate
 
-Defined in: [packages/core/src/detect/types.ts:274](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/types.ts#L274)
+Defined in: [packages/core/src/detect/types.ts:274](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/types.ts#L274)
 
 A Stage 1 candidate, extending the shared `Candidate` with the original-text
 span.
@@ -24,7 +24,7 @@ D7: the alternative — redefining `Candidate.start` to mean original offsets
 
 > `readonly` **canonical**: `string`
 
-Defined in: [packages/core/src/detect/types.ts:292](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/types.ts#L292)
+Defined in: [packages/core/src/detect/types.ts:292](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/types.ts#L292)
 
 Canonical form, separators stripped and case normalized.
 
@@ -34,7 +34,7 @@ Canonical form, separators stripped and case normalized.
 
 > `readonly` **detectorId**: `string`
 
-Defined in: [packages/core/src/detect/types.ts:287](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/types.ts#L287)
+Defined in: [packages/core/src/detect/types.ts:287](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/types.ts#L287)
 
 ***
 
@@ -42,7 +42,7 @@ Defined in: [packages/core/src/detect/types.ts:287](https://github.com/horozbaba
 
 > `readonly` **end**: `number`
 
-Defined in: [packages/core/src/detect/types.ts:280](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/types.ts#L280)
+Defined in: [packages/core/src/detect/types.ts:280](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/types.ts#L280)
 
 End offset in the NORMALIZED text (exclusive).
 
@@ -52,7 +52,7 @@ End offset in the NORMALIZED text (exclusive).
 
 > `readonly` `optional` **metadata?**: `Readonly`\<`Record`\<`string`, `unknown`\>\>
 
-Defined in: [packages/core/src/detect/types.ts:293](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/types.ts#L293)
+Defined in: [packages/core/src/detect/types.ts:293](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/types.ts#L293)
 
 ***
 
@@ -60,7 +60,7 @@ Defined in: [packages/core/src/detect/types.ts:293](https://github.com/horozbaba
 
 > `readonly` **originalEnd**: `number`
 
-Defined in: [packages/core/src/detect/types.ts:284](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/types.ts#L284)
+Defined in: [packages/core/src/detect/types.ts:284](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/types.ts#L284)
 
 End offset in the ORIGINAL text (exclusive), via the Stage 0 map.
 
@@ -70,7 +70,7 @@ End offset in the ORIGINAL text (exclusive), via the Stage 0 map.
 
 > `readonly` **originalStart**: `number`
 
-Defined in: [packages/core/src/detect/types.ts:282](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/types.ts#L282)
+Defined in: [packages/core/src/detect/types.ts:282](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/types.ts#L282)
 
 Start offset in the ORIGINAL text (inclusive), via the Stage 0 map.
 
@@ -80,7 +80,7 @@ Start offset in the ORIGINAL text (inclusive), via the Stage 0 map.
 
 > `readonly` **rawConfidence**: `number`
 
-Defined in: [packages/core/src/detect/types.ts:285](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/types.ts#L285)
+Defined in: [packages/core/src/detect/types.ts:285](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/types.ts#L285)
 
 ***
 
@@ -88,7 +88,7 @@ Defined in: [packages/core/src/detect/types.ts:285](https://github.com/horozbaba
 
 > `readonly` **sensitive**: `boolean`
 
-Defined in: [packages/core/src/detect/types.ts:290](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/types.ts#L290)
+Defined in: [packages/core/src/detect/types.ts:290](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/types.ts#L290)
 
 False for known test/documentation values, which are detected but must
  never be masked.
@@ -99,7 +99,7 @@ False for known test/documentation values, which are detected but must
 
 > `readonly` **stage**: `"stage1-validated-identifier"`
 
-Defined in: [packages/core/src/detect/types.ts:286](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/types.ts#L286)
+Defined in: [packages/core/src/detect/types.ts:286](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/types.ts#L286)
 
 ***
 
@@ -107,7 +107,7 @@ Defined in: [packages/core/src/detect/types.ts:286](https://github.com/horozbaba
 
 > `readonly` **start**: `number`
 
-Defined in: [packages/core/src/detect/types.ts:278](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/types.ts#L278)
+Defined in: [packages/core/src/detect/types.ts:278](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/types.ts#L278)
 
 Start offset in the NORMALIZED text (inclusive).
 
@@ -117,7 +117,7 @@ Start offset in the NORMALIZED text (inclusive).
 
 > `readonly` **text**: `string`
 
-Defined in: [packages/core/src/detect/types.ts:275](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/types.ts#L275)
+Defined in: [packages/core/src/detect/types.ts:275](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/types.ts#L275)
 
 ***
 
@@ -125,7 +125,7 @@ Defined in: [packages/core/src/detect/types.ts:275](https://github.com/horozbaba
 
 > `readonly` **type**: [`EntityType`](../type-aliases/EntityType.md)
 
-Defined in: [packages/core/src/detect/types.ts:276](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/types.ts#L276)
+Defined in: [packages/core/src/detect/types.ts:276](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/types.ts#L276)
 
 ***
 
@@ -133,6 +133,6 @@ Defined in: [packages/core/src/detect/types.ts:276](https://github.com/horozbaba
 
 > `readonly` `optional` **validatorPassed?**: `string`
 
-Defined in: [packages/core/src/detect/types.ts:295](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/types.ts#L295)
+Defined in: [packages/core/src/detect/types.ts:295](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/types.ts#L295)
 
 Which validator passed, for the entity explanation.

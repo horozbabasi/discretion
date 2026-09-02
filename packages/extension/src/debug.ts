@@ -20,7 +20,7 @@
  */
 
 /** The extension's own injected host. Never evidence about the page. */
-const SURFACE_HOST_TAG = 'privacyshield-surface';
+const SURFACE_HOST_TAG = 'discretion-surface';
 
 import {
   lastRegionAdmission,
@@ -35,7 +35,7 @@ import type { SubmitPathEntry } from './adapters/index.js';
 import type { AdapterDiagnostic, EnvironmentForensics } from './diagnostics.js';
 
 const STORAGE_KEY = 'debugLogging';
-const PREFIX = 'PrivacyShield';
+const PREFIX = 'Discretion';
 
 let overrideEnabled: boolean | null = null;
 
@@ -190,7 +190,7 @@ export function paintEvidence(f: EnvironmentForensics): {
     (f.probes['button']?.deep ?? 0) + (f.probes['[role="button"]']?.deep ?? 0);
   const editables = f.editableCandidates.length;
   // OUR OWN HOST IS NOT EVIDENCE THE PAGE PAINTED, and counting it was
-  // circular: `privacyshield-surface` is mounted by this extension, on every
+  // circular: `discretion-surface` is mounted by this extension, on every
   // page, before anything is measured - so `painted` was true by construction
   // and the gate could never report NOT PAINTED once we had attached.
   //

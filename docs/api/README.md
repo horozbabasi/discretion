@@ -1,8 +1,8 @@
-**@privacyshield/core**
+**@discretion/core**
 
 ***
 
-# @privacyshield/core
+# @discretion/core
 
 ## Modules
 

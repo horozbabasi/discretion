@@ -52,7 +52,7 @@ import {
   normalize,
   resolveOverlaps,
   toDetectedEntity,
-} from '@privacyshield/core';
+} from '@discretion/core';
 
 import { entityLabel } from '../i18n/index.js';
 import type {
@@ -67,9 +67,9 @@ import type {
   SubstitutionMode,
   UserLists,
   Vault,
-} from '@privacyshield/core';
-import { decide } from '@privacyshield/core';
-import { CALIBRATION_MODEL } from '@privacyshield/data';
+} from '@discretion/core';
+import { decide } from '@discretion/core';
+import { CALIBRATION_MODEL } from '@discretion/data';
 
 /** The committed model, shaped for core's calibrator. */
 const MODEL = CALIBRATION_MODEL as unknown as CalibrationModel;

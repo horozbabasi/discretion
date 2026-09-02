@@ -1,14 +1,14 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / [index](../README.md) / mask
+[@discretion/core](../../README.md) / [index](../README.md) / mask
 
 # Function: mask()
 
 > **mask**(`text`, `vault`, `options?`): [`MaskResult`](../interfaces/MaskResult.md)
 
-Defined in: [packages/core/src/mask/masker.ts:180](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/mask/masker.ts#L180)
+Defined in: [packages/core/src/mask/masker.ts:180](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/mask/masker.ts#L180)
 
 End-to-end: normalize, run Stage 1, and mask the original text. The
 convenience entry point for the playground (M5) and the tests; the

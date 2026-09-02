@@ -14,14 +14,14 @@
 
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { Vault } from '@privacyshield/core';
+import { Vault } from '@discretion/core';
 
 import { DomRestorer } from '../src/detection/restore.js';
 import { resetDocument } from './dom-helpers.js';
 
 beforeEach(resetDocument);
 
-const HOST_TAG = 'privacyshield-surface';
+const HOST_TAG = 'discretion-surface';
 
 function vaultWith(pairs: readonly (readonly [string, string])[]): Vault {
   const vault = new Vault();

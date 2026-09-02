@@ -1,12 +1,12 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / [index](../README.md) / ProtectedEntity
+[@discretion/core](../../README.md) / [index](../README.md) / ProtectedEntity
 
 # Interface: ProtectedEntity
 
-Defined in: [packages/core/src/protect.ts:117](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/protect.ts#L117)
+Defined in: [packages/core/src/protect.ts:117](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/protect.ts#L117)
 
 One finding, with everything needed to show it and nothing that leaks it.
 
@@ -16,7 +16,7 @@ One finding, with everything needed to show it and nothing that leaks it.
 
 > `readonly` **confidence**: `number`
 
-Defined in: [packages/core/src/protect.ts:128](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/protect.ts#L128)
+Defined in: [packages/core/src/protect.ts:128](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/protect.ts#L128)
 
 Calibrated, comparable across types. Never the raw detector score.
 
@@ -26,7 +26,7 @@ Calibrated, comparable across types. Never the raw detector score.
 
 > `readonly` **explanation**: [`EntityExplanation`](EntityExplanation.md)
 
-Defined in: [packages/core/src/protect.ts:130](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/protect.ts#L130)
+Defined in: [packages/core/src/protect.ts:130](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/protect.ts#L130)
 
 Which evidence fired. Structured, so callers can render it in any language.
 
@@ -36,7 +36,7 @@ Which evidence fired. Structured, so callers can render it in any language.
 
 > `readonly` **id**: `string`
 
-Defined in: [packages/core/src/protect.ts:125](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/protect.ts#L125)
+Defined in: [packages/core/src/protect.ts:125](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/protect.ts#L125)
 
 The vault id, stable across re-analyses of the same value.
 
@@ -50,7 +50,7 @@ document. An index-based id would silently move the decision.
 
 > `readonly` **originalEnd**: `number`
 
-Defined in: [packages/core/src/protect.ts:135](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/protect.ts#L135)
+Defined in: [packages/core/src/protect.ts:135](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/protect.ts#L135)
 
 ***
 
@@ -58,7 +58,7 @@ Defined in: [packages/core/src/protect.ts:135](https://github.com/horozbabasi/pr
 
 > `readonly` **originalStart**: `number`
 
-Defined in: [packages/core/src/protect.ts:134](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/protect.ts#L134)
+Defined in: [packages/core/src/protect.ts:134](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/protect.ts#L134)
 
 Offsets into the ORIGINAL text, not the normalized text.
 
@@ -68,7 +68,7 @@ Offsets into the ORIGINAL text, not the normalized text.
 
 > `readonly` **surrogate**: `string`
 
-Defined in: [packages/core/src/protect.ts:132](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/protect.ts#L132)
+Defined in: [packages/core/src/protect.ts:132](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/protect.ts#L132)
 
 What replaced it in `maskedText`.
 
@@ -78,4 +78,4 @@ What replaced it in `maskedText`.
 
 > `readonly` **type**: [`EntityType`](../type-aliases/EntityType.md)
 
-Defined in: [packages/core/src/protect.ts:126](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/protect.ts#L126)
+Defined in: [packages/core/src/protect.ts:126](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/protect.ts#L126)

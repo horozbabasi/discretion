@@ -10,8 +10,8 @@
  * blocks (PEM, MRZ) that only some document types can host.
  */
 
-import { generate } from '@privacyshield/core';
-import type { EntityType } from '@privacyshield/core';
+import { generate } from '@discretion/core';
+import type { EntityType } from '@discretion/core';
 
 export interface EntityKind {
   readonly kind: string;

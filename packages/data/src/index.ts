@@ -1,5 +1,5 @@
 /**
- * @privacyshield/data — generated Unicode data.
+ * @discretion/data — generated Unicode data.
  *
  * M1 content: the confusables table, generated from the official Unicode
  * security data by scripts/build-confusables.ts (see that file for

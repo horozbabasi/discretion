@@ -1,12 +1,12 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / [index](../README.md) / DetectorError
+[@discretion/core](../../README.md) / [index](../README.md) / DetectorError
 
 # Class: DetectorError
 
-Defined in: [packages/core/src/detect/runner.ts:44](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/runner.ts#L44)
+Defined in: [packages/core/src/detect/runner.ts:44](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/runner.ts#L44)
 
 Thrown when a detector itself throws. Names the detector; never the value.
 
@@ -20,7 +20,7 @@ Thrown when a detector itself throws. Names the detector; never the value.
 
 > **new DetectorError**(`detectorId`, `cause`): `DetectorError`
 
-Defined in: [packages/core/src/detect/runner.ts:45](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/runner.ts#L45)
+Defined in: [packages/core/src/detect/runner.ts:45](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/runner.ts#L45)
 
 #### Parameters
 
@@ -46,7 +46,7 @@ Defined in: [packages/core/src/detect/runner.ts:45](https://github.com/horozbaba
 
 > `readonly` **cause**: `unknown`
 
-Defined in: [packages/core/src/detect/runner.ts:47](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/runner.ts#L47)
+Defined in: [packages/core/src/detect/runner.ts:47](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/runner.ts#L47)
 
 #### Inherited from
 
@@ -58,7 +58,7 @@ Defined in: [packages/core/src/detect/runner.ts:47](https://github.com/horozbaba
 
 > `readonly` **detectorId**: `string`
 
-Defined in: [packages/core/src/detect/runner.ts:46](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/runner.ts#L46)
+Defined in: [packages/core/src/detect/runner.ts:46](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/runner.ts#L46)
 
 ***
 

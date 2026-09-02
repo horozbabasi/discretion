@@ -6,13 +6,13 @@ export default defineConfig({
     alias: {
       // Let tests run straight from TypeScript source without a prior `tsc -b`.
       // (The compiled workspace packages point at dist/ via their package.json.)
-      '@privacyshield/data': fileURLToPath(
+      '@discretion/data': fileURLToPath(
         new URL('./packages/data/src/index.ts', import.meta.url),
       ),
-      '@privacyshield/core': fileURLToPath(
+      '@discretion/core': fileURLToPath(
         new URL('./packages/core/src/index.ts', import.meta.url),
       ),
-      '@privacyshield/eval': fileURLToPath(
+      '@discretion/eval': fileURLToPath(
         new URL('./packages/eval/src/index.ts', import.meta.url),
       ),
     },

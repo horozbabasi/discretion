@@ -15,8 +15,8 @@
  * not by truncating the benchmark.
  */
 
-import { NerEngine, normalize, runStage2 } from '@privacyshield/core';
-import type { TokenClassifier } from '@privacyshield/core';
+import { NerEngine, normalize, runStage2 } from '@discretion/core';
+import type { TokenClassifier } from '@discretion/core';
 import { generateCorpus } from '../corpus/builder.js';
 import { generateHardNegatives } from '../corpus/hardNegatives.js';
 import type { EvalResult, ScoredCandidate } from '../metrics.js';

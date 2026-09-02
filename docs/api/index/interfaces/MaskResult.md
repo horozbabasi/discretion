@@ -1,12 +1,12 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / [index](../README.md) / MaskResult
+[@discretion/core](../../README.md) / [index](../README.md) / MaskResult
 
 # Interface: MaskResult
 
-Defined in: [packages/core/src/mask/masker.ts:57](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/mask/masker.ts#L57)
+Defined in: [packages/core/src/mask/masker.ts:57](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/mask/masker.ts#L57)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [packages/core/src/mask/masker.ts:57](https://github.com/horozbabasi
 
 > `readonly` **entities**: readonly [`MaskedEntity`](MaskedEntity.md)[]
 
-Defined in: [packages/core/src/mask/masker.ts:59](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/mask/masker.ts#L59)
+Defined in: [packages/core/src/mask/masker.ts:59](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/mask/masker.ts#L59)
 
 ***
 
@@ -22,7 +22,7 @@ Defined in: [packages/core/src/mask/masker.ts:59](https://github.com/horozbabasi
 
 > `readonly` **maskedText**: `string`
 
-Defined in: [packages/core/src/mask/masker.ts:58](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/mask/masker.ts#L58)
+Defined in: [packages/core/src/mask/masker.ts:58](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/mask/masker.ts#L58)
 
 ***
 
@@ -30,4 +30,4 @@ Defined in: [packages/core/src/mask/masker.ts:58](https://github.com/horozbabasi
 
 > `readonly` **vaultEntries**: readonly [`VaultEntry`](VaultEntry.md)[]
 
-Defined in: [packages/core/src/mask/masker.ts:60](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/mask/masker.ts#L60)
+Defined in: [packages/core/src/mask/masker.ts:60](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/mask/masker.ts#L60)

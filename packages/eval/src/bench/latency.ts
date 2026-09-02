@@ -24,7 +24,7 @@
 import { cpus, totalmem } from 'node:os';
 import process from 'node:process';
 
-import { detect, normalize, NerEngine } from '@privacyshield/core';
+import { detect, normalize, NerEngine } from '@discretion/core';
 import { generateCorpus } from '../corpus/builder.js';
 import { generateHardNegatives } from '../corpus/hardNegatives.js';
 
@@ -138,7 +138,7 @@ async function main(): Promise<void> {
 
   const model = arg('ner');
   if (model !== undefined) {
-    const { createTransformersClassifier } = await import('@privacyshield/core/ner-transformers');
+    const { createTransformersClassifier } = await import('@discretion/core/ner-transformers');
     const classifier = await createTransformersClassifier({
       model,
       dtype: arg('dtype', 'q8')!,

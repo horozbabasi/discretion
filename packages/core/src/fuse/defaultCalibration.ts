@@ -4,7 +4,7 @@
  * ─────────────────────────────────────────────────────────────────────────
  * THE CAST THIS REPLACES
  *
- * `@privacyshield/data` types the fitted model's `perType` as
+ * `@discretion/data` types the fitted model's `perType` as
  * `Record<string, CalibrationCurveData>`, because it is generated from an eval
  * run and the generator has no access to the `EntityType` union. Core's
  * `CalibrationModel` wants `Partial<Record<EntityType, CalibrationCurve>>`.

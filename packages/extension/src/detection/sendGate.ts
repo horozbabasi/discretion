@@ -28,8 +28,8 @@
  * ─────────────────────────────────────────────────────────────────────────
  */
 
-import { guardEgress } from '@privacyshield/core';
-import type { DetectionStage, Vault } from '@privacyshield/core';
+import { guardEgress } from '@discretion/core';
+import type { DetectionStage, Vault } from '@discretion/core';
 
 import type { AnalyzedEntity } from './analyze.js';
 

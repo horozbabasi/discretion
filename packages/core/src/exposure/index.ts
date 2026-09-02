@@ -29,7 +29,7 @@
  * `ExposureReport.limitation`.
  */
 
-import { CATEGORY_OF, SEVERITY_WEIGHTS, TYPE_FACTORS, type SeverityCategory } from '@privacyshield/data';
+import { CATEGORY_OF, SEVERITY_WEIGHTS, TYPE_FACTORS, type SeverityCategory } from '@discretion/data';
 import type { EntityType } from '../types.js';
 
 /** The minimum an entity needs to contribute anything at all. */

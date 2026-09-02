@@ -1,12 +1,12 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / [index](../README.md) / TriggerMatch
+[@discretion/core](../../README.md) / [index](../README.md) / TriggerMatch
 
 # Interface: TriggerMatch
 
-Defined in: [packages/core/src/context/triggers.ts:41](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/context/triggers.ts#L41)
+Defined in: [packages/core/src/context/triggers.ts:41](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/context/triggers.ts#L41)
 
 A trigger found near a candidate.
 
@@ -16,7 +16,7 @@ A trigger found near a candidate.
 
 > `readonly` **distance**: `number`
 
-Defined in: [packages/core/src/context/triggers.ts:47](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/context/triggers.ts#L47)
+Defined in: [packages/core/src/context/triggers.ts:47](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/context/triggers.ts#L47)
 
 Characters between the trigger and the candidate. 0 when adjacent.
 
@@ -26,7 +26,7 @@ Characters between the trigger and the candidate. 0 when adjacent.
 
 > `readonly` **languages**: readonly `string`[]
 
-Defined in: [packages/core/src/context/triggers.ts:49](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/context/triggers.ts#L49)
+Defined in: [packages/core/src/context/triggers.ts:49](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/context/triggers.ts#L49)
 
 Language codes that contributed this term.
 
@@ -36,7 +36,7 @@ Language codes that contributed this term.
 
 > `readonly` **term**: `string`
 
-Defined in: [packages/core/src/context/triggers.ts:43](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/context/triggers.ts#L43)
+Defined in: [packages/core/src/context/triggers.ts:43](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/context/triggers.ts#L43)
 
 The lexicon term that matched, in its lexicon (folded) form.
 
@@ -46,6 +46,6 @@ The lexicon term that matched, in its lexicon (folded) form.
 
 > `readonly` **types**: readonly [`EntityType`](../type-aliases/EntityType.md)[]
 
-Defined in: [packages/core/src/context/triggers.ts:45](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/context/triggers.ts#L45)
+Defined in: [packages/core/src/context/triggers.ts:45](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/context/triggers.ts#L45)
 
 Entity types this term vouches for.

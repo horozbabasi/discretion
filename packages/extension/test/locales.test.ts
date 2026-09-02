@@ -101,7 +101,7 @@ describe('every locale', () => {
     // Guards against a locale file created by copy-paste and never filled in.
     //
     // A FRACTION, not a count. Some entries are legitimately identical in
-    // another language - 'PrivacyShield' is a proper noun, and French spells
+    // another language - 'Discretion' is a proper noun, and French spells
     // Contact, Documents and Secrets the way English does. An absolute
     // threshold turns those correct translations into a failure the moment
     // enough of them accumulate, which is what a count of 5 did the first time

@@ -1,12 +1,12 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / [index](../README.md) / ExposureReport
+[@discretion/core](../../README.md) / [index](../README.md) / ExposureReport
 
 # Interface: ExposureReport
 
-Defined in: [packages/core/src/exposure/index.ts:72](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/exposure/index.ts#L72)
+Defined in: [packages/core/src/exposure/index.ts:72](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/exposure/index.ts#L72)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [packages/core/src/exposure/index.ts:72](https://github.com/horozbab
 
 > `readonly` **byCategory**: readonly [`CategoryBreakdown`](CategoryBreakdown.md)[]
 
-Defined in: [packages/core/src/exposure/index.ts:77](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/exposure/index.ts#L77)
+Defined in: [packages/core/src/exposure/index.ts:77](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/exposure/index.ts#L77)
 
 ***
 
@@ -22,7 +22,7 @@ Defined in: [packages/core/src/exposure/index.ts:77](https://github.com/horozbab
 
 > `readonly` **contributions**: readonly [`ExposureContribution`](ExposureContribution.md)[]
 
-Defined in: [packages/core/src/exposure/index.ts:81](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/exposure/index.ts#L81)
+Defined in: [packages/core/src/exposure/index.ts:81](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/exposure/index.ts#L81)
 
 Every contribution, so the total demonstrably decomposes.
 
@@ -32,7 +32,7 @@ Every contribution, so the total demonstrably decomposes.
 
 > `readonly` **limitation**: `string`
 
-Defined in: [packages/core/src/exposure/index.ts:83](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/exposure/index.ts#L83)
+Defined in: [packages/core/src/exposure/index.ts:83](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/exposure/index.ts#L83)
 
 Stated wherever the score is shown, per SPEC.
 
@@ -42,7 +42,7 @@ Stated wherever the score is shown, per SPEC.
 
 > `readonly` **rawPoints**: `number`
 
-Defined in: [packages/core/src/exposure/index.ts:76](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/exposure/index.ts#L76)
+Defined in: [packages/core/src/exposure/index.ts:76](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/exposure/index.ts#L76)
 
 The un-saturated sum, so the transform can be checked by a reader.
 
@@ -52,7 +52,7 @@ The un-saturated sum, so the transform can be checked by a reader.
 
 > `readonly` **score**: `number`
 
-Defined in: [packages/core/src/exposure/index.ts:74](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/exposure/index.ts#L74)
+Defined in: [packages/core/src/exposure/index.ts:74](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/exposure/index.ts#L74)
 
 Overall exposure, 0–100.
 
@@ -62,6 +62,6 @@ Overall exposure, 0–100.
 
 > `readonly` **topContributors**: readonly [`ExposureContribution`](ExposureContribution.md)[]
 
-Defined in: [packages/core/src/exposure/index.ts:79](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/exposure/index.ts#L79)
+Defined in: [packages/core/src/exposure/index.ts:79](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/exposure/index.ts#L79)
 
 Highest-contributing entities first.

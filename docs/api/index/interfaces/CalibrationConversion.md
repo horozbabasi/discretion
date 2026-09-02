@@ -1,12 +1,12 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / [index](../README.md) / CalibrationConversion
+[@discretion/core](../../README.md) / [index](../README.md) / CalibrationConversion
 
 # Interface: CalibrationConversion
 
-Defined in: [packages/core/src/fuse/defaultCalibration.ts:40](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/fuse/defaultCalibration.ts#L40)
+Defined in: [packages/core/src/fuse/defaultCalibration.ts:40](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/fuse/defaultCalibration.ts#L40)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [packages/core/src/fuse/defaultCalibration.ts:40](https://github.com
 
 > `readonly` **model**: [`CalibrationModel`](CalibrationModel.md)
 
-Defined in: [packages/core/src/fuse/defaultCalibration.ts:41](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/fuse/defaultCalibration.ts#L41)
+Defined in: [packages/core/src/fuse/defaultCalibration.ts:41](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/fuse/defaultCalibration.ts#L41)
 
 ***
 
@@ -22,7 +22,7 @@ Defined in: [packages/core/src/fuse/defaultCalibration.ts:41](https://github.com
 
 > `readonly` **unknownTypes**: readonly `string`[]
 
-Defined in: [packages/core/src/fuse/defaultCalibration.ts:50](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/fuse/defaultCalibration.ts#L50)
+Defined in: [packages/core/src/fuse/defaultCalibration.ts:50](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/fuse/defaultCalibration.ts#L50)
 
 Keys in the generated model that are not `EntityType` members.
 

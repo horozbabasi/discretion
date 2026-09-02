@@ -1,14 +1,14 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / [index](../README.md) / runStage1
+[@discretion/core](../../README.md) / [index](../README.md) / runStage1
 
 # Function: runStage1()
 
 > **runStage1**(`normalization`, `options?`): [`Stage1Candidate`](../interfaces/Stage1Candidate.md)[]
 
-Defined in: [packages/core/src/detect/runner.ts:79](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/runner.ts#L79)
+Defined in: [packages/core/src/detect/runner.ts:79](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/runner.ts#L79)
 
 Run Stage 1 over an already-normalized text.
 

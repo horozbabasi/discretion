@@ -1,14 +1,14 @@
-[**@privacyshield/core**](../../../../README.md)
+[**@discretion/core**](../../../../README.md)
 
 ***
 
-[@privacyshield/core](../../../../README.md) / [index](../../../README.md) / [checksums](../README.md) / mod11\_10CheckDigit
+[@discretion/core](../../../../README.md) / [index](../../../README.md) / [checksums](../README.md) / mod11\_10CheckDigit
 
 # Function: mod11\_10CheckDigit()
 
 > **mod11\_10CheckDigit**(`payload`): `number` \| `null`
 
-Defined in: [packages/core/src/checksums/iso7064.ts:137](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/checksums/iso7064.ts#L137)
+Defined in: [packages/core/src/checksums/iso7064.ts:137](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/checksums/iso7064.ts#L137)
 
 ISO 7064 MOD 11-10, a hybrid system. Unlike the pure systems this carries
 the running value through a different recurrence and closes with a single

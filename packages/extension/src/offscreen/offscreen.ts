@@ -32,9 +32,9 @@
  * ─────────────────────────────────────────────────────────────────────────
  */
 
-import { ChunkCache, NerEngine } from '@privacyshield/core';
-import { createTransformersClassifier } from '@privacyshield/core/ner-transformers';
-import type { NerSpan } from '@privacyshield/core';
+import { ChunkCache, NerEngine } from '@discretion/core';
+import { createTransformersClassifier } from '@discretion/core/ner-transformers';
+import type { NerSpan } from '@discretion/core';
 
 import { NER_CHANNEL } from './protocol.js';
 import type { NerRequest, NerResponse, OffscreenStatus } from './protocol.js';

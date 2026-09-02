@@ -17,7 +17,7 @@
  * genuinely want one stage; `detect` is what consumers should use.
  */
 
-import { DOMAIN_LEXICONS, TRIGGER_LEXICONS } from '@privacyshield/data';
+import { DOMAIN_LEXICONS, TRIGGER_LEXICONS } from '@discretion/data';
 
 import type { NormalizationResult } from './types.js';
 import { runStage1, type Stage1Options } from './detect/runner.js';

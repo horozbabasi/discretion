@@ -1,14 +1,14 @@
-[**@privacyshield/core**](../../../../README.md)
+[**@discretion/core**](../../../../README.md)
 
 ***
 
-[@privacyshield/core](../../../../README.md) / [index](../../../README.md) / [checksums](../README.md) / abaValid
+[@discretion/core](../../../../README.md) / [index](../../../README.md) / [checksums](../README.md) / abaValid
 
 # Function: abaValid()
 
 > **abaValid**(`value`): `boolean`
 
-Defined in: [packages/core/src/checksums/aba.ts:26](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/checksums/aba.ts#L26)
+Defined in: [packages/core/src/checksums/aba.ts:26](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/checksums/aba.ts#L26)
 
 Validate a nine-digit ABA routing number.
 

@@ -8,7 +8,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import type { MaskedEntity, Stage1Candidate } from '@privacyshield/core';
+import type { MaskedEntity, Stage1Candidate } from '@discretion/core';
 import { candidateCard, replacementCard } from '../src/tooltip.js';
 
 function candidate(overrides: Partial<Stage1Candidate> = {}): Stage1Candidate {

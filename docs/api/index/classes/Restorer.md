@@ -1,12 +1,12 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / [index](../README.md) / Restorer
+[@discretion/core](../../README.md) / [index](../README.md) / Restorer
 
 # Class: Restorer
 
-Defined in: [packages/core/src/mask/restorer.ts:47](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/mask/restorer.ts#L47)
+Defined in: [packages/core/src/mask/restorer.ts:47](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/mask/restorer.ts#L47)
 
 ## Constructors
 
@@ -14,7 +14,7 @@ Defined in: [packages/core/src/mask/restorer.ts:47](https://github.com/horozbaba
 
 > **new Restorer**(`vault`, `options?`): `Restorer`
 
-Defined in: [packages/core/src/mask/restorer.ts:59](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/mask/restorer.ts#L59)
+Defined in: [packages/core/src/mask/restorer.ts:59](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/mask/restorer.ts#L59)
 
 #### Parameters
 
@@ -38,7 +38,7 @@ Defined in: [packages/core/src/mask/restorer.ts:59](https://github.com/horozbaba
 
 > **get** **rendered**(): `string`
 
-Defined in: [packages/core/src/mask/restorer.ts:94](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/mask/restorer.ts#L94)
+Defined in: [packages/core/src/mask/restorer.ts:94](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/mask/restorer.ts#L94)
 
 Everything rendered so far.
 
@@ -54,7 +54,7 @@ Everything rendered so far.
 
 > **get** **restoredCount**(): `number`
 
-Defined in: [packages/core/src/mask/restorer.ts:99](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/mask/restorer.ts#L99)
+Defined in: [packages/core/src/mask/restorer.ts:99](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/mask/restorer.ts#L99)
 
 How many surrogate occurrences have been restored.
 
@@ -68,7 +68,7 @@ How many surrogate occurrences have been restored.
 
 > **finish**(): `string`
 
-Defined in: [packages/core/src/mask/restorer.ts:86](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/mask/restorer.ts#L86)
+Defined in: [packages/core/src/mask/restorer.ts:86](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/mask/restorer.ts#L86)
 
 Flush the remainder; no more holding. Returns the final rendered text.
 
@@ -82,7 +82,7 @@ Flush the remainder; no more holding. Returns the final rendered text.
 
 > **push**(`chunk`): `string`
 
-Defined in: [packages/core/src/mask/restorer.ts:79](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/mask/restorer.ts#L79)
+Defined in: [packages/core/src/mask/restorer.ts:79](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/mask/restorer.ts#L79)
 
 Push the next stream chunk; returns the text newly rendered this call.
 

@@ -195,7 +195,7 @@ This is the only way to establish Claim B. It takes about two minutes per site.
 **1. Build.**
 
 ```
-npm.cmd run build --workspace @privacyshield/extension
+npm.cmd run build --workspace @discretion/extension
 ```
 
 The loadable extension is at **`packages/extension/build`** — *not* `dist/`,
@@ -208,7 +208,7 @@ Developer mode → *Load unpacked* → select `packages/extension/build`.
 Use a throwaway account if you have one.
 
 **4. Open the console** (F12 → Console) and look for a line beginning
-`PrivacyShield [<site>]`. It is emitted when the content script runs and again
+`Discretion [<site>]`. It is emitted when the content script runs and again
 on every change of state. Expand it.
 
 **SAVE THE WHOLE BLOCK TO A FILE. Do not copy from the viewport.** In devtools:

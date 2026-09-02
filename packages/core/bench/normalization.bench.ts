@@ -17,7 +17,7 @@ import {
   nfkcByGrapheme,
   foldHomoglyphs,
   normalizeWhitespacePunct,
-} from '@privacyshield/core';
+} from '@discretion/core';
 
 const cc = (cp: number): string => String.fromCharCode(cp);
 const ZWSP = cc(0x200b);

@@ -25,7 +25,7 @@ When a CJK input method is open, pressing Enter **commits the highlighted
 candidate**. The user is still typing; it is not a "send" keystroke. Browsers
 mark that keydown `isComposing: true`.
 
-PrivacyShield's adapters skip those Enters deliberately — gating them would
+Discretion's adapters skip those Enters deliberately — gating them would
 interrupt the user mid-word on every candidate they accept.
 
 **That is only safe if the site skips them too.** If a site submits on a

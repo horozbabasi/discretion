@@ -47,7 +47,7 @@ import { itemCount, pasteTotal } from './surfaceState.js';
 import { PANEL_STYLES } from './styles.js';
 import { detectTheme, onSystemThemeChange } from './theme.js';
 
-const HOST_TAG = 'privacyshield-surface';
+const HOST_TAG = 'discretion-surface';
 
 /**
  * How many times the host may be re-attached after the page removes it.

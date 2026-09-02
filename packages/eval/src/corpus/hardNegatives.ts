@@ -22,7 +22,7 @@
  *      error, not a detector test.
  */
 
-import { generate } from '@privacyshield/core';
+import { generate } from '@discretion/core';
 import type { LabeledDocument, DocType } from './types.js';
 
 const g = generate;

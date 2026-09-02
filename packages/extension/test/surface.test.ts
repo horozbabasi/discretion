@@ -94,7 +94,7 @@ describe('isolation', () => {
     const { surface } = makeSurface();
     surface.setState({ kind: 'review', content: REVIEW });
 
-    const host = document.querySelector('privacyshield-surface');
+    const host = document.querySelector('discretion-surface');
     expect(host).not.toBeNull();
     // The page's own route in is null: `mode: closed`. The panel lists which
     // entity TYPES were found in the user's text, and the page is the party
@@ -189,7 +189,7 @@ describe('the three states', () => {
     // Trapping focus inside a panel floating over someone's chat would take
     // the page away from them.
     expect(panel?.getAttribute('aria-modal')).toBe('false');
-    expect(panel?.getAttribute('aria-label')).toContain('PrivacyShield');
+    expect(panel?.getAttribute('aria-label')).toContain('Discretion');
   });
 
   it('degraded is an assertive live region and does NOT steal focus', () => {
@@ -223,7 +223,7 @@ describe('the three states', () => {
     const { surface, root } = makeSurface();
     surface.setState({ kind: 'inactive', evidence: [evidence] });
 
-    const host = document.querySelector('privacyshield-surface');
+    const host = document.querySelector('discretion-surface');
     expect(host?.getAttribute('data-hidden')).toBe('true');
     expect(root.querySelector('.panel')?.childElementCount).toBe(0);
   });
@@ -318,11 +318,11 @@ describe('survival', () => {
     const { surface } = makeSurface();
     surface.setState({ kind: 'review', content: REVIEW });
 
-    document.querySelector('privacyshield-surface')?.remove();
-    expect(document.querySelector('privacyshield-surface')).toBeNull();
+    document.querySelector('discretion-surface')?.remove();
+    expect(document.querySelector('discretion-surface')).toBeNull();
 
     await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(document.querySelector('privacyshield-surface')).not.toBeNull();
+    expect(document.querySelector('discretion-surface')).not.toBeNull();
     surface.destroy();
   });
 
@@ -330,17 +330,17 @@ describe('survival', () => {
     const { surface } = makeSurface();
     surface.setState({ kind: 'review', content: REVIEW });
     surface.destroy();
-    expect(document.querySelector('privacyshield-surface')).toBeNull();
+    expect(document.querySelector('discretion-surface')).toBeNull();
 
     // And it must not resurrect itself after destroy.
     await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(document.querySelector('privacyshield-surface')).toBeNull();
+    expect(document.querySelector('discretion-surface')).toBeNull();
   });
 
   it('mount is idempotent', () => {
     const { surface } = makeSurface();
     surface.mount();
-    expect(document.querySelectorAll('privacyshield-surface')).toHaveLength(1);
+    expect(document.querySelectorAll('discretion-surface')).toHaveLength(1);
   });
 
   it('positions itself without an anchor rather than at the origin', () => {
@@ -348,7 +348,7 @@ describe('survival', () => {
     const { surface } = makeSurface();
     surface.setAnchor(null);
     surface.setState({ kind: 'review', content: REVIEW });
-    const host = document.querySelector('privacyshield-surface') as HTMLElement;
+    const host = document.querySelector('discretion-surface') as HTMLElement;
     expect(host.style.getPropertyValue('--ps-left')).toBe('50%');
     expect(host.style.getPropertyValue('--ps-bottom')).toBe('16px');
   });
@@ -369,7 +369,7 @@ describe('theme', () => {
     surface.setAnchor(anchor);
     surface.setState({ kind: 'review', content: REVIEW });
 
-    const host = document.querySelector('privacyshield-surface');
+    const host = document.querySelector('discretion-surface');
     expect(host?.getAttribute('data-theme')).toBe('dark');
     vi.restoreAllMocks();
   });
@@ -381,7 +381,7 @@ describe('semantics do not survive a state change', () => {
   it('drops the dialog role and label when review becomes degraded', () => {
     // Each renderer used to set only the attributes it cared about, so
     // renderDegraded left the dialog's aria-label in place and the alert was
-    // announced as "PrivacyShield: review what will be masked before sending"
+    // announced as "Discretion: review what will be masked before sending"
     // - a label describing a panel that is no longer there, read out instead
     // of the failure that replaced it.
     const { surface, root } = makeSurface();
@@ -515,7 +515,7 @@ describe('the anchor is borrowed, and the page takes it back', () => {
     composer.remove();
     surface.setState({ kind: 'review', content: { ...REVIEW, exposureScore: 12 } });
 
-    const host = document.querySelector('privacyshield-surface') as HTMLElement;
+    const host = document.querySelector('discretion-surface') as HTMLElement;
     expect(host.getAttribute('data-hidden')).toBe('false');
     expect(host.style.getPropertyValue('--ps-left')).toBe('50%');
   });
@@ -530,7 +530,7 @@ describe('the anchor is borrowed, and the page takes it back', () => {
     surface.setState({ kind: 'review', content: REVIEW });
     // Nothing was lost - nothing was ever accepted.
     expect(calls.anchorLost).toBe(0);
-    const host = document.querySelector('privacyshield-surface') as HTMLElement;
+    const host = document.querySelector('discretion-surface') as HTMLElement;
     expect(host.style.getPropertyValue('--ps-left')).toBe('50%');
   });
 
@@ -545,7 +545,7 @@ describe('the anchor is borrowed, and the page takes it back', () => {
     document.body.append(replacement);
     surface.setAnchor(replacement);
 
-    const host = document.querySelector('privacyshield-surface') as HTMLElement;
+    const host = document.querySelector('discretion-surface') as HTMLElement;
     expect(host.style.getPropertyValue('--ps-left')).toBe('40px');
     expect(host.style.getPropertyValue('--ps-width')).toBe('320px');
   });
@@ -564,7 +564,7 @@ describe('positioning stays inside the viewport', () => {
     surface.setAnchor(narrow);
     surface.setState({ kind: 'review', content: REVIEW });
 
-    const host = document.querySelector('privacyshield-surface') as HTMLElement;
+    const host = document.querySelector('discretion-surface') as HTMLElement;
     expect(Number.parseInt(host.style.getPropertyValue('--ps-width'), 10)).toBeGreaterThanOrEqual(240);
   });
 
@@ -586,7 +586,7 @@ describe('positioning stays inside the viewport', () => {
     );
     surface.setState({ kind: 'review', content: REVIEW });
 
-    const host = document.querySelector('privacyshield-surface') as HTMLElement;
+    const host = document.querySelector('discretion-surface') as HTMLElement;
     expect(Number.parseInt(host.style.getPropertyValue('--ps-left'), 10)).toBeGreaterThanOrEqual(0);
   });
 
@@ -598,7 +598,7 @@ describe('positioning stays inside the viewport', () => {
     );
     surface.setState({ kind: 'review', content: REVIEW });
 
-    const host = document.querySelector('privacyshield-surface') as HTMLElement;
+    const host = document.querySelector('discretion-surface') as HTMLElement;
     expect(Number.parseInt(host.style.getPropertyValue('--ps-width'), 10)).toBeLessThanOrEqual(window.innerWidth);
   });
 });
@@ -613,7 +613,7 @@ describe('stacking and survival bounds', () => {
     // and a panel blocking a send must not vanish because the user clicked the
     // page behind it.
     makeSurface();
-    const host = document.querySelector('privacyshield-surface') as HTMLElement;
+    const host = document.querySelector('discretion-surface') as HTMLElement;
     expect(host.getAttribute('popover')).toBe('manual');
   });
 
@@ -626,11 +626,11 @@ describe('stacking and survival bounds', () => {
     surface.setState({ kind: 'review', content: REVIEW });
 
     for (let attempt = 0; attempt < 40; attempt += 1) {
-      document.querySelector('privacyshield-surface')?.remove();
+      document.querySelector('discretion-surface')?.remove();
       await new Promise((resolve) => setTimeout(resolve, 0));
     }
     expect(calls.surfaceLost).toBe(1);
-    expect(document.querySelector('privacyshield-surface')).toBeNull();
+    expect(document.querySelector('discretion-surface')).toBeNull();
     surface.destroy();
   });
 });
@@ -794,7 +794,7 @@ describe('the panel is actually positioned where it is computed to be', () => {
     surface.setAnchor(anchorAt({ left: 120, top: 400, right: 560, bottom: 448, width: 440, height: 48 }));
     surface.setState({ kind: 'review', content: REVIEW });
 
-    const host = document.querySelector('privacyshield-surface') as HTMLElement;
+    const host = document.querySelector('discretion-surface') as HTMLElement;
     // Written as CUSTOM PROPERTIES, which is the only channel that reaches the
     // host past `all: initial !important` - inline `left: ... !important` was
     // tried first and lost, because for important declarations the INNER tree
@@ -813,7 +813,7 @@ describe('the panel is actually positioned where it is computed to be', () => {
     const { surface } = makeSurface();
     surface.setAnchor(null);
     surface.setState({ kind: 'review', content: REVIEW });
-    const host = document.querySelector('privacyshield-surface') as HTMLElement;
+    const host = document.querySelector('discretion-surface') as HTMLElement;
     expect(host.style.getPropertyValue('--ps-bottom')).toBe('16px');
 
     surface.setAnchor(anchorAt({ left: 120, top: 400, right: 560, bottom: 448, width: 440, height: 48 }));

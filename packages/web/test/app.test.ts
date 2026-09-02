@@ -8,7 +8,7 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { generate } from '@privacyshield/core';
+import { generate } from '@discretion/core';
 import { createApp } from '../src/app.js';
 import type { App } from '../src/app.js';
 

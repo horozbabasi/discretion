@@ -1,12 +1,12 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / [index](../README.md) / DetectionTimeoutError
+[@discretion/core](../../README.md) / [index](../README.md) / DetectionTimeoutError
 
 # Class: DetectionTimeoutError
 
-Defined in: [packages/core/src/detect/runner.ts:33](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/runner.ts#L33)
+Defined in: [packages/core/src/detect/runner.ts:33](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/runner.ts#L33)
 
 Thrown when detection exceeds its time budget. Callers must fail closed.
 
@@ -20,7 +20,7 @@ Thrown when detection exceeds its time budget. Callers must fail closed.
 
 > **new DetectionTimeoutError**(`budgetMs`, `elapsedMs`): `DetectionTimeoutError`
 
-Defined in: [packages/core/src/detect/runner.ts:34](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/runner.ts#L34)
+Defined in: [packages/core/src/detect/runner.ts:34](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/runner.ts#L34)
 
 #### Parameters
 
@@ -46,7 +46,7 @@ Defined in: [packages/core/src/detect/runner.ts:34](https://github.com/horozbaba
 
 > `readonly` **budgetMs**: `number`
 
-Defined in: [packages/core/src/detect/runner.ts:35](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/runner.ts#L35)
+Defined in: [packages/core/src/detect/runner.ts:35](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/runner.ts#L35)
 
 ***
 
@@ -66,7 +66,7 @@ Defined in: node\_modules/typescript/lib/lib.es2022.error.d.ts:26
 
 > `readonly` **elapsedMs**: `number`
 
-Defined in: [packages/core/src/detect/runner.ts:36](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/runner.ts#L36)
+Defined in: [packages/core/src/detect/runner.ts:36](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/runner.ts#L36)
 
 ***
 

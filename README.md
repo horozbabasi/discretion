@@ -1,4 +1,4 @@
-# PrivacyShield
+# Discretion
 
 **Finds passwords, keys, card and ID numbers in what you type into ChatGPT,
 Claude and Gemini — and masks them before you send.**
@@ -48,8 +48,8 @@ the submission draft and the blockers still in front of it.
 **Unpacked, from source:**
 
 ```sh
-git clone https://github.com/horozbabasi/privacyshield
-cd privacyshield
+git clone https://github.com/horozbabasi/discretion
+cd discretion
 npm ci
 npm run ext:fetch-model    # ~280 MB, verified against recorded SHA-256 digests
 npm run build
@@ -313,7 +313,7 @@ protection visible instead of silent.
 
 ## Configuration
 
-The options page (`chrome://extensions` → PrivacyShield → Details → Extension
+The options page (`chrome://extensions` → Discretion → Details → Extension
 options) covers:
 
 | | |
@@ -699,7 +699,7 @@ extension. It has no DOM dependency, no Node built-in dependency, and makes no
 network requests.
 
 ```js
-import { protect, restore } from '@privacyshield/core';
+import { protect, restore } from '@discretion/core';
 
 const result = await protect('Wire it to DE44500105175407324931.');
 // result.maskedText   -> a different, checksum-valid IBAN
@@ -758,7 +758,7 @@ the build nor the runtime ever touches the network. Regeneration is a
 deliberate, occasional step:
 
 ```bash
-npm run generate -w @privacyshield/data
+npm run generate -w @discretion/data
 ```
 
 This **fetches over the network** from

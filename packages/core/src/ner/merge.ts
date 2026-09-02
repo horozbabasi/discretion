@@ -23,7 +23,7 @@
 import type { AlignedPiece } from './align.js';
 import type { NerEntityType, NerSpan, TokenPrediction } from './types.js';
 
-/** Model label suffix → PrivacyShield entity type. MISC and friends drop. */
+/** Model label suffix → Discretion entity type. MISC and friends drop. */
 const DEFAULT_LABEL_TYPES: Readonly<Record<string, NerEntityType>> = {
   PER: 'PERSON',
   PERSON: 'PERSON',

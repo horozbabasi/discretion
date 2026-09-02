@@ -38,7 +38,7 @@
  * ─────────────────────────────────────────────────────────────────────────
  */
 
-import type { NerRecognizer, NerSpan } from '@privacyshield/core';
+import type { NerRecognizer, NerSpan } from '@discretion/core';
 
 import { NER_CHANNEL } from '../offscreen/protocol.js';
 import type { NerRequest, NerRequestBody, NerResponse, OffscreenStatus } from '../offscreen/protocol.js';

@@ -22,11 +22,11 @@
 import type { Catalogue, EntityLabels } from '../catalogue.js';
 
 export const AR: Catalogue = {
-  appName: 'PrivacyShield',
+  appName: 'Discretion',
   appDescription:
     'يكتشف المعلومات الحساسة في النص ويخفيها قبل وصولها إلى واجهات الدردشة بالذكاء الاصطناعي. يعمل بالكامل على جهازك.',
 
-  'panel.review.aria': 'PrivacyShield: راجع ما سيتم إخفاؤه قبل الإرسال',
+  'panel.review.aria': 'Discretion: راجع ما سيتم إخفاؤه قبل الإرسال',
   'panel.review.title': {
     zero: 'لا عناصر لإخفائها',
     one: 'عنصر واحد لإخفائه',
@@ -45,15 +45,15 @@ export const AR: Catalogue = {
 
   'panel.unwitnessed.title': 'تأكد من أن هذه رسالتك',
   'panel.unwitnessed.body':
-    'كان هذا النص موجودًا في الحقل من قبل — لم يرَ PrivacyShield أنك كتبته. هذا طبيعي في مسودة محفوظة، أو رابط يملأ الحقل نيابةً عنك، أو اقتراح جاهز.',
+    'كان هذا النص موجودًا في الحقل من قبل — لم يرَ Discretion أنك كتبته. هذا طبيعي في مسودة محفوظة، أو رابط يملأ الحقل نيابةً عنك، أو اقتراح جاهز.',
 
   'panel.findings.aria': {
-    zero: 'PrivacyShield: لم يُرصد أي عنصر حساس في هذه الرسالة',
-    one: 'PrivacyShield: رُصد عنصر حساس واحد في هذه الرسالة',
-    two: 'PrivacyShield: رُصد عنصران حساسان في هذه الرسالة',
-    few: 'PrivacyShield: رُصدت $1 عناصر حساسة في هذه الرسالة',
-    many: 'PrivacyShield: رُصد $1 عنصرًا حساسًا في هذه الرسالة',
-    other: 'PrivacyShield: رُصد $1 عنصر حساس في هذه الرسالة',
+    zero: 'Discretion: لم يُرصد أي عنصر حساس في هذه الرسالة',
+    one: 'Discretion: رُصد عنصر حساس واحد في هذه الرسالة',
+    two: 'Discretion: رُصد عنصران حساسان في هذه الرسالة',
+    few: 'Discretion: رُصدت $1 عناصر حساسة في هذه الرسالة',
+    many: 'Discretion: رُصد $1 عنصرًا حساسًا في هذه الرسالة',
+    other: 'Discretion: رُصد $1 عنصر حساس في هذه الرسالة',
   },
   'panel.findings.title': {
     zero: 'لا عناصر مرصودة',
@@ -79,20 +79,20 @@ export const AR: Catalogue = {
     other: '$1 $2',
   },
 
-  'panel.degraded.pageTitle': 'PrivacyShield لا يحمي هذه الصفحة',
-  'panel.degraded.sendTitle': 'لم يُرسل PrivacyShield هذه الرسالة',
+  'panel.degraded.pageTitle': 'Discretion لا يحمي هذه الصفحة',
+  'panel.degraded.sendTitle': 'لم يُرسل Discretion هذه الرسالة',
   'panel.degraded.couldNotFind': 'تعذّر العثور على: $1.',
   'panel.degraded.noReason': 'أبلغت الإضافة عن مشكلة دون أن تحدد ما هي.',
 
   // Layout direction, not a translation. See catalogue.ts.
   'ui.dir': 'rtl',
-  'popup.title': 'PrivacyShield',
+  'popup.title': 'Discretion',
   'popup.tab.status': 'الحالة',
   'popup.tab.quickRedact': 'إخفاء سريع',
   'popup.tab.insights': 'إحصاءات',
   'popup.status.protected': 'يجري حماية هذه الصفحة',
   'popup.status.unprotected': 'هذه الصفحة غير محمية',
-  'popup.status.unsupported': 'PrivacyShield لا يعمل على هذا الموقع',
+  'popup.status.unsupported': 'Discretion لا يعمل على هذا الموقع',
   'popup.status.sessionCounts': 'ما أُخفي في هذه الجلسة',
   'popup.status.sessionExposure': 'انكشاف الجلسة',
   'popup.status.profile': 'مستوى الحساسية',
@@ -152,7 +152,7 @@ export const AR: Catalogue = {
   'family.person': 'أسماء',
   'family.other': 'أخرى',
 
-  'options.title': 'إعدادات PrivacyShield',
+  'options.title': 'إعدادات Discretion',
   'options.section.detection': 'ما الذي يُرصد',
   'options.section.substitution': 'أسلوب الاستبدال',
   'options.section.lists': 'دائمًا وأبدًا',

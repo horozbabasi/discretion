@@ -1,12 +1,12 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / [index](../README.md) / MappedTextBuilder
+[@discretion/core](../../README.md) / [index](../README.md) / MappedTextBuilder
 
 # Class: MappedTextBuilder
 
-Defined in: [packages/core/src/offsetMap.ts:207](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/offsetMap.ts#L207)
+Defined in: [packages/core/src/offsetMap.ts:207](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/offsetMap.ts#L207)
 
 Streaming builder used by every transform to produce output text and its
 offset map in one left-to-right pass. It enforces the deletion-attribution
@@ -33,7 +33,7 @@ non-overlapping [start, end) ranges, then finish(inputLength) exactly once.
 
 > **copyVerbatim**(`input`, `start`, `end`): `void`
 
-Defined in: [packages/core/src/offsetMap.ts:230](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/offsetMap.ts#L230)
+Defined in: [packages/core/src/offsetMap.ts:230](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/offsetMap.ts#L230)
 
 Copy input.slice(start, end) through unchanged. Mapping is fine-grained
 (each output unit → its own input position), except that the first unit
@@ -63,7 +63,7 @@ claims any pending deleted region before it.
 
 > **deleteRange**(`start`, `end`): `void`
 
-Defined in: [packages/core/src/offsetMap.ts:257](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/offsetMap.ts#L257)
+Defined in: [packages/core/src/offsetMap.ts:257](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/offsetMap.ts#L257)
 
 Delete input.slice(start, end): emits nothing. The region stays
 unclaimed and will be attributed to the next output (or the sentinel).
@@ -88,7 +88,7 @@ unclaimed and will be attributed to the next output (or the sentinel).
 
 > **finish**(`inputLength`): `object`
 
-Defined in: [packages/core/src/offsetMap.ts:262](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/offsetMap.ts#L262)
+Defined in: [packages/core/src/offsetMap.ts:262](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/offsetMap.ts#L262)
 
 Finish the map with its sentinel entry and assemble the output text.
 
@@ -116,7 +116,7 @@ Finish the map with its sentinel entry and assemble the output text.
 
 > **replaceRange**(`replacement`, `start`, `end`): `void`
 
-Defined in: [packages/core/src/offsetMap.ts:245](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/offsetMap.ts#L245)
+Defined in: [packages/core/src/offsetMap.ts:245](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/offsetMap.ts#L245)
 
 Replace input.slice(start, end) with `replacement`. Every output unit
 maps to the start of the input cluster (including any pending deleted

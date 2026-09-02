@@ -16,7 +16,7 @@ import {
   protect,
   registerDetector,
   valid,
-} from '@privacyshield/core';
+} from '@discretion/core';
 
 registerDetector({
   id: 'acme-employee-id',

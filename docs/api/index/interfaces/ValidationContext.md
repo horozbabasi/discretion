@@ -1,12 +1,12 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / [index](../README.md) / ValidationContext
+[@discretion/core](../../README.md) / [index](../README.md) / ValidationContext
 
 # Interface: ValidationContext
 
-Defined in: [packages/core/src/detect/types.ts:113](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/types.ts#L113)
+Defined in: [packages/core/src/detect/types.ts:113](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/types.ts#L113)
 
 What a validator is given alongside the matched text.
 
@@ -20,7 +20,7 @@ IP address must know whether it is inside a URL.
 
 > `readonly` `optional` **context?**: [`ContextSignal`](ContextSignal.md)
 
-Defined in: [packages/core/src/detect/types.ts:126](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/types.ts#L126)
+Defined in: [packages/core/src/detect/types.ts:126](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/types.ts#L126)
 
 Stage 3 evidence. Always `undefined` in M2.
 
@@ -30,7 +30,7 @@ Stage 3 evidence. Always `undefined` in M2.
 
 > `readonly` `optional` **defaultRegion?**: `string`
 
-Defined in: [packages/core/src/detect/types.ts:124](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/types.ts#L124)
+Defined in: [packages/core/src/detect/types.ts:124](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/types.ts#L124)
 
 The user's configured default region, used for ambiguous formats such as
  phone numbers. `undefined` when unset.
@@ -41,7 +41,7 @@ The user's configured default region, used for ambiguous formats such as
 
 > `readonly` **end**: `number`
 
-Defined in: [packages/core/src/detect/types.ts:119](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/types.ts#L119)
+Defined in: [packages/core/src/detect/types.ts:119](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/types.ts#L119)
 
 End offset of the match within `text` (exclusive).
 
@@ -51,7 +51,7 @@ End offset of the match within `text` (exclusive).
 
 > `readonly` **match**: `RegExpExecArray`
 
-Defined in: [packages/core/src/detect/types.ts:121](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/types.ts#L121)
+Defined in: [packages/core/src/detect/types.ts:121](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/types.ts#L121)
 
 The regex match that produced this candidate, including capture groups.
 
@@ -61,7 +61,7 @@ The regex match that produced this candidate, including capture groups.
 
 > `readonly` **start**: `number`
 
-Defined in: [packages/core/src/detect/types.ts:117](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/types.ts#L117)
+Defined in: [packages/core/src/detect/types.ts:117](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/types.ts#L117)
 
 Start offset of the match within `text` (inclusive).
 
@@ -71,6 +71,6 @@ Start offset of the match within `text` (inclusive).
 
 > `readonly` **text**: `string`
 
-Defined in: [packages/core/src/detect/types.ts:115](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/detect/types.ts#L115)
+Defined in: [packages/core/src/detect/types.ts:115](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/detect/types.ts#L115)
 
 The full normalized text the runner is scanning.

@@ -1,12 +1,12 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / [index](../README.md) / LanguageTriggers
+[@discretion/core](../../README.md) / [index](../README.md) / LanguageTriggers
 
 # Interface: LanguageTriggers
 
-Defined in: [packages/core/src/context/triggers.ts:34](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/context/triggers.ts#L34)
+Defined in: [packages/core/src/context/triggers.ts:34](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/context/triggers.ts#L34)
 
 One language's triggers, keyed by the entity type each vouches for.
 
@@ -16,7 +16,7 @@ One language's triggers, keyed by the entity type each vouches for.
 
 > `readonly` **code**: `string`
 
-Defined in: [packages/core/src/context/triggers.ts:36](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/context/triggers.ts#L36)
+Defined in: [packages/core/src/context/triggers.ts:36](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/context/triggers.ts#L36)
 
 BCP-47 primary subtag, e.g. 'tr', 'zh', 'he'.
 
@@ -26,4 +26,4 @@ BCP-47 primary subtag, e.g. 'tr', 'zh', 'he'.
 
 > `readonly` **triggers**: `Readonly`\<`Partial`\<`Record`\<[`EntityType`](../type-aliases/EntityType.md), readonly `string`[]\>\>\>
 
-Defined in: [packages/core/src/context/triggers.ts:37](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/context/triggers.ts#L37)
+Defined in: [packages/core/src/context/triggers.ts:37](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/context/triggers.ts#L37)

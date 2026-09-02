@@ -3,11 +3,11 @@
 import type { Catalogue, EntityLabels } from '../catalogue.js';
 
 export const FR: Catalogue = {
-  appName: 'PrivacyShield',
+  appName: 'Discretion',
   appDescription:
     "Détecte et masque les informations sensibles dans le texte avant qu'elles n'atteignent les interfaces de discussion IA. Fonctionne entièrement sur votre appareil.",
 
-  'panel.review.aria': "PrivacyShield : vérifiez ce qui sera masqué avant l'envoi",
+  'panel.review.aria': "Discretion : vérifiez ce qui sera masqué avant l'envoi",
   'panel.review.title': { one: '$1 élément à masquer', other: '$1 éléments à masquer' },
   'panel.exposure': 'exposition $1/100',
   'panel.action.cancel': 'Annuler',
@@ -19,11 +19,11 @@ export const FR: Catalogue = {
 
   'panel.unwitnessed.title': "Vérifiez qu'il s'agit bien de votre message",
   'panel.unwitnessed.body':
-    "Ce texte était déjà dans le champ : PrivacyShield ne vous a pas vu le saisir. C'est normal pour un brouillon enregistré, un lien qui remplit le champ à votre place ou une suggestion.",
+    "Ce texte était déjà dans le champ : Discretion ne vous a pas vu le saisir. C'est normal pour un brouillon enregistré, un lien qui remplit le champ à votre place ou une suggestion.",
 
   'panel.findings.aria': {
-    one: 'PrivacyShield : $1 élément sensible détecté dans ce message',
-    other: 'PrivacyShield : $1 éléments sensibles détectés dans ce message',
+    one: 'Discretion : $1 élément sensible détecté dans ce message',
+    other: 'Discretion : $1 éléments sensibles détectés dans ce message',
   },
   'panel.findings.title': { one: '$1 élément détecté', other: '$1 éléments détectés' },
   'panel.findings.note':
@@ -37,21 +37,21 @@ export const FR: Catalogue = {
   'panel.paste.maskNow': 'Masquer maintenant',
   'panel.paste.countOfType': { one: '$1 $2', other: '$1 $2' },
 
-  'panel.degraded.pageTitle': 'PrivacyShield ne protège pas cette page',
-  'panel.degraded.sendTitle': "PrivacyShield n'a pas envoyé ce message",
+  'panel.degraded.pageTitle': 'Discretion ne protège pas cette page',
+  'panel.degraded.sendTitle': "Discretion n'a pas envoyé ce message",
   'panel.degraded.couldNotFind': 'Introuvable : $1.',
   'panel.degraded.noReason':
     "L'extension a signalé un problème sans préciser lequel.",
 
   // Layout direction, not a translation. See catalogue.ts.
   'ui.dir': 'ltr',
-  'popup.title': 'PrivacyShield',
+  'popup.title': 'Discretion',
   'popup.tab.status': 'État',
   'popup.tab.quickRedact': 'Masquage rapide',
   'popup.tab.insights': 'Statistiques',
   'popup.status.protected': 'Cette page est protégée',
   'popup.status.unprotected': "Cette page n'est pas protégée",
-  'popup.status.unsupported': 'PrivacyShield ne fonctionne pas sur ce site',
+  'popup.status.unsupported': 'Discretion ne fonctionne pas sur ce site',
   'popup.status.sessionCounts': 'Masqué pendant cette session',
   'popup.status.sessionExposure': 'Exposition de la session',
   'popup.status.profile': 'Sensibilité',
@@ -105,7 +105,7 @@ export const FR: Catalogue = {
   'family.person': 'Noms',
   'family.other': 'Autres',
 
-  'options.title': 'Paramètres de PrivacyShield',
+  'options.title': 'Paramètres de Discretion',
   'options.section.detection': "Ce qu'il faut détecter",
   'options.section.substitution': 'Style de remplacement',
   'options.section.lists': 'Toujours et jamais',

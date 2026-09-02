@@ -12,11 +12,11 @@ bottom**, which are real and must not be quietly skipped.
 ## Name
 
 ```
-PrivacyShield — mask PII before you send
+Discretion — mask PII before you send
 ```
 
 45 characters. The em-dash half is what a reader scanning a search results
-page actually needs; "PrivacyShield" alone says nothing about what it does.
+page actually needs; "Discretion" alone says nothing about what it does.
 
 ## Short description (132 char limit)
 
@@ -38,7 +38,7 @@ engineer pasting an API key.
 ## Detailed description
 
 ```
-PrivacyShield checks what you type or paste into ChatGPT, Claude and Gemini,
+Discretion checks what you type or paste into ChatGPT, Claude and Gemini,
 and replaces sensitive values with realistic stand-ins before the message is
 sent. You see exactly what it found and decide, one item at a time.
 
@@ -131,7 +131,7 @@ device. A smaller model was measured and was 26 F1 points worse.
 OPEN SOURCE
 
 Source, the full measured evaluation, and the reasoning behind every design
-decision: https://github.com/horozbabasi/privacyshield
+decision: https://github.com/horozbabasi/discretion
 ```
 
 ## Privacy practices disclosures
@@ -236,8 +236,8 @@ person with an account.** It cannot be automated and must not be faked.
 
 | field | value |
 | --- | --- |
-| Homepage | `https://github.com/horozbabasi/privacyshield` |
-| Support | `https://github.com/horozbabasi/privacyshield/issues` |
+| Homepage | `https://github.com/horozbabasi/discretion` |
+| Support | `https://github.com/horozbabasi/discretion/issues` |
 | Privacy policy | **BLOCKED.** `PRIVACY.md` is written, but the repository is PRIVATE, so the URL returns 404 to anyone but the owner. Measured, not assumed: an anonymous `git ls-remote` is refused and the repo root returns HTTP 404. |
 
 ---

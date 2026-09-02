@@ -32,8 +32,8 @@
  * ─────────────────────────────────────────────────────────────────────────
  */
 
-import type { NerRecognizer, SensitivityProfile, SubstitutionMode } from '@privacyshield/core';
-import { restore, Vault } from '@privacyshield/core';
+import type { NerRecognizer, SensitivityProfile, SubstitutionMode } from '@discretion/core';
+import { restore, Vault } from '@discretion/core';
 
 import { analyzeText } from '../detection/analyze.js';
 import type { AnalyzedEntity } from '../detection/analyze.js';

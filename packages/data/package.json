@@ -1,10 +1,10 @@
 {
-  "name": "@privacyshield/data",
+  "name": "@discretion/data",
   "version": "0.1.0",
   "type": "module",
-  "description": "Generated data tables for @privacyshield/core: Unicode confusables, trigger lexicons, gazetteers, severity weights, and the fitted calibration model.",
+  "description": "Generated data tables for @discretion/core: Unicode confusables, trigger lexicons, gazetteers, severity weights, and the fitted calibration model.",
   "keywords": [
-    "privacyshield",
+    "discretion",
     "unicode",
     "confusables",
     "gazetteer"
@@ -12,11 +12,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/horozbabasi/privacyshield.git",
+    "url": "git+https://github.com/horozbabasi/discretion.git",
     "directory": "packages/data"
   },
-  "homepage": "https://github.com/horozbabasi/privacyshield/tree/main/packages/data#readme",
-  "bugs": "https://github.com/horozbabasi/privacyshield/issues",
+  "homepage": "https://github.com/horozbabasi/discretion/tree/main/packages/data#readme",
+  "bugs": "https://github.com/horozbabasi/discretion/issues",
   "engines": {
     "node": ">=20"
   },

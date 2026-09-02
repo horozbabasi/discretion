@@ -2,7 +2,7 @@
 
 **Status: NOT REVIEWED — this locale is not shipped**
 
-Digest of the strings below: `4612897b`
+Digest of the strings below: `7f8c7f5f`
 
 ---
 
@@ -39,18 +39,18 @@ A stiff translation ships; a misleading one does not.
 | `panel.action.protectAndSend` | Protect and send | **保護して送信** | Same as above; this is the wording used when items are being replaced. | | |
 | `panel.item.keepOriginal` | Keep original | **元のまま** | If this and "mask this" read as each other, the user LEAVES A SECRET IN PLAINTEXT believing they masked it. | | |
 | `panel.item.maskThis` | Mask this | **これをマスク** | If this and "keep original" read as each other, the user leaves a secret in plaintext believing they masked it. | | |
-| `panel.degraded.pageTitle` | PrivacyShield is not protecting this page | **PrivacyShield はこのページを保護していません** | Says the extension is NOT protecting this page. If it reads as protected, the user trusts a page that is not guarded. | | |
-| `panel.degraded.sendTitle` | PrivacyShield did not send this message | **PrivacyShield はこのメッセージを送信しませんでした** | Says the message was NOT sent. If it reads as sent, the user believes something left that did not - or the reverse. | | |
+| `panel.degraded.pageTitle` | Discretion is not protecting this page | **Discretion はこのページを保護していません** | Says the extension is NOT protecting this page. If it reads as protected, the user trusts a page that is not guarded. | | |
+| `panel.degraded.sendTitle` | Discretion did not send this message | **Discretion はこのメッセージを送信しませんでした** | Says the message was NOT sent. If it reads as sent, the user believes something left that did not - or the reverse. | | |
 | `panel.degraded.couldNotFind` | Could not find: $1. | **見つかりません: $1。** | Names what the extension could not locate. Must read as a failure, not as a result. | | |
 | `panel.degraded.noReason` | The extension reported a problem without saying what it was. | **拡張機能が問題を報告しましたが、内容は不明です。** | Says the extension failed without explaining why. Must not read as "nothing was found". | | |
 | `panel.unwitnessed.title` | Check this is your message | **このメッセージがご自身のものか確認してください** | Warns the message may not be what the user wrote. Must read as a warning. | | |
-| `panel.unwitnessed.body` | This text was already in the box - PrivacyShield did not see you type it. That is normal for a saved draft, a link that fills the box for you, or a suggested prompt. | **このテキストは最初から入力欄にありました。PrivacyShield は入力を確認していません。保存された下書き、入力欄を自動で埋めるリンク、提案文では通常のことです。** | Explains that warning. Must not read as reassurance. | | |
+| `panel.unwitnessed.body` | This text was already in the box - Discretion did not see you type it. That is normal for a saved draft, a link that fills the box for you, or a suggested prompt. | **このテキストは最初から入力欄にありました。Discretion は入力を確認していません。保存された下書き、入力欄を自動で埋めるリンク、提案文では通常のことです。** | Explains that warning. Must not read as reassurance. | | |
 | `panel.findings.note` | When you send, these will be replaced and you will be asked to confirm first. | **送信時に置き換えられ、その前に確認を求めます。** | Promises that these items WILL be replaced on send, and that the user will be asked first. A wrong tense or a negation changes what the user expects to happen. | | |
 | `panel.paste.body` | These will be masked when you send. You can mask them now instead. | **送信時にマスクされます。今すぐマスクすることもできます。** | Says pasted items will be masked when sending, and can be masked now instead. Must not read as "already masked". | | |
 | `panel.paste.none` | Nothing sensitive was found in it. | **機密情報は見つかりませんでした。** | Says nothing sensitive was found. If this reads as an error, the user distrusts a correct result; if an error reads as this, they trust a failure. | | |
 | `popup.status.protected` | Protecting this page | **このページを保護しています** | Says this page IS protected. Must not be confusable with the next string. | | |
 | `popup.status.unprotected` | Not protecting this page | **このページは保護されていません** | Says this page is NOT protected. If these two read alike, the status display is worse than none. | | |
-| `popup.status.unsupported` | PrivacyShield does not run on this site | **PrivacyShield はこのサイトでは動作しません** | Says the extension does not run here at all. Must not read as "protected". | | |
+| `popup.status.unsupported` | Discretion does not run on this site | **Discretion はこのサイトでは動作しません** | Says the extension does not run here at all. Must not read as "protected". | | |
 | `quick.action.mask` | Mask | **マスク** | Turns text into masked text. If it swaps with "restore", the user reveals values they meant to hide. | | |
 | `quick.action.restore` | Restore | **復元** | Turns masked text back into the real values. If it swaps with "mask", the user reveals values they meant to hide. | | |
 | `quick.unavailable` | Masking is unavailable right now, so nothing was changed. | **現在マスクを実行できないため、何も変更していません。** | Says masking did NOT happen and nothing was changed. If it reads as success, the user copies unmasked text believing it is safe. | | |
@@ -70,7 +70,7 @@ When every row is marked, add to `packages/extension/src/i18n/reviewed.ts`:
   reviewer: '<name>',
   relationship: '<native speaker / fluent, how long>',
   date: '<YYYY-MM-DD>',
-  digest: '4612897b',
+  digest: '7f8c7f5f',
 },
 ```
 

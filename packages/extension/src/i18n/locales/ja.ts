@@ -10,11 +10,11 @@
 import type { Catalogue, EntityLabels } from '../catalogue.js';
 
 export const JA: Catalogue = {
-  appName: 'PrivacyShield',
+  appName: 'Discretion',
   appDescription:
     'AI チャットに送信される前に、テキスト内の機密情報を検出してマスクします。すべてお使いのデバイス上で動作します。',
 
-  'panel.review.aria': 'PrivacyShield: 送信前にマスクされる内容を確認してください',
+  'panel.review.aria': 'Discretion: 送信前にマスクされる内容を確認してください',
   'panel.review.title': { other: 'マスクする項目 $1 件' },
   'panel.exposure': '露出度 $1/100',
   'panel.action.cancel': 'キャンセル',
@@ -26,9 +26,9 @@ export const JA: Catalogue = {
 
   'panel.unwitnessed.title': 'このメッセージがご自身のものか確認してください',
   'panel.unwitnessed.body':
-    'このテキストは最初から入力欄にありました。PrivacyShield は入力を確認していません。保存された下書き、入力欄を自動で埋めるリンク、提案文では通常のことです。',
+    'このテキストは最初から入力欄にありました。Discretion は入力を確認していません。保存された下書き、入力欄を自動で埋めるリンク、提案文では通常のことです。',
 
-  'panel.findings.aria': { other: 'PrivacyShield: このメッセージで機密情報 $1 件を検出しました' },
+  'panel.findings.aria': { other: 'Discretion: このメッセージで機密情報 $1 件を検出しました' },
   'panel.findings.title': { other: '$1 件を検出' },
   'panel.findings.note': '送信時に置き換えられ、その前に確認を求めます。',
 
@@ -39,20 +39,20 @@ export const JA: Catalogue = {
   'panel.paste.maskNow': '今すぐマスク',
   'panel.paste.countOfType': { other: '$2 $1 件' },
 
-  'panel.degraded.pageTitle': 'PrivacyShield はこのページを保護していません',
-  'panel.degraded.sendTitle': 'PrivacyShield はこのメッセージを送信しませんでした',
+  'panel.degraded.pageTitle': 'Discretion はこのページを保護していません',
+  'panel.degraded.sendTitle': 'Discretion はこのメッセージを送信しませんでした',
   'panel.degraded.couldNotFind': '見つかりません: $1。',
   'panel.degraded.noReason': '拡張機能が問題を報告しましたが、内容は不明です。',
 
   // Layout direction, not a translation. See catalogue.ts.
   'ui.dir': 'ltr',
-  'popup.title': 'PrivacyShield',
+  'popup.title': 'Discretion',
   'popup.tab.status': 'ステータス',
   'popup.tab.quickRedact': 'クイックマスク',
   'popup.tab.insights': '統計',
   'popup.status.protected': 'このページを保護しています',
   'popup.status.unprotected': 'このページは保護されていません',
-  'popup.status.unsupported': 'PrivacyShield はこのサイトでは動作しません',
+  'popup.status.unsupported': 'Discretion はこのサイトでは動作しません',
   'popup.status.sessionCounts': 'このセッションでマスクした件数',
   'popup.status.sessionExposure': 'セッションの露出度',
   'popup.status.profile': '検出レベル',
@@ -105,7 +105,7 @@ export const JA: Catalogue = {
   'family.person': '名前',
   'family.other': 'その他',
 
-  'options.title': 'PrivacyShield の設定',
+  'options.title': 'Discretion の設定',
   'options.section.detection': '検出する対象',
   'options.section.substitution': '置換のスタイル',
   'options.section.lists': '常にマスク / 常に除外',

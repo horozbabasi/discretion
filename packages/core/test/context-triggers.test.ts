@@ -11,7 +11,7 @@
  * number.
  */
 import { describe, expect, it } from 'vitest';
-import { TRIGGER_LEXICONS } from '@privacyshield/data';
+import { TRIGGER_LEXICONS } from '@discretion/data';
 import { buildTriggerIndex, foldForMatch } from '../src/context/triggers.js';
 import type { EntityType } from '../src/types.js';
 

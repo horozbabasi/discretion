@@ -1,14 +1,14 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / [index](../README.md) / guardEgress
+[@discretion/core](../../README.md) / [index](../README.md) / guardEgress
 
 # Function: guardEgress()
 
 > **guardEgress**(`payload`, `auditor`): [`EgressVerdict`](../interfaces/EgressVerdict.md)
 
-Defined in: [packages/core/src/mask/egressGuard.ts:64](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/mask/egressGuard.ts#L64)
+Defined in: [packages/core/src/mask/egressGuard.ts:64](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/mask/egressGuard.ts#L64)
 
 Scan `payload` for every plaintext original in the vault. The auditor is
 the vault's single plaintext door (`vault.createEgressAuditor()`); this

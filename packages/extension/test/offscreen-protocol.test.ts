@@ -109,7 +109,7 @@ describe('the protocol is JSON-representable', () => {
   });
 
   it('names the channel distinctively enough not to collide', () => {
-    expect(NER_CHANNEL).toContain('privacyshield');
+    expect(NER_CHANNEL).toContain('discretion');
   });
 });
 

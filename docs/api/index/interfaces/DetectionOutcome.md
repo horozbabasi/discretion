@@ -1,12 +1,12 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / [index](../README.md) / DetectionOutcome
+[@discretion/core](../../README.md) / [index](../README.md) / DetectionOutcome
 
 # Interface: DetectionOutcome
 
-Defined in: [packages/core/src/pipeline.ts:41](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/pipeline.ts#L41)
+Defined in: [packages/core/src/pipeline.ts:41](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/pipeline.ts#L41)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [packages/core/src/pipeline.ts:41](https://github.com/horozbabasi/pr
 
 > `readonly` **emitted**: readonly [`ContextScoredCandidate`](ContextScoredCandidate.md)[]
 
-Defined in: [packages/core/src/pipeline.ts:43](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/pipeline.ts#L43)
+Defined in: [packages/core/src/pipeline.ts:43](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/pipeline.ts#L43)
 
 Candidates Stage 3 kept, with their adjusted confidence and reasons.
 
@@ -24,7 +24,7 @@ Candidates Stage 3 kept, with their adjusted confidence and reasons.
 
 > `readonly` **profile**: [`DocumentProfile`](DocumentProfile.md)
 
-Defined in: [packages/core/src/pipeline.ts:53](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/pipeline.ts#L53)
+Defined in: [packages/core/src/pipeline.ts:53](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/pipeline.ts#L53)
 
 ***
 
@@ -32,7 +32,7 @@ Defined in: [packages/core/src/pipeline.ts:53](https://github.com/horozbabasi/pr
 
 > `readonly` **suppressed**: readonly [`ContextScoredCandidate`](ContextScoredCandidate.md)[]
 
-Defined in: [packages/core/src/pipeline.ts:52](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/pipeline.ts#L52)
+Defined in: [packages/core/src/pipeline.ts:52](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/pipeline.ts#L52)
 
 Candidates Stage 3 suppressed, retained for eval and explanation.
 

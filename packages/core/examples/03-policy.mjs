@@ -8,7 +8,7 @@
  */
 
 import assert from 'node:assert/strict';
-import { protect, detectableEntityTypes, exposureBand } from '@privacyshield/core';
+import { protect, detectableEntityTypes, exposureBand } from '@discretion/core';
 
 const message = 'Card 5555341244441115 for Acme Ltd, ref DE44500105175407324931.';
 

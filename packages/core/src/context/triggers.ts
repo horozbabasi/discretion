@@ -9,7 +9,7 @@
  * languages."
  *
  * This module is the MATCHER; the lexicons themselves live in
- * `@privacyshield/data` as required. Two matching strategies run together
+ * `@discretion/data` as required. Two matching strategies run together
  * because one alone cannot cover the world's scripts:
  *
  *   • Space-delimited scripts tokenize, then look up 1..4-word n-grams in a

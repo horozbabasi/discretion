@@ -115,23 +115,23 @@ def main() -> int:
             # and every later assertion measures a zero-sized box - which is
             # exactly what the first version of this script did.
             page.wait_for_function(
-                "() => { const h = document.querySelector('privacyshield-surface');"
+                "() => { const h = document.querySelector('discretion-surface');"
                 " return h !== null && h.getAttribute('data-state') === 'review'"
                 " && h.getBoundingClientRect().height > 80; }",
                 timeout=60_000,
             )
         except Exception:
             state = page.evaluate(
-                "() => { const h = document.querySelector('privacyshield-surface');"
+                "() => { const h = document.querySelector('discretion-surface');"
                 " return h ? h.getAttribute('data-state') : 'no host'; }"
             )
             failures.append(f"the review panel never opened (data-state={state!r})")
 
-        host = page.locator("privacyshield-surface")
+        host = page.locator("discretion-surface")
         page.wait_for_timeout(1_200)  # let the entry transition settle
 
         state = page.evaluate(
-            "() => { const h = document.querySelector('privacyshield-surface');"
+            "() => { const h = document.querySelector('discretion-surface');"
             " if (!h) return 'no host';"
             " const cs = getComputedStyle(h);"
             " return { display: cs.display, visibility: cs.visibility, opacity: cs.opacity,"

@@ -1,14 +1,14 @@
-[**@privacyshield/core**](../../README.md)
+[**@discretion/core**](../../README.md)
 
 ***
 
-[@privacyshield/core](../../README.md) / [index](../README.md) / foldDigits
+[@discretion/core](../../README.md) / [index](../README.md) / foldDigits
 
 # Function: foldDigits()
 
 > **foldDigits**(`text`): [`TransformStepResult`](../interfaces/TransformStepResult.md) \| `null`
 
-Defined in: [packages/core/src/transforms/foldDigits.ts:95](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/transforms/foldDigits.ts#L95)
+Defined in: [packages/core/src/transforms/foldDigits.ts:95](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/transforms/foldDigits.ts#L95)
 
 Fold every non-ASCII decimal digit to ASCII.
 

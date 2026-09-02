@@ -12,8 +12,8 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { normalize, runStage1, generate } from '@privacyshield/core';
-import '@privacyshield/core';
+import { normalize, runStage1, generate } from '@discretion/core';
+import '@discretion/core';
 import { generateHardNegatives, HARD_NEGATIVE_CATEGORIES } from '../src/corpus/hardNegatives.js';
 
 /**

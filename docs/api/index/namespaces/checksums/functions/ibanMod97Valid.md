@@ -1,14 +1,14 @@
-[**@privacyshield/core**](../../../../README.md)
+[**@discretion/core**](../../../../README.md)
 
 ***
 
-[@privacyshield/core](../../../../README.md) / [index](../../../README.md) / [checksums](../README.md) / ibanMod97Valid
+[@discretion/core](../../../../README.md) / [index](../../../README.md) / [checksums](../README.md) / ibanMod97Valid
 
 # Function: ibanMod97Valid()
 
 > **ibanMod97Valid**(`iban`): `boolean`
 
-Defined in: [packages/core/src/checksums/mod97.ts:55](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/checksums/mod97.ts#L55)
+Defined in: [packages/core/src/checksums/mod97.ts:55](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/checksums/mod97.ts#L55)
 
 Validate an IBAN's mod-97 checksum (ISO 13616 / ISO 7064 MOD 97-10).
 

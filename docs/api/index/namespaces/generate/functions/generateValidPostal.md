@@ -1,14 +1,14 @@
-[**@privacyshield/core**](../../../../README.md)
+[**@discretion/core**](../../../../README.md)
 
 ***
 
-[@privacyshield/core](../../../../README.md) / [index](../../../README.md) / [generate](../README.md) / generateValidPostal
+[@discretion/core](../../../../README.md) / [index](../../../README.md) / [generate](../README.md) / generateValidPostal
 
 # Function: generateValidPostal()
 
 > **generateValidPostal**(`seed`): `string`
 
-Defined in: [packages/core/src/generate/location.ts:24](https://github.com/horozbabasi/privacyshield/blob/b5e097aedd021fca70f7b2cc252a9eff1043721e/packages/core/src/generate/location.ts#L24)
+Defined in: [packages/core/src/generate/location.ts:24](https://github.com/horozbabasi/privacyshield/blob/1ed43083dc5f2fa94a4eff8cba71ae6aeb5df89d/packages/core/src/generate/location.ts#L24)
 
 A postal code satisfying at least one country's format.
 

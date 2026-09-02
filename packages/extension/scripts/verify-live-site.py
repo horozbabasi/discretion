@@ -254,7 +254,7 @@ def probe_offscreen_config(worker):
         status = worker.evaluate(
             """async () => {
               return await new Promise((resolve) => {
-                const port = chrome.runtime.connect({ name: 'privacyshield-ner' });
+                const port = chrome.runtime.connect({ name: 'discretion-ner' });
                 const timer = setTimeout(() => resolve({ error: 'timeout' }), 120000);
                 port.onMessage.addListener((msg) => {
                   clearTimeout(timer);
@@ -340,7 +340,7 @@ def verify(ctx, site, config):
                 fail(site, f'no composer at {page.url[:70]}')
             return
 
-        host = page.locator('privacyshield-surface')
+        host = page.locator('discretion-surface')
         try:
             # state='attached': the host starts display:none, and the default
             # wait is for VISIBLE - which times out on an extension that has

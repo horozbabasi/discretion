@@ -14,8 +14,8 @@
 
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { generate, Vault } from '@privacyshield/core';
-import type { DetectionStage } from '@privacyshield/core';
+import { generate, Vault } from '@discretion/core';
+import type { DetectionStage } from '@discretion/core';
 
 import type { AnalyzedEntity } from '../src/detection/analyze.js';
 import {

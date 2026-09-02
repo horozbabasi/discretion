@@ -16,7 +16,7 @@
  *   0 non-matching lines skipped)
  *
  * Format: [source code point, source script, skeleton (NFKC), skeleton script].
- * Script names mirror ScriptName in @privacyshield/core.
+ * Script names mirror ScriptName in @discretion/core.
  *
  * ── ATTRIBUTION ──────────────────────────────────────────────────────
  * Derived from Unicode Character Database security data.

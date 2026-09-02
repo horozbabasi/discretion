@@ -14,7 +14,7 @@
 # Usage:  bash packages/extension/scripts/verify-fresh-clone.sh [--keep]
 set -uo pipefail
 
-REPO_URL="${REPO_URL:-https://github.com/horozbabasi/privacyshield}"
+REPO_URL="${REPO_URL:-https://github.com/horozbabasi/discretion}"
 WORK="$(mktemp -d -t ps-fresh-XXXXXX)"
 KEEP=0
 [ "${1:-}" = "--keep" ] && KEEP=1
@@ -51,10 +51,10 @@ else
 fi
 
 step "clone into $WORK"
-if ! git clone --depth 1 "$REPO_URL" "$WORK/privacyshield" 2>&1 | tail -2; then
+if ! git clone --depth 1 "$REPO_URL" "$WORK/discretion" 2>&1 | tail -2; then
   fail "clone failed"; exit 1
 fi
-cd "$WORK/privacyshield" || exit 1
+cd "$WORK/discretion" || exit 1
 ok "cloned $(git log --oneline -1)$([ "$PUBLIC" = "0" ] && printf ' (AUTHENTICATED, not anonymous)')"
 
 # THE PRECONDITION THIS TEST IS ABOUT. If the model were somehow already

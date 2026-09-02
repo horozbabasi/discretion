@@ -27,8 +27,8 @@
  * ─────────────────────────────────────────────────────────────────────────
  */
 
-import type { EntityFamily, EntityType } from '@privacyshield/core';
-import { detectableEntityTypes, familyOf } from '@privacyshield/core';
+import type { EntityFamily, EntityType } from '@discretion/core';
+import { detectableEntityTypes, familyOf } from '@discretion/core';
 
 import { entityLabel, isRtl, plural, t, uiLocale } from '../i18n/index.js';
 import type { MessageKey } from '../i18n/index.js';
@@ -466,7 +466,7 @@ class OptionsPage {
       const url = URL.createObjectURL(blob);
       const link = el('a');
       link.href = url;
-      link.download = 'privacyshield-settings.json';
+      link.download = 'discretion-settings.json';
       link.click();
       URL.revokeObjectURL(url);
     });

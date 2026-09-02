@@ -254,7 +254,7 @@ def main() -> int:
                 fail(f"dir={html_dir!r}")
             else:
                 ok(f"dir={html_dir}")
-            if args.locale != "en" and title == "PrivacyShield settings":
+            if args.locale != "en" and title == "Discretion settings":
                 failures.append(f"locale {args.locale} rendered the English title")
                 fail("no translation applied")
             else:

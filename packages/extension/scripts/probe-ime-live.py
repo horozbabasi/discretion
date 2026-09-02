@@ -36,10 +36,14 @@ means nothing unless a plain Enter is shown to send in the same run.
 ─────────────────────────────────────────────────────────────────────────────
 
 Usage:
-  python packages/extension/scripts/probe-ime-live.py [--control]
+  python packages/extension/scripts/probe-ime-live.py [--control] [--site all]
 
+  --site     chatgpt | claude | gemini | all   (default: all)
   --control  also press a plain Enter afterwards, to prove a send WOULD have
              been observable. Without it a negative result is not conclusive.
+
+All three are asked, because there is no reason to assume they behave alike -
+they do not agree on anything else about their composers.
 """
 
 from __future__ import annotations
@@ -61,8 +65,33 @@ PROFILE = ROOT / ".live-profile"
 # sent, what lands in the history is a greeting.
 COMPOSITION_TEXT = "こんにちは"
 
+# The signed-in composer for each site, and the marker that says the real app
+# loaded rather than a marketing page. Selectors are lifted from the adapters
+# in src/adapters/, so this probe and the extension agree about what a composer
+# is; a probe with its own idea of the composer answers a different question.
+SITES = {
+    "chatgpt": {
+        "url": "https://chatgpt.com/",
+        "composer": ["#prompt-textarea", "[contenteditable='true'][role='textbox']"],
+        "app_marker": "#prompt-textarea, [data-testid='send-button']",
+    },
+    "claude": {
+        "url": "https://claude.ai/new",
+        "composer": [
+            "[contenteditable='true'][role='textbox']",
+            "div.ProseMirror[contenteditable='true']",
+        ],
+        "app_marker": "[data-testid='chat-input'], div.ProseMirror[contenteditable='true']",
+    },
+    "gemini": {
+        "url": "https://gemini.google.com/app",
+        "composer": [".ql-editor[contenteditable='true']", "[contenteditable='true'][role='textbox']"],
+        "app_marker": ".ql-editor, [data-test-id='send-button'], .send-button",
+    },
+}
 
-def session_state(page) -> dict:
+
+def session_state(page, site: dict) -> dict:
     """Signed in, or looking at the marketing page?
 
     THIS DISTINCTION IS LOAD-BEARING, and the first version of this script did
@@ -73,185 +102,257 @@ def session_state(page) -> dict:
 
     Its own control step caught that: a plain Enter did not send either, it
     inserted a newline. Which is why the control exists.
-
-    The signed-in composer is a ProseMirror contenteditable at
-    `#prompt-textarea`, alongside a send button. A bare textarea with "Log in"
-    on the page is the landing page, and answers a different question.
     """
-    return page.evaluate("""() => {
-      const prompt = document.querySelector('#prompt-textarea');
-      const loginish = [...document.querySelectorAll('a,button')]
-        .map((e) => (e.textContent || '').trim())
-        .filter((t) => /log ?in|sign ?up|sign ?in/i.test(t));
-      return {
-        hasPromptComposer: prompt !== null && prompt.isContentEditable === true,
-        contentEditables: document.querySelectorAll('[contenteditable="true"]').length,
-        hasSendButton: document.querySelector('[data-testid="send-button"]') !== null,
-        loginAffordances: loginish.slice(0, 4),
-      };
-    }""")
+    return page.evaluate(
+        """(marker) => {
+          const loginish = [...document.querySelectorAll('a,button')]
+            .map((e) => (e.textContent || '').trim())
+            .filter((t) => /log ?in|sign ?in|sign ?up|get started/i.test(t));
+          return {
+            appLoaded: document.querySelector(marker) !== null,
+            contentEditables: document.querySelectorAll('[contenteditable="true"]').length,
+            loginAffordances: [...new Set(loginish)].slice(0, 4),
+          };
+        }""",
+        site["app_marker"],
+    )
 
 
-def composer_of(page):
-    """The signed-in app composer only. Never the landing-page textarea."""
-    for selector in ("#prompt-textarea", "[contenteditable='true']"):
+def composer_of(page, site: dict):
+    """The signed-in app composer only. Never a landing-page textarea."""
+    for selector in site["composer"]:
         found = page.locator(selector).first
-        if found.count() > 0:
-            try:
-                if found.is_visible():
-                    return found, selector
-            except Exception:
-                continue
+        try:
+            if found.count() > 0 and found.is_visible():
+                return found, selector
+        except Exception:
+            continue
     return None, None
+
+
+def probe_site(context, name: str, site: dict, control: bool) -> tuple[int, str]:
+    """Returns (code, one-line verdict). 0 waits correctly, 1 defect, 3 inconclusive."""
+    page = context.new_page()
+    print()
+    print("=" * 68)
+    print(f"  {name}  ->  {site['url']}")
+    print("=" * 68)
+
+    try:
+        page.goto(site["url"], wait_until="domcontentloaded", timeout=60_000)
+    except Exception as error:
+        print(f"  could not load: {error}")
+        page.close()
+        return 3, f"{name}: page would not load"
+    page.wait_for_timeout(7_000)
+
+    state = session_state(page, site)
+    print(f"  session: {state}")
+    composer, selector = composer_of(page, site)
+
+    if not state["appLoaded"] or composer is None:
+        print()
+        print("  NOT SIGNED IN, or the app did not load its composer.")
+        if state["loginAffordances"]:
+            print(f"  the page offers: {state['loginAffordances']}")
+        print("  Reported INCONCLUSIVE, not as a pass: a page with no send handler")
+        print("  sends nothing, which is not evidence about anything.")
+        page.close()
+        return 3, f"{name}: not signed in"
+
+    print(f"  composer: {selector}")
+    composer.click()
+    page.wait_for_timeout(600)
+
+    page.evaluate(
+        """(sel) => {
+          const node = document.querySelector(sel);
+          window.__ps = { enters: [], text: () =>
+            (typeof node.value === 'string' ? node.value : (node.textContent ?? '')) };
+          node.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') window.__ps.enters.push({
+              isComposing: e.isComposing, keyCode: e.keyCode, trusted: e.isTrusted });
+          }, true);
+        }""",
+        selector,
+    )
+
+    cdp = context.new_cdp_session(page)
+
+    print()
+    print("  -- composing Enter (the actual question) --")
+    cdp.send(
+        "Input.imeSetComposition",
+        {
+            "text": COMPOSITION_TEXT,
+            "selectionStart": len(COMPOSITION_TEXT),
+            "selectionEnd": len(COMPOSITION_TEXT),
+        },
+    )
+    page.wait_for_timeout(600)
+    before = page.evaluate("() => window.__ps.text()")
+    print(f"  composer before Enter: {before!r}")
+
+    for kind in ("rawKeyDown", "keyUp"):
+        cdp.send(
+            "Input.dispatchKeyEvent",
+            {
+                "type": kind,
+                "key": "Enter",
+                "code": "Enter",
+                "windowsVirtualKeyCode": 13,
+                "nativeVirtualKeyCode": 13,
+            },
+        )
+    page.wait_for_timeout(3_000)
+
+    after = page.evaluate("() => window.__ps.text()")
+    enters = page.evaluate("() => window.__ps.enters")
+    print(f"  composer after Enter : {after!r}")
+    print(f"  Enter events seen    : {enters}")
+
+    composing_seen = any(e["isComposing"] for e in enters)
+    sent = len(before.strip()) > 0 and len(after.strip()) == 0
+
+    print()
+    if not composing_seen:
+        print("  INCONCLUSIVE: no Enter arrived with isComposing=true, so the")
+        print("  composition state never reached the handler for this page.")
+        page.close()
+        return 3, f"{name}: composition did not reach the handler"
+
+    if sent:
+        print("  *** SENDS PREMATURELY ***")
+        print("  An Enter that only committed an IME candidate submitted the")
+        print("  message. A CJK user can send ungated text.")
+        page.close()
+        return 1, f"{name}: SENDS PREMATURELY"
+
+    print("  WAITS CORRECTLY: the composing Enter committed the candidate and")
+    print("  did NOT submit.")
+
+    if control:
+        print()
+        print("  -- control: a plain Enter, to show a send would have been visible --")
+        print("     (this sends one short message to your account, on purpose)")
+        page.wait_for_timeout(600)
+        control_before = page.evaluate("() => window.__ps.text()")
+        page.keyboard.press("Enter")
+        page.wait_for_timeout(4_000)
+        control_after = page.evaluate("() => window.__ps.text()")
+        control_sent = (
+            len(control_before.strip()) > 0 and len(control_after.strip()) == 0
+        )
+        print(f"  before: {control_before!r}  after: {control_after!r}")
+        if control_sent:
+            print("  ok    a plain Enter DID send, so the negative result above is real")
+            page.close()
+            return 0, f"{name}: waits correctly (control confirmed)"
+        print("  FAIL  a plain Enter did not send either - the observation method")
+        print("        did not work, so the result above proves nothing")
+        page.close()
+        return 3, f"{name}: control failed, result not trustworthy"
+
+    page.close()
+    return 0, f"{name}: waits correctly (NO CONTROL - weaker)"
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--control", action="store_true")
+    parser.add_argument("--site", default="all", choices=[*SITES, "all"])
+    parser.add_argument(
+        "--attach",
+        type=int,
+        metavar="PORT",
+        help=(
+            "Attach to a browser YOU launched, over CDP, instead of launching one. "
+            "See docs/manual-checks/isComposing.md."
+        ),
+    )
     args = parser.parse_args()
 
-    if not PROFILE.exists():
-        print("No .live-profile. Run: python packages/extension/scripts/login-profile.py")
-        return 2
+    names = list(SITES) if args.site == "all" else [args.site]
+    results: list[tuple[int, str]] = []
 
     with sync_playwright() as p:
-        context = p.chromium.launch_persistent_context(
-            user_data_dir=str(PROFILE),
-            channel="msedge",
-            headless=False,
-            viewport={"width": 1280, "height": 900},
-        )
-        page = context.pages[0] if context.pages else context.new_page()
-
-        print("-- loading chatgpt.com with the hand-logged-in profile --")
-        try:
-            page.goto("https://chatgpt.com/", wait_until="domcontentloaded", timeout=60_000)
-        except Exception as error:
-            print(f"  could not load: {error}")
-            context.close()
-            return 1
-        page.wait_for_timeout(6_000)
-
-        url = page.url
-        title = (page.title() or "").strip()
-        body = (page.inner_text("body") or "")[:400].replace("\n", " ")
-        print(f"  url   : {url}")
-        print(f"  title : {title!r}")
-
-        state = session_state(page)
-        print(f"  session: {state}")
-        composer, selector = composer_of(page)
-
-        if not state["hasPromptComposer"] or composer is None:
-            print(f"  body  : {body[:160]!r}")
-            print()
-            print("NOT SIGNED IN - this is the logged-out landing page.")
-            if state["loginAffordances"]:
-                print(f"  the page offers: {state['loginAffordances']}")
-            print()
-            print("The site's real send handler is only reachable behind the login, so")
-            print("the question stays OPEN. It is NOT reported as a pass: a landing-page")
-            print("textarea that sends nothing is not evidence that a composing Enter is")
-            print("handled correctly.")
-            print()
-            print("To settle it:")
-            print("  1. python packages/extension/scripts/login-profile.py")
-            print("     - log in BY HAND in the window it opens, then close it")
-            print("  2. python packages/extension/scripts/probe-ime-live.py --control")
-            print()
-            print("No password is typed, read or stored by any script here, and this")
-            print("one will not attempt to log in or to get past a challenge.")
-            context.close()
-            return 3
-
-        print(f"  composer: {selector}")
-        composer.click()
-        page.wait_for_timeout(400)
-
-        # Instrument BEFORE composing, so nothing is missed.
-        page.evaluate(
-            """(sel) => {
-              const node = document.querySelector(sel);
-              window.__ps = { enters: [], cleared: 0, text: () =>
-                (typeof node.value === 'string' ? node.value : (node.textContent ?? '')) };
-              window.__psNode = node;
-              node.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') window.__ps.enters.push({
-                  isComposing: e.isComposing, keyCode: e.keyCode, trusted: e.isTrusted });
-              }, true);
-            }""",
-            selector,
-        )
-
-        cdp = context.new_cdp_session(page)
-
-        print()
-        print("-- composing Enter (the actual question) --")
-        cdp.send("Input.imeSetComposition", {
-            "text": COMPOSITION_TEXT,
-            "selectionStart": len(COMPOSITION_TEXT),
-            "selectionEnd": len(COMPOSITION_TEXT),
-        })
-        page.wait_for_timeout(500)
-        before = page.evaluate("() => window.__ps.text()")
-        print(f"  composer before Enter: {before!r}")
-
-        cdp.send("Input.dispatchKeyEvent", {
-            "type": "rawKeyDown", "key": "Enter", "code": "Enter",
-            "windowsVirtualKeyCode": 13, "nativeVirtualKeyCode": 13,
-        })
-        cdp.send("Input.dispatchKeyEvent", {
-            "type": "keyUp", "key": "Enter", "code": "Enter",
-            "windowsVirtualKeyCode": 13, "nativeVirtualKeyCode": 13,
-        })
-        page.wait_for_timeout(2_500)
-
-        after = page.evaluate("() => window.__ps.text()")
-        enters = page.evaluate("() => window.__ps.enters")
-        print(f"  composer after Enter : {after!r}")
-        print(f"  Enter events seen    : {enters}")
-
-        composing_seen = any(e["isComposing"] for e in enters)
-        sent = len(before.strip()) > 0 and len(after.strip()) == 0
-
-        print()
-        if not composing_seen:
-            print("INCONCLUSIVE: no Enter arrived with isComposing=true, so the")
-            print("composition state did not reach the site's handler. The question")
-            print("stays OPEN rather than being answered by a run that did not test it.")
-            verdict = 3
-        elif sent:
-            print("*** SENDS PREMATURELY ***")
-            print("An Enter that only committed an IME candidate submitted the message.")
-            print("A CJK user can send ungated text. This is a real defect and the")
-            print("adapter cannot skip a composing Enter unilaterally.")
-            verdict = 1
+        if args.attach:
+            # ATTACH, DO NOT LAUNCH.
+            #
+            # Playwright launching the browser is what trips the bot wall: it
+            # sets --enable-automation and the AutomationControlled blink
+            # feature, and navigator.webdriver comes back true. A login form
+            # then refuses, correctly.
+            #
+            # This mode does none of that. YOU start an ordinary browser with
+            # --remote-debugging-port and log in by hand, as a human, in a
+            # browser carrying no automation flags at all. This then attaches
+            # to it the way DevTools does.
+            #
+            # THIS IS NOT AN EVASION. Nothing is spoofed, no fingerprint is
+            # forged, and no check is defeated - the browser genuinely is an
+            # ordinary one and the person genuinely is a person. If a challenge
+            # appears, a human answers it. That is the whole difference from
+            # the stealth-flag approach this project refuses.
+            endpoint = f"http://127.0.0.1:{args.attach}"
+            print(f"attaching to {endpoint} (a browser you started)")
+            try:
+                browser = p.chromium.connect_over_cdp(endpoint)
+            except Exception as error:
+                print(f"  could not attach: {error}")
+                print()
+                print("Start the browser first - see docs/manual-checks/isComposing.md:")
+                print("  Launch Edge yourself with two flags - the exact command is in")
+                print("  docs/manual-checks/isComposing.md - then re-run this with")
+                print(f"  --attach {args.attach}.")
+                return 2
+            if not browser.contexts:
+                print("  attached, but the browser has no context open. Open a tab first.")
+                return 2
+            context = browser.contexts[0]
+            automation = context.pages[0].evaluate("() => navigator.webdriver") if context.pages else None
+            print(f"  attached. navigator.webdriver = {automation!r}")
+            if automation is True:
+                print("  NOTE: this browser reports itself as automated, so it was")
+                print("  probably launched by a tool rather than by you. The bot wall")
+                print("  will behave the same as before.")
         else:
-            print("WAITS CORRECTLY: the composing Enter committed the candidate and did")
-            print("NOT submit. Skipping it in the adapter matches what the site does.")
-            verdict = 0
+            if not PROFILE.exists():
+                print("No .live-profile. Run: python packages/extension/scripts/login-profile.py")
+                return 2
+            context = p.chromium.launch_persistent_context(
+                user_data_dir=str(PROFILE),
+                channel="msedge",
+                headless=False,
+                viewport={"width": 1280, "height": 900},
+            )
 
-        if args.control and not sent:
-            print()
-            print("-- control: a plain Enter, to show a send would have been visible --")
-            print("   (this sends one short message to your account, on purpose)")
-            page.wait_for_timeout(500)
-            control_before = page.evaluate("() => window.__ps.text()")
-            page.keyboard.press("Enter")
-            page.wait_for_timeout(3_000)
-            control_after = page.evaluate("() => window.__ps.text()")
-            control_sent = len(control_before.strip()) > 0 and len(control_after.strip()) == 0
-            print(f"  before: {control_before!r}  after: {control_after!r}")
-            if control_sent:
-                print("  ok    a plain Enter DID send, so the negative result above is real")
-            else:
-                print("  FAIL  a plain Enter did not send either - the observation method")
-                print("        did not work, so the result above proves nothing")
-                verdict = 3
+        for name in names:
+            try:
+                results.append(probe_site(context, name, SITES[name], args.control))
+            except Exception as error:
+                print(f"  probe raised: {error}")
+                results.append((3, f"{name}: probe raised {type(error).__name__}"))
 
-        page.wait_for_timeout(1_000)
-        context.close()
-        return verdict
+        # An attached browser belongs to the USER. Closing its context would
+        # close their window and their tabs; only a launched one is ours to end.
+        if not args.attach:
+            context.close()
+
+    print()
+    print("=" * 68)
+    print("SUMMARY")
+    for code, line in results:
+        tag = {0: "ok  ", 1: "FAIL", 3: "????"}[code]
+        print(f"  {tag}  {line}")
+    print("=" * 68)
+
+    if any(code == 1 for code, _ in results):
+        return 1
+    if any(code == 3 for code, _ in results):
+        return 3
+    return 0
+
 
 
 if __name__ == "__main__":

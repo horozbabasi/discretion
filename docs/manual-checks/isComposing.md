@@ -1,125 +1,177 @@
 # Manual check: the `isComposing` Enter
 
-**Status: OPEN.** One step is needed from a person, and it is smaller than it
-used to be.
+**Status: OPEN on all three sites.** Two routes remain, both needing a person
+for the login and nothing else.
 
 ## The question
 
 When a CJK input method is open, pressing Enter **commits the highlighted
-candidate**. It is not a "send" keystroke — the user is still typing. Browsers
+candidate**. The user is still typing; it is not a "send" keystroke. Browsers
 mark that keydown `isComposing: true`.
 
-PrivacyShield's adapters skip those Enters, deliberately. Gating them would
+PrivacyShield's adapters skip those Enters deliberately — gating them would
 interrupt the user mid-word on every candidate they accept.
 
-**That is only safe if the site skips them too.** If ChatGPT submits on a
+**That is only safe if the site skips them too.** If a site submits on a
 composing Enter, a Japanese, Chinese or Korean user commits a candidate and the
-message goes out without ever passing the send gate. Those are precisely the
-users the nine-locale work was for.
+message goes out without passing the send gate. Those are exactly the users the
+nine-locale work was for.
 
-Our half is settled and tested. The site's half is not.
+Our half is settled and tested. The sites' half is not, for **any** of the
+three.
 
-## What has been established
+## What is already established
 
-**A human at a keyboard is no longer needed.** This was previously written up
-as needing someone to switch to a CJK IME and type, and that turns out to be
-wrong.
-
-`packages/extension/scripts/probe-ime-composition.py` measured it:
+**A CJK input method is not required.** This was previously written up as
+needing someone to type with an IME, and that is wrong.
+`probe-ime-composition.py` measured it:
 
 | approach | produces a real composing Enter? |
 | --- | --- |
-| `new KeyboardEvent('keydown', { isComposing: true })` from page script | **No** — arrives with `isTrusted: false`; a site checking trust ignores it |
-| CDP `Input.imeSetComposition` + `Input.dispatchKeyEvent` | **Yes** — `compositionstart` fires with `isTrusted: true`, and the following Enter arrives `isComposing: true, isTrusted: true` |
+| `new KeyboardEvent('keydown', { isComposing: true })` from page script | **No** — `isTrusted: false`; a site checking trust ignores it |
+| CDP `Input.imeSetComposition` + `Input.dispatchKeyEvent` | **Yes** — trusted `compositionstart`, then Enter with `isComposing: true, isTrusted: true` |
 
-So the composition itself is fully automatable.
+**What blocks it is the login.** Playwright *launching* the browser sets
+`--enable-automation` and `navigator.webdriver`, and the sites' login
+challenges refuse it. That wall is not to be worked around: no stealth flags,
+no fingerprint spoofing, no challenge solving.
 
-**What still cannot be automated is the login.** ChatGPT's real composer — a
-ProseMirror `contenteditable` at `#prompt-textarea` — exists only behind a
-signed-in session. No script in this repository will type a password, and none
-will try to get past a bot challenge.
+---
 
-## What happened on the last attempt
+## Route A — attach to a browser you launched (recommended)
 
-Run on 2026-09-02 against `.live-profile`, the profile created by hand at M9:
+The difference that matters: **you** start an ordinary browser and log in as a
+human. Nothing is automated at launch, so there is nothing to detect. Only
+afterwards does the probe attach, the way DevTools does.
+
+Measured on this machine, attached to a hand-launched Edge 151:
 
 ```
-session: {'hasPromptComposer': False, 'contentEditables': 0,
-          'hasSendButton': False,
-          'loginAffordances': ['Log in', 'Sign up for free', ...]}
-NOT SIGNED IN - this is the logged-out landing page.
+navigator.webdriver : False        (it is True when Playwright launches)
+headless in UA      : False
+plugins             : 5
+languages           : ['en-US', 'en', 'tr']
+Input.imeSetComposition through the attach: accepted
 ```
 
-The M9 session has expired.
+**Nothing is spoofed.** The browser genuinely is an ordinary one, the person
+genuinely is a person, and if a challenge appears a human answers it. That is
+the whole difference from the stealth-flag approach this project refuses.
 
-**The first version of the probe reported this as a pass**, and was wrong.
-Logged out, chatgpt.com still renders a `<textarea>` on its landing page. The
-script found it, composed into it, pressed Enter, saw nothing sent, and printed
-`WAITS CORRECTLY` — about a textarea with no send handler attached to it at
-all.
+### Steps
 
-Its own control step is what caught this: a plain Enter did not send either, it
-inserted a newline. A negative result means nothing unless a positive one is
-shown to be observable in the same run. The probe now checks for the signed-in
-composer up front and refuses to proceed without it.
+**1. Start Edge yourself**, in PowerShell:
 
-## The step
+```powershell
+& "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" `
+    --remote-debugging-port=9222 `
+    --user-data-dir="C:\ps-probe-profile"
+```
 
-Two commands. The first opens a browser and waits while **you** log in; no
-script sees the password.
+`--user-data-dir` is required: since Chrome/Edge 136, remote debugging is
+refused on the default profile. It also means **your everyday profile is never
+touched** — this is a scratch profile that starts logged out, and the probe
+never sees your normal browsing session.
+
+**2. Log in by hand** in that window, at whichever of these you want covered:
+
+- `https://chatgpt.com/`
+- `https://claude.ai/new`
+- `https://gemini.google.com/app`
+
+Open a **new chat** on each so the real composer is on screen. It is an
+ordinary browser, so the login behaves normally.
+
+**3. Leave it open** and run:
 
 ```bash
-python packages/extension/scripts/login-profile.py
-#   log in by hand in the window that opens, then close it
-
-python packages/extension/scripts/probe-ime-live.py --control
+python packages/extension/scripts/probe-ime-live.py --attach 9222 --control
+# or one at a time:
+python packages/extension/scripts/probe-ime-live.py --attach 9222 --control --site chatgpt
 ```
 
-Exit codes: `0` waits correctly, `1` **sends prematurely**, `3` inconclusive
-(not signed in, or the composition never reached the handler).
+The probe prints `navigator.webdriver` on attach, so you can see for yourself
+that it is looking at a non-automated browser.
 
-`--control` presses a plain Enter afterwards and requires it to send. Without
-that, "nothing was sent" is indistinguishable from "nothing could have been
-sent", which is the exact mistake described above.
+Exit codes: `0` all sites wait correctly, `1` **at least one sends
+prematurely**, `3` inconclusive (not signed in, or the composition never
+reached the handler).
 
-**It may send a message to your account, and that is the point.** The text is
-`こんにちは`. If the composing Enter submits it, that greeting appears in your
-history — which is the finding. The control step sends one deliberately.
+**4. Close the browser and delete `C:\ps-probe-profile`** when done.
 
-## Doing it by hand instead
+### `--control` sends one message per site, on purpose
 
-If you would rather not run the script, `ime-diagnostic.js` in this directory
-can be pasted into DevTools on a signed-in tab. It only observes: it never
-sends, never edits the composer, and never reads its contents beyond their
-length.
+The text is `こんにちは`. If the composing Enter submits it, that greeting
+appears in your history — which *is* the finding.
 
-1. Open a signed-in chatgpt.com tab and click into the message box.
-2. Paste the contents of `ime-diagnostic.js` into the console.
-3. Switch to a CJK IME. Type until the candidate window is open.
-4. Press Enter **once**, to commit the candidate.
-5. Run `__psImeReport()`.
+The control step then sends one deliberately, because **"nothing was sent"
+proves nothing unless a plain Enter is shown to send in the same run.** That is
+not hypothetical: without it, the probe once reported `WAITS CORRECTLY` while testing the logged-out landing page, whose `<textarea>` has no send handler
+attached at all.
 
-It reports `WAITS CORRECTLY`, `SENDS PREMATURELY`, or `INCONCLUSIVE — no Enter
-was seen while composing`, and prints every Enter it saw with its
-`isComposing`, `keyCode` and `isTrusted`. `keyCode` is recorded too because
-some sites test for `229` instead of `isComposing`, and knowing which signal
-was available matters if the answer turns out to be bad.
+Run without `--control` if you prefer, and the result is labelled
+`NO CONTROL - weaker`.
 
-`__psImeStop()` removes it.
+---
 
-The snippet is exercised by `probe-ime-composition.py`, which installs it and
-drives a CDP-generated composing Enter through it, so it is known to report
-correctly before anyone pastes it anywhere.
+## Route B — fully manual, no automation anywhere
 
-## If the answer is "sends prematurely"
+If Route A is unwanted, this touches no automation at all. It needs a CJK input
+method, because without CDP the composition has to come from a real IME.
 
-The adapter can no longer skip composing Enters unilaterally. The likely fix is
-to gate them and release the keystroke back to the page after analysis, the way
-the existing replay path does — at the cost of a visible pause on every
-candidate commit. That is a real UX cost, which is why the measurement has to
-come first.
+### Installing a Japanese IME on Windows (about two minutes)
 
-## Claude and Gemini
+1. **Settings → Time & language → Language & region**
+2. **Add a language** → search `日本語` (Japanese) → **Next** → **Install**
+3. Switch input with **Win + Space** (a language bar appears near the clock)
 
-Not yet asked. The same probe points at one origin; the other two need the same
-treatment, and there is no reason to assume all three behave alike.
+Remove it the same way afterwards.
+
+### The check
+
+1. Open a signed-in tab in **your own normal browser** and click into the
+   message box.
+2. Open DevTools (**F12**) → **Console**.
+3. Paste the entire contents of
+   [`ime-diagnostic.js`](ime-diagnostic.js). It prints `IME diagnostic armed`.
+4. Switch to the Japanese IME (**Win + Space**) and type `nihon` — a candidate
+   window appears under the text. **Do not press Enter yet.**
+5. Press **Enter once**, to commit the candidate.
+6. Run `__psImeReport()`.
+7. `__psImeStop()` to remove it.
+
+### Reading the result
+
+- **`WAITS CORRECTLY`** — the composing Enter committed the candidate and did
+  not submit. This is the good case.
+- **`SENDS PREMATURELY`** — real defect; see below.
+- **`INCONCLUSIVE — no Enter was seen while composing`** — the candidate window
+  was not open when you pressed Enter. Retry from step 4.
+
+The snippet only observes: it never sends, never edits the composer, and never
+reads its contents beyond their length. It also records `keyCode`, because some
+sites test for `229` instead of `isComposing`, and knowing which signal was
+available matters if the answer turns out to be bad.
+
+It is exercised by `probe-ime-composition.py`, which installs it and drives a
+CDP-generated composing Enter through it — so it is known to report correctly
+before anyone pastes it into a signed-in session.
+
+Repeat on all three sites. **There is no reason to assume they behave alike;**
+they agree on nothing else about their composers.
+
+---
+
+## If any site answers "sends prematurely"
+
+That adapter can no longer skip composing Enters unilaterally. The fix follows
+the existing replay path: gate the keystroke, run analysis, then release the
+user's own action back to the page — the same one-shot replay the send gate
+already uses for clicks and plain Enters.
+
+The cost is a visible pause on every candidate commit, for that site only,
+which is why the measurement has to come first: it is a real UX regression to
+impose on the exact users this is meant to protect, and it should not be
+imposed on sites that do not need it.
+
+`probe-ime-live.py` exits `1` in that case, so it can gate a release.

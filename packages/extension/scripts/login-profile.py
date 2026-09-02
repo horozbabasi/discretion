@@ -32,7 +32,15 @@ PROFILE = ROOT / '.live-profile'
 SITES = [
     ('claude', 'https://claude.ai/new'),
     ('chatgpt', 'https://chatgpt.com/'),
+    # Added at M13: the isComposing question has to be settled on all three,
+    # and there is no reason to assume they behave alike.
+    ('gemini', 'https://gemini.google.com/app'),
 ]
+
+# Written by whoever drives this script once the human confirms. Polled below,
+# so the session can be saved on a signal rather than only on a keypress this
+# process may have no way to receive.
+DONE_SENTINEL = PROFILE / '.logged-in'
 
 PROFILE.mkdir(parents=True, exist_ok=True)
 print(f'profile directory: {PROFILE}')
@@ -53,22 +61,47 @@ with sync_playwright() as p:
             print(f'  opened {name}: {url}')
 
         print('\n' + '=' * 68)
-        print('LOG IN to both tabs now, and open a NEW CHAT on each so the real')
-        print('composer is on screen.')
+        print('LOG IN to all three tabs now, and open a NEW CHAT on each so the')
+        print('real composer is on screen.')
         print()
-        print('Nothing will be sent to either service by the verification that')
-        print('follows: it types a synthetic IBAN, lets the extension mask it,')
-        print('and blocks every outbound POST before the step that would submit.')
+        print('NOTE: probe-ime-live.py --control DELIBERATELY SENDS one short')
+        print('message per site. That is the control step - "nothing was sent"')
+        print('means nothing unless a plain Enter is shown to send in the same')
+        print('run. The text is a greeting. Older text here claimed nothing is')
+        print('ever sent; that was true of verify-live-site.py and is not true')
+        print('of the IME probe.')
         print()
-        print('When both are logged in, press Enter HERE to save the session.')
+        print('When all three are logged in, CLOSE THE BROWSER WINDOW (that flushes')
+        print('the session to disk), then press Enter here if this is interactive.')
         print('=' * 68)
         try:
             input()
         except EOFError:
-            print('\nNo interactive stdin. Log in, then close the browser window.')
-            page.wait_for_timeout(600_000)
+            # No interactive stdin - this is being run detached by an agent,
+            # which cannot press Enter here. Two exits instead: a sentinel file,
+            # or the human simply closing the browser window.
+            print()
+            print('No interactive stdin (running detached).')
+            print('Finish by closing the browser window, or by creating:')
+            print(f'  {DONE_SENTINEL}')
+            DONE_SENTINEL.unlink(missing_ok=True)
+            waited = 0
+            while waited < 3_600_000:
+                if DONE_SENTINEL.exists():
+                    print('sentinel seen - saving the session.')
+                    DONE_SENTINEL.unlink(missing_ok=True)
+                    break
+                if not ctx.pages:
+                    print('browser closed - saving the session.')
+                    break
+                try:
+                    page.wait_for_timeout(2_000)
+                except Exception:
+                    print('browser closed - saving the session.')
+                    break
+                waited += 2_000
     finally:
         ctx.close()
 
 print(f'\nSession saved to {PROFILE}')
-print('Next: python packages/extension/scripts/verify-live-site.py --profile --sites claude,chatgpt')
+print('Next: python packages/extension/scripts/probe-ime-live.py --control')

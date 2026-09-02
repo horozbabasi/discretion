@@ -6524,6 +6524,125 @@ however genuine the panel in it happens to be. The capture is cropped to the
 panel - no page, no URL bar, no chrome - so the image claims only what it
 shows. The real-conversation screenshot needs a person with an account.
 
+### D61 - The launch call on translations, and attaching instead of launching
+
+Two decisions, both taken because the obvious route was blocked.
+
+#### The bot wall, and what is and is not a workaround
+
+Playwright LAUNCHING a browser sets `--enable-automation` and the
+AutomationControlled blink feature, and `navigator.webdriver` returns true. All
+three sites' login challenges refuse it. That wall is not to be worked around:
+no stealth flags, no fingerprint spoofing, no challenge solving. It was ruled
+out for claude.ai earlier and the same answer applies here.
+
+**Attaching is a different thing from evading, and the difference is not a
+technicality.** The user starts an ordinary browser and logs in as a human;
+the probe then connects over CDP the way DevTools does. Nothing is spoofed, no
+fingerprint is forged, no check is defeated - the browser genuinely is an
+ordinary browser and the person genuinely is a person. A stealth flag lies
+about the environment; this does not.
+
+Measured, attached to a hand-launched Edge 151:
+
+```
+navigator.webdriver : False        (True when Playwright launches)
+headless in UA      : False
+plugins             : 5
+languages           : ['en-US', 'en', 'tr']
+Input.imeSetComposition through the attach: accepted
+```
+
+That last line is what makes the mode useful rather than merely polite: the
+composition API the whole question depends on works through an attach.
+
+`--user-data-dir` is required because Chrome and Edge have refused remote
+debugging on the DEFAULT profile since 136. That constraint turns out to be a
+benefit: the probe runs against a scratch profile and never sees the user's
+everyday browsing session.
+
+`probe-ime-live.py --attach PORT` prints `navigator.webdriver` on connect, so
+the operator can see which kind of browser they are pointed at rather than
+trusting the flag name. It also refuses to close a context it did not create -
+an attached browser belongs to the user, and closing it would close their
+tabs.
+
+#### Why the answer is still not known
+
+The route exists; nobody has run it yet. `isComposing` stays OPEN on all three
+sites, and is explicitly not reported as anything else.
+
+#### The translation launch call: ENGLISH-ONLY, and no AI sign-off
+
+The question was whether an AI-assisted pass over the 21 safety-critical
+strings is a legitimate intermediate rigour level.
+
+**It is legitimate as a defect-finding pass and illegitimate as a sign-off**,
+and the distinction is the whole answer.
+
+The machine translations were produced by me. Reviewing them draws on the same
+knowledge that generated them, so a systematic misunderstanding - the kind that
+matters - is invisible to the check by construction. Confident-but-wrong does
+not feel wrong to whoever produced it. An "AI-checked" tier in
+`REVIEW_SIGNOFFS` was considered and rejected: the mechanism is deliberately
+binary, and a second tier would be read later as "reviewed".
+
+But the pass was still worth running, because **its two halves have very
+different value**:
+
+- **Contrastive and structural findings are verifiable by anyone**, including
+  someone who does not read the language. "These two strings differ by one
+  letter" is a property of the pair.
+- **Semantic-fidelity findings are worth very little** when the reviewer is the
+  author. Crucially, the ABSENCE of findings in a language is not evidence of
+  correctness; it is the expected result either way.
+
+It found three things, recorded in `docs/translation-review/FINDINGS-ai-pass.md`:
+
+1. Turkish `popup.status.protected` / `unprotected` are `Bu sayfa korunuyor`
+   and `Bu sayfa korunmuyor` - 18 and 19 characters differing by one `m`, for
+   the pair whose confusion means trusting an unguarded page. Mitigated, but
+   not eliminated, by a mitigation I checked rather than assumed: the badge
+   carries `data-state` on/off and `pages.css` colours it green versus grey.
+   WCAG's own rule is that colour must not be the only channel, and here the
+   text channel is weak.
+2. Arabic uses a verbal construction for `protected` and an adjectival one for
+   `unprotected`, for a single binary status. Raised as a question for a
+   speaker, not as a defect - I am not confident enough in Arabic register to
+   call it wrong.
+3. French `panel.item.maskThis` is `Masquer`, dropping the deictic every other
+   locale keeps, on the per-item control whose confusion leaves a secret in
+   plaintext.
+
+**None of the three was fixed.** Rewriting a translation without a reviewer is
+just more machine translation, which is the thing being distrusted. They are
+recorded so a future reviewer starts from a shorter list.
+
+#### Is English-only a degraded launch?
+
+Separating the two things that were being asked at once:
+
+**On safety it is not degraded - it is strictly better.** The alternative is
+shipping safety-critical strings nobody who reads them has checked, in a tool
+whose failure mode is silent. An English panel says nothing in a language the
+reader may not have; a confidently mistranslated "Mask this" says the wrong
+thing in a language they trust.
+
+**On reach it is genuinely narrower, and that should not be dressed up.**
+Non-English speakers get an English UI, and the store listing has to be
+English-only because a localised listing would promise a localised product. The
+i18n work was done for those users and they do not yet benefit from it.
+
+The trade is the right one because the costs are asymmetric: the reach cost is
+a usability cost that is visible and recoverable, and the safety cost would be
+an invisible one. It is also cheap to reverse - 254 words per locale, 20-30
+minutes per reviewer - so this is a launch that ships without them rather than
+a design that excludes them.
+
+**Decision: launch English-only. The eight locales are on the roadmap, gated on
+real reviewers, and the build enforces it rather than relying on anyone to
+remember.**
+
 ## Status after M11
 
 **M11's deliverables are complete**, with one measured caveat and the same two

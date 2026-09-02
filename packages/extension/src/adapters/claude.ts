@@ -43,6 +43,7 @@ import {
   isAdmissibleComposer,
   originComposerOfButtonEvent,
   originComposerOfKeyEvent,
+  recordIntent,
 } from './binding.js';
 
 // Re-exported because the tests and the live probe import it from here; the
@@ -177,19 +178,40 @@ export const CLAUDE_RESPONSE_STRATEGIES: readonly ElementStrategy[] = [
 export function composerRegionOf(from: Element): Element | null {
   let node: Element | null = from;
   let hops = 0;
+  const steps: RegionWalkStep[] = [];
+
   while (node !== null && hops < REGION_HOP_LIMIT) {
-    if (node.tagName === 'FORM') return node;
-    if (
-      node.querySelector(SEND_BUTTON_SELECTOR) !== null &&
-      containsAdmissibleComposer(node)
-    ) {
-      lastRegionWalk = { hops, outcome: 'found' };
+    const hasButton = node.querySelector(SEND_BUTTON_SELECTOR) !== null;
+    const hasComposer = containsAdmissibleComposer(node);
+    // EVERY HOP, not just the verdict. The two conditions have to become true
+    // at the SAME ancestor for a region to exist, and knowing the hop at which
+    // each one turns true is what says whether the bound is wrong, the
+    // selector is wrong, or they are simply never both true.
+    steps.push({
+      hop: hops,
+      tag: node.tagName.toLowerCase(),
+      hasSendButton: hasButton,
+      hasAdmissibleComposer: hasComposer,
+    });
+
+    if (node.tagName === 'FORM') {
+      lastRegionWalk = { hops, outcome: 'found', steps, startedAt: from.tagName.toLowerCase() };
+      return node;
+    }
+    if (hasButton && hasComposer) {
+      lastRegionWalk = { hops, outcome: 'found', steps, startedAt: from.tagName.toLowerCase() };
       return node;
     }
     node = node.parentElement;
     hops += 1;
   }
-  lastRegionWalk = { hops, outcome: node === null ? 'reached-root' : 'hop-limit' };
+
+  lastRegionWalk = {
+    hops,
+    outcome: node === null ? 'reached-root' : 'hop-limit',
+    steps,
+    startedAt: from.tagName.toLowerCase(),
+  };
   return null;
 }
 
@@ -228,13 +250,25 @@ function containsAdmissibleComposer(container: Element): boolean {
  */
 const REGION_HOP_LIMIT = 8;
 
-let lastRegionWalk: { hops: number; outcome: 'found' | 'hop-limit' | 'reached-root' } | null = null;
+/** One ancestor considered by the region walk. Structure only. */
+export interface RegionWalkStep {
+  readonly hop: number;
+  readonly tag: string;
+  readonly hasSendButton: boolean;
+  readonly hasAdmissibleComposer: boolean;
+}
+
+export interface RegionWalkTrace {
+  readonly hops: number;
+  readonly outcome: 'found' | 'hop-limit' | 'reached-root';
+  readonly steps: readonly RegionWalkStep[];
+  readonly startedAt: string;
+}
+
+let lastRegionWalk: RegionWalkTrace | null = null;
 
 /** The most recent region walk, for the diagnostic. */
-export function lastComposerRegionWalk(): {
-  hops: number;
-  outcome: 'found' | 'hop-limit' | 'reached-root';
-} | null {
+export function lastComposerRegionWalk(): RegionWalkTrace | null {
   return lastRegionWalk;
 }
 
@@ -280,6 +314,17 @@ export class ClaudeAdapter implements SiteAdapter {
 
   onSubmitIntent(callback: (intent: SubmitIntent) => void): () => void {
     const onKeyDown = (event: KeyboardEvent): void => {
+      // Recorded BEFORE the guard. The last reading showed three
+      // `button:no-region` intents and NO key intent at all for what was
+      // reported as an Enter press - which leaves two possibilities that need
+      // separating: the keydown never reached us, or it reached us and the
+      // guard rejected it. Without this the absence of a record is silent.
+      if (event.key === 'Enter') {
+        recordIntent(
+          `key:enter-seen${event.shiftKey ? '+shift' : ''}${event.isComposing ? '+composing' : ''}`,
+          false,
+        );
+      }
       if (event.key !== 'Enter' || event.shiftKey || event.isComposing) return;
       const origin = originComposerOfKeyEvent(event);
       if (origin === null) return;

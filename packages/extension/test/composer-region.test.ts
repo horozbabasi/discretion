@@ -145,3 +145,44 @@ describe('the uniqueness decision records what it saw', () => {
     expect(lastComposerRegionWalk()?.outcome).not.toBe('found');
   });
 });
+
+describe('the walk reports every hop, not just its verdict', () => {
+  // The previous round of instrumentation promised "which outcome, and how
+  // many hops" and did not print it, so a trace with everything else in it
+  // still could not answer the question. Per-hop is what actually locates the
+  // fix: the two conditions must become true at the SAME ancestor, and knowing
+  // where each turns true says whether the bound, the send-button selector, or
+  // the structure is the constraint.
+
+  it('records both conditions at each ancestor', () => {
+    const { button } = claudeLikeDom();
+    composerRegionOf(button);
+    const walk = lastComposerRegionWalk();
+
+    expect(walk?.outcome).toBe('found');
+    expect(walk?.startedAt).toBe('button');
+    expect((walk?.steps.length ?? 0) > 0).toBe(true);
+    // #controls has the button but only decoys; #outer has both.
+    const controls = walk?.steps.find((s) => s.tag === 'div' && s.hasSendButton && !s.hasAdmissibleComposer);
+    expect(controls).toBeDefined();
+    const both = walk?.steps.find((s) => s.hasSendButton && s.hasAdmissibleComposer);
+    expect(both).toBeDefined();
+  });
+
+  it('shows the two conditions never coinciding when there is no region', () => {
+    document.body.innerHTML = '<div id="a"><div id="b"><button aria-label="Send message">s</button></div></div>';
+    giveEverythingLayout();
+    composerRegionOf(document.querySelector('button') as HTMLElement);
+    const walk = lastComposerRegionWalk();
+    expect(walk?.outcome).not.toBe('found');
+    expect(walk?.steps.every((s) => !s.hasAdmissibleComposer)).toBe(true);
+  });
+
+  it('carries no page text', () => {
+    const { button } = claudeLikeDom();
+    composerRegionOf(button);
+    const serialised = JSON.stringify(lastComposerRegionWalk());
+    expect(serialised).not.toContain('hello');
+    expect(serialised).not.toContain('absolute -z-10');
+  });
+});

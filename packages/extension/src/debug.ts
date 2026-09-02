@@ -27,6 +27,10 @@ import {
   lastSubmitPath,
   recentIntents,
 } from './adapters/index.js';
+import { lastComposerRegionWalk } from './adapters/claude.js';
+
+/** Mirrors REGION_HOP_LIMIT in claude.ts, for the reading only. */
+const REGION_HOP_LIMIT_FOR_DISPLAY = 8;
 import type { SubmitPathEntry } from './adapters/index.js';
 import type { AdapterDiagnostic, EnvironmentForensics } from './diagnostics.js';
 
@@ -841,6 +845,37 @@ export function renderSubmitRefusal(context: {
       'The region uniqueness test NEVER RAN. For a button intent that means no ' +
         'region was found at all; for a key intent it is expected, because that ' +
         'path resolves from the composed path instead.',
+    );
+  }
+
+  // THE WALK ITSELF. Promised by the previous round of instrumentation and not
+  // actually printed, which is why "which outcome, and how many hops" could
+  // not be answered from a trace that had everything else.
+  const walk = lastComposerRegionWalk();
+  if (walk !== null) {
+    console.log(
+      `region walk from <${walk.startedAt}>: ${walk.outcome} after ${String(walk.hops)} hop(s) ` +
+        `(limit ${String(REGION_HOP_LIMIT_FOR_DISPLAY)})`,
+    );
+    console.table(
+      walk.steps.map((step) => ({
+        hop: step.hop,
+        tag: step.tag,
+        hasSendButton: step.hasSendButton,
+        hasAdmissibleComposer: step.hasAdmissibleComposer,
+      })),
+    );
+    const bothEver = walk.steps.some((s2) => s2.hasSendButton && s2.hasAdmissibleComposer);
+    const buttonAt = walk.steps.find((s2) => s2.hasSendButton)?.hop;
+    const composerAt = walk.steps.find((s2) => s2.hasAdmissibleComposer)?.hop;
+    console.warn(
+      bothEver
+        ? 'Both conditions were true at one ancestor, so the region SHOULD have been found.'
+        : `Never both true. Send button first seen at hop ${String(buttonAt ?? -1)}, ` +
+          `admissible composer at hop ${String(composerAt ?? -1)} ` +
+          `(-1 = never within the walk). If the composer number is -1 or larger than the ` +
+          `limit, the bound is the constraint; if it is small and the button is -1, the ` +
+          `send-button selector is.`,
     );
   }
 

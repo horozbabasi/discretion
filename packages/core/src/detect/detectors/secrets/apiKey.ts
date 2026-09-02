@@ -97,7 +97,18 @@ registerDetector({
   id: 'api-key',
   entityType: 'API_KEY',
   regions: [GLOBAL_REGION],
-  pattern: new RegExp(`(?:${PREFIX_ALTERNATION})[A-Za-z0-9._-]{10,130}`, 'g'),
+  // The body charset must include `.` - plenty of provider tokens contain one
+  // - but the match may not END with one, or a key at the end of a sentence
+  // swallows the full stop. Found at M12 while running a README example:
+  // `sk_live_...tY6.` matched WITH the period, so the masked text lost the
+  // punctuation and, worse, the vault keyed on a value that differs from the
+  // same key written mid-sentence - which quietly breaks the guarantee that a
+  // value seen twice gets the same surrogate.
+  //
+  // Only `.` is excluded. Trailing `-` and `_` are also unlikely to be part of
+  // a real token, but they were not what this found, and tightening them here
+  // would be an unmeasured change riding on a measured one.
+  pattern: new RegExp(`(?:${PREFIX_ALTERNATION})[A-Za-z0-9._-]{9,129}[A-Za-z0-9_-]`, 'g'),
   baseConfidence: CONFIDENCE.HIGH,
   description: 'Provider API tokens from the bundled prefix table; GitHub checksums verified.',
   validate: validateApiKey,

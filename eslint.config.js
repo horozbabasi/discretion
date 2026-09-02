@@ -59,6 +59,22 @@ export default tseslint.config(
     },
   },
   {
+    // The documented examples under packages/core/examples/. These are Node
+    // programs written from a CONSUMER's point of view - they import the
+    // package the way a stranger would and are executed against the packed
+    // tarball by verify-standalone-consumer.sh. They are not part of the
+    // library, so the environment-agnostic rule that governs
+    // packages/core/src does not apply to them, and printing is the point.
+    //
+    // Scoped to globals only: everything else the base config enforces still
+    // applies here, because an example that would not pass review is a bad
+    // example.
+    files: ['packages/core/examples/**/*.mjs'],
+    languageOptions: {
+      globals: { console: 'readonly', process: 'readonly' },
+    },
+  },
+  {
     // Code that RUNS IN A BROWSER PAGE rather than in Node: the benchmark
     // harness, and the in-page half of the fixture capture tool. Neither is
     // bundled into the extension; both legitimately use DOM globals.

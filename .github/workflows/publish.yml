@@ -1,0 +1,132 @@
+## Publishes @privacyshield/data and @privacyshield/core to npm with provenance.
+##
+## WHY IT PUBLISHES FROM CI AND NOT FROM A LAPTOP
+##
+## npm provenance is an attestation, signed by Sigstore, that links the
+## published tarball to the exact commit and workflow run that built it. It
+## requires the `id-token: write` OIDC identity, which only CI has. A package
+## published by hand is indistinguishable from one built anywhere, by anyone —
+## which for a package whose entire claim is "this code is what runs on your
+## data" is the wrong default. There is deliberately no local publish path.
+##
+## ORDER MATTERS. `core` depends on `data` at an exact version. Publishing
+## core first would leave a package on the registry that cannot be installed
+## until the other lands, so `data` goes first and the job waits for it to be
+## resolvable before core is published.
+##
+## Triggered by a `v*` tag; see VERSIONING.md for the release steps.
+
+name: publish
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Pack and verify without publishing'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          registry-url: https://registry.npmjs.org
+          cache: npm
+
+      - run: npm ci
+
+      # Every gate that guards a normal commit also guards a release. A release
+      # is the worst moment to discover that one of them was skipped.
+      - run: npm run build:ts
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run lint
+
+      # The version in the tag must match the version being published, or the
+      # tag points at something that was never released under that name.
+      - name: the tag and the manifests agree
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          for pkg in core data; do
+            found=$(node -p "require('./packages/$pkg/package.json').version")
+            if [ "$found" != "$tag" ]; then
+              echo "::error::tag $tag but packages/$pkg is $found"
+              exit 1
+            fi
+          done
+          echo "tag $tag matches both manifests"
+
+      # Proves the tarball a consumer would download actually works, before it
+      # is uploaded rather than after.
+      - name: a fresh consumer can install and use it
+        run: bash packages/core/scripts/verify-standalone-consumer.sh
+
+  publish:
+    name: publish to npm
+    needs: verify
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v') && !inputs.dry_run
+    permissions:
+      contents: read
+      id-token: write # required for provenance; nothing else grants it
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          registry-url: https://registry.npmjs.org
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build:ts
+
+      # data first: core pins it at an exact version and cannot install without it.
+      - name: publish @privacyshield/data
+        run: npm publish --workspace @privacyshield/data --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: wait for data to be resolvable
+        run: |
+          version=$(node -p "require('./packages/data/package.json').version")
+          for attempt in $(seq 1 30); do
+            if npm view "@privacyshield/data@$version" version >/dev/null 2>&1; then
+              echo "@privacyshield/data@$version is live"
+              exit 0
+            fi
+            echo "attempt $attempt: not yet visible, waiting"
+            sleep 10
+          done
+          echo "::error::@privacyshield/data@$version never became resolvable"
+          exit 1
+
+      - name: publish @privacyshield/core
+        run: npm publish --workspace @privacyshield/core --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: confirm provenance was attached
+        run: |
+          version=$(node -p "require('./packages/core/package.json').version")
+          # A publish that silently lost its attestation would look identical
+          # to a successful one from the log alone.
+          if npm view "@privacyshield/core@$version" --json | grep -q '"attestations"'; then
+            echo "provenance attestation present"
+          else
+            echo "::error::published without provenance"
+            exit 1
+          fi

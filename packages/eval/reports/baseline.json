@@ -1,20 +1,20 @@
 {
   "documents": 2611,
   "groundTruthEntities": 6645,
-  "predictions": 9335,
+  "predictions": 9337,
   "byType": {
     "API_KEY": {
       "groundTruth": 456,
-      "predictions": 489,
-      "matchedPredictions": 454,
+      "predictions": 491,
+      "matchedPredictions": 456,
       "falsePositives": 35,
-      "matchedExact": 454,
-      "matchedPartial": 454,
-      "falseNegatives": 2,
-      "precision": 0.9284253578732107,
-      "recallExact": 0.9956140350877193,
-      "recallPartial": 0.9956140350877193,
-      "f1": 0.9608465608465607
+      "matchedExact": 456,
+      "matchedPartial": 456,
+      "falseNegatives": 0,
+      "precision": 0.9287169042769857,
+      "recallExact": 1,
+      "recallPartial": 1,
+      "f1": 0.9630411826821541
     },
     "AU_BSB": {
       "groundTruth": 4,
@@ -644,16 +644,16 @@
     },
     "nl": {
       "groundTruth": 259,
-      "predictions": 350,
-      "matchedPredictions": 199,
+      "predictions": 352,
+      "matchedPredictions": 201,
       "falsePositives": 151,
-      "matchedExact": 198,
-      "matchedPartial": 199,
-      "falseNegatives": 60,
-      "precision": 0.5685714285714286,
-      "recallExact": 0.7644787644787645,
-      "recallPartial": 0.7683397683397684,
-      "f1": 0.6535303776683088
+      "matchedExact": 200,
+      "matchedPartial": 201,
+      "falseNegatives": 58,
+      "precision": 0.5710227272727273,
+      "recallExact": 0.7722007722007722,
+      "recallPartial": 0.7760617760617761,
+      "f1": 0.6579378068739771
     },
     "pl": {
       "groundTruth": 284,
@@ -775,9 +775,9 @@
   },
   "byConfidence": {
     "HIGH(0.85)": {
-      "predictions": 4789,
-      "matched": 4048,
-      "precision": 0.8452704113593652
+      "predictions": 4791,
+      "matched": 4050,
+      "precision": 0.8453350031308704
     },
     "LOW(0.3)": {
       "predictions": 3485,
@@ -806,10 +806,10 @@
     "version-numbers": 8
   },
   "latencyMs": {
-    "p50": 0.4881000000000313,
-    "p95": 1.5300999999999476,
-    "p99": 2.847099999999955,
-    "max": 23.583499999999958,
+    "p50": 0.5070999999998094,
+    "p95": 1.5945999999999003,
+    "p99": 2.9980999999999085,
+    "max": 28.094899999999598,
     "meanDocLength": 200
   },
   "falsePositives": [

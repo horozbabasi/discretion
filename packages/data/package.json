@@ -1,17 +1,45 @@
 {
   "name": "@privacyshield/data",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
-  "description": "PrivacyShield generated Unicode data (confusables table). The generated module is committed; regeneration needs network access.",
+  "description": "Generated data tables for @privacyshield/core: Unicode confusables, trigger lexicons, gazetteers, severity weights, and the fitted calibration model.",
+  "keywords": [
+    "privacyshield",
+    "unicode",
+    "confusables",
+    "gazetteer"
+  ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/horozbabasi/privacyshield.git",
+    "directory": "packages/data"
+  },
+  "homepage": "https://github.com/horozbabasi/privacyshield/tree/main/packages/data#readme",
+  "bugs": "https://github.com/horozbabasi/privacyshield/issues",
+  "engines": {
+    "node": ">=20"
+  },
+  "sideEffects": false,
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
-    }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.map",
+    "README.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   },
   "scripts": {
     "generate": "node scripts/build-confusables.ts"

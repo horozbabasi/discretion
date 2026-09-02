@@ -1,6 +1,6 @@
 # Stage 1 baseline — 2611 documents (2000 labeled + 600 hard-negative), seeds 12648430/48879
 
-Corpus: 2611 documents, 6645 ground-truth entities, 9335 sensitive predictions. Mean document length 200 chars.
+Corpus: 2611 documents, 6645 ground-truth entities, 9337 sensitive predictions. Mean document length 200 chars.
 
 **This corpus is synthetic.** Values are generator-made, carriers are template sentences, and hard negatives are constructed categories. The numbers measure the detectors against this corpus, not against real-world text; real-world performance will differ, most likely downward on precision for the context-free detectors.
 
@@ -8,7 +8,7 @@ Corpus: 2611 documents, 6645 ground-truth entities, 9335 sensitive predictions. 
 
 | type | GT | pred | P | R (partial) | R (exact) | F1 | FP | FN |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| API_KEY | 456 | 489 | 92.8% | 99.6% | 99.6% | 96.1% | 35 | 2 |
+| API_KEY | 456 | 491 | 92.9% | 100.0% | 100.0% | 96.3% | 35 | 0 |
 | AU_BSB | 4 | 4 | 100.0% | 100.0% | 100.0% | 100.0% | 0 | 0 |
 | BR_AGENCIA | 8 | 8 | 100.0% | 100.0% | 100.0% | 100.0% | 0 | 0 |
 | CA_TRANSIT_NUMBER | 16 | 18 | 88.9% | 100.0% | 100.0% | 94.1% | 2 | 0 |
@@ -62,7 +62,7 @@ Corpus: 2611 documents, 6645 ground-truth entities, 9335 sensitive predictions. 
 | it | 235 | 307 | 62.2% | 81.3% | 81.3% | 70.5% | 116 | 44 |
 | ja | 242 | 313 | 61.0% | 78.5% | 78.5% | 68.7% | 122 | 52 |
 | ko | 248 | 363 | 53.7% | 78.6% | 78.6% | 63.8% | 168 | 53 |
-| nl | 259 | 350 | 56.9% | 76.8% | 76.4% | 65.4% | 151 | 60 |
+| nl | 259 | 352 | 57.1% | 77.6% | 77.2% | 65.8% | 151 | 58 |
 | pl | 284 | 398 | 57.8% | 77.1% | 77.1% | 66.1% | 168 | 65 |
 | pt | 200 | 253 | 60.9% | 75.0% | 75.0% | 67.2% | 99 | 50 |
 | ro | 241 | 319 | 58.9% | 78.0% | 77.6% | 67.1% | 131 | 53 |
@@ -79,7 +79,7 @@ Stage 1 confidences are detector-local and only ordered; real calibration requir
 
 | bucket | predictions | matched | precision |
 | --- | ---: | ---: | ---: |
-| HIGH(0.85) | 4789 | 4048 | 84.5% |
+| HIGH(0.85) | 4791 | 4050 | 84.5% |
 | LOW(0.3) | 3485 | 329 | 9.4% |
 | MAXIMUM(0.99) | 101 | 101 | 100.0% |
 | MEDIUM(0.6) | 960 | 820 | 85.4% |
@@ -99,7 +99,7 @@ Stage 1 confidences are detector-local and only ordered; real calibration requir
 
 ## Latency
 
-p50 0.49ms · p95 1.53ms · p99 2.85ms · max 23.58ms per document (normalize + all detectors).
+p50 0.51ms · p95 1.59ms · p99 3.00ms · max 28.09ms per document (normalize + all detectors).
 
 ## Worst false positives (highest confidence first)
 

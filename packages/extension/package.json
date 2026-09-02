@@ -11,5 +11,8 @@
   },
   "devDependencies": {
     "vite": "^6.0.0"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "^4.2.0"
   }
 }

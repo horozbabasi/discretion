@@ -26,7 +26,9 @@
     "web:preview": "npm run preview --workspace @privacyshield/web",
     "ext:build": "npm run build --workspace @privacyshield/extension",
     "typecheck:tests": "tsc -p tsconfig.test.json",
-    "ext:fetch-model": "node packages/extension/scripts/fetch-model.mjs"
+    "ext:fetch-model": "node packages/extension/scripts/fetch-model.mjs",
+    "docs:api": "typedoc",
+    "verify:consumer": "bash packages/core/scripts/verify-standalone-consumer.sh"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
@@ -37,6 +39,8 @@
     "fast-check": "^3.23.0",
     "jsdom": "^25.0.0",
     "prettier": "^3.0.0",
+    "typedoc": "^0.28.20",
+    "typedoc-plugin-markdown": "^4.13.0",
     "typescript": "^5.9.0",
     "typescript-eslint": "^8.0.0",
     "vitest": "^3.2.0"

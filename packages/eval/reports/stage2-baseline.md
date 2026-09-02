@@ -1,6 +1,6 @@
 # Stage 1+2 combined — model jiting/xlm-roberta-base-ner-hrl_onnx (q8), same corpus and seeds as the Stage 1 baseline
 
-Corpus: 2611 documents, 6645 ground-truth entities, 9860 sensitive predictions. Mean document length 200 chars.
+Corpus: 2611 documents, 6645 ground-truth entities, 9864 sensitive predictions. Mean document length 200 chars.
 
 **This corpus is synthetic.** Values are generator-made, carriers are template sentences, and hard negatives are constructed categories. The numbers measure the detectors against this corpus, not against real-world text; real-world performance will differ, most likely downward on precision for the context-free detectors.
 
@@ -8,7 +8,7 @@ Corpus: 2611 documents, 6645 ground-truth entities, 9860 sensitive predictions. 
 
 | type | GT | pred | P | R (partial) | R (exact) | F1 | FP | FN |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| API_KEY | 456 | 474 | 95.8% | 99.6% | 99.6% | 97.6% | 20 | 2 |
+| API_KEY | 456 | 476 | 95.8% | 100.0% | 100.0% | 97.9% | 20 | 0 |
 | AU_BSB | 4 | 4 | 100.0% | 100.0% | 100.0% | 100.0% | 0 | 0 |
 | BR_AGENCIA | 8 | 8 | 100.0% | 100.0% | 100.0% | 100.0% | 0 | 0 |
 | CA_TRANSIT_NUMBER | 16 | 18 | 88.9% | 100.0% | 100.0% | 94.1% | 2 | 0 |
@@ -18,7 +18,7 @@ Corpus: 2611 documents, 6645 ground-truth entities, 9860 sensitive predictions. 
 | CRYPTO_WALLET | 625 | 633 | 98.7% | 100.0% | 100.0% | 99.4% | 8 | 0 |
 | DRIVERS_LICENSE | 3 | 15 | 20.0% | 100.0% | 100.0% | 33.3% | 12 | 0 |
 | EMAIL | 594 | 600 | 99.0% | 100.0% | 100.0% | 99.5% | 6 | 0 |
-| GENERIC_SECRET | 74 | 2117 | 2.0% | 56.8% | 56.8% | 3.8% | 2075 | 32 |
+| GENERIC_SECRET | 74 | 2119 | 2.0% | 56.8% | 56.8% | 3.8% | 2077 | 32 |
 | HEALTH_DATA | 417 | 449 | 92.9% | 100.0% | 100.0% | 96.3% | 32 | 0 |
 | IBAN | 178 | 178 | 100.0% | 100.0% | 100.0% | 100.0% | 0 | 0 |
 | IN_IFSC | 13 | 13 | 100.0% | 100.0% | 100.0% | 100.0% | 0 | 0 |
@@ -62,7 +62,7 @@ Corpus: 2611 documents, 6645 ground-truth entities, 9860 sensitive predictions. 
 | it | 235 | 330 | 70.9% | 97.0% | 94.0% | 81.9% | 96 | 7 |
 | ja | 242 | 327 | 71.6% | 95.9% | 93.4% | 81.9% | 93 | 10 |
 | ko | 248 | 387 | 61.5% | 96.0% | 96.0% | 75.0% | 149 | 10 |
-| nl | 259 | 389 | 68.9% | 97.7% | 91.1% | 80.8% | 121 | 6 |
+| nl | 259 | 393 | 68.7% | 98.5% | 91.9% | 80.9% | 123 | 4 |
 | pl | 284 | 428 | 68.2% | 98.6% | 98.2% | 80.6% | 136 | 4 |
 | pt | 200 | 291 | 70.8% | 99.0% | 97.0% | 82.6% | 85 | 2 |
 | ro | 241 | 339 | 71.1% | 99.2% | 95.9% | 82.8% | 98 | 2 |
@@ -79,8 +79,8 @@ Stage 1 confidences are detector-local and only ordered; real calibration requir
 
 | bucket | predictions | matched | precision |
 | --- | ---: | ---: | ---: |
-| HIGH(0.85) | 4958 | 4369 | 88.1% |
-| LOW(0.3) | 1129 | 109 | 9.7% |
+| HIGH(0.85) | 4960 | 4371 | 88.1% |
+| LOW(0.3) | 1131 | 109 | 9.6% |
 | MAXIMUM(0.99) | 1029 | 1007 | 97.9% |
 | MEDIUM(0.6) | 2744 | 1205 | 43.9% |
 
@@ -99,7 +99,7 @@ Stage 1 confidences are detector-local and only ordered; real calibration requir
 
 ## Latency
 
-p50 59.82ms · p95 133.99ms · p99 350.54ms · max 525.89ms per document (normalize + all detectors).
+p50 60.81ms · p95 142.14ms · p99 354.25ms · max 595.67ms per document (normalize + all detectors).
 
 ## Worst false positives (highest confidence first)
 

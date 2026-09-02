@@ -257,3 +257,49 @@ describe('generic-secret', () => {
     // the precision half. Threshold tuning is deferred to M3 per SPEC.md.
   });
 });
+
+describe('API_KEY span boundaries (M12 regression)', () => {
+  const KEY = 'sk_live_7f3Kq2mNpX8vC1bWzR4tY6';
+
+  const apiKeySpans = (text: string): string[] =>
+    runStage1(normalize(text), {})
+      .filter((candidate) => candidate.type === 'API_KEY')
+      .map((candidate) => candidate.text);
+
+  it('does not swallow a full stop at the end of a sentence', () => {
+    // Found while running a README example at M12. The body charset includes
+    // `.` because provider tokens contain them, and the match ran on into the
+    // sentence punctuation.
+    expect(apiKeySpans(`use key ${KEY}.`)).toEqual([KEY]);
+  });
+
+  it('gives the same span with and without trailing punctuation', () => {
+    // THE REASON THIS MATTERS. The vault keys on the matched value, so the
+    // two spellings below were two different values: the same key written at
+    // the end of a sentence got a DIFFERENT surrogate from the same key
+    // written mid-sentence, quietly breaking the consistency guarantee the
+    // README documents.
+    expect(apiKeySpans(`use key ${KEY}.`)).toEqual(apiKeySpans(`use key ${KEY} here`));
+  });
+
+  it('still matches a dot INSIDE a token', () => {
+    // The fix must not become "reject dots", which would lose whole families
+    // of provider tokens.
+    const dotted = 'xoxb-1234.5678.abcdefghijklmnop';
+    expect(getDetector('api-key')!.pattern.test(dotted)).toBe(true);
+  });
+
+  it('still matches the shortest body its provider allows', () => {
+    // The fix split {10,130} into {9,129} plus one final character; an
+    // off-by-one there would silently drop the shortest real tokens.
+    //
+    // 16 is Stripe's own minimum from the provider table, not the pattern's.
+    // The first draft of this test used a 10-character body - the pattern's
+    // floor - and failed, because the VALIDATOR rejected it. The test was
+    // wrong, not the fix: the two lengths are different rules and only the
+    // stricter one is observable through runStage1.
+    const shortest = `sk_live_${'a'.repeat(16)}`;
+    expect(apiKeySpans(`key ${shortest} here`)).toEqual([shortest]);
+    expect(apiKeySpans(`key ${shortest}.`)).toEqual([shortest]);
+  });
+});

@@ -1,10 +1,30 @@
 {
   "name": "@privacyshield/core",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
-  "description": "PrivacyShield detection pipeline — environment-agnostic TypeScript library (no DOM, no Node built-ins)",
+  "description": "Local-first detection and masking of PII, credentials and secrets in text. No network access, no DOM, no Node built-ins.",
+  "keywords": [
+    "pii",
+    "redaction",
+    "masking",
+    "anonymization",
+    "gdpr",
+    "secret-detection",
+    "data-loss-prevention",
+    "privacy"
+  ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/horozbabasi/privacyshield.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/horozbabasi/privacyshield/tree/main/packages/core#readme",
+  "bugs": "https://github.com/horozbabasi/privacyshield/issues",
+  "engines": {
+    "node": ">=20"
+  },
+  "sideEffects": true,
   "main": "./dist/src/index.js",
   "types": "./dist/src/index.d.ts",
   "exports": {
@@ -15,11 +35,33 @@
     "./ner-transformers": {
       "types": "./dist/src/ner/transformersClassifier.d.ts",
       "default": "./dist/src/ner/transformersClassifier.js"
-    }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist/src",
+    "src",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   },
   "dependencies": {
-    "@huggingface/transformers": "^4.2.0",
-    "@privacyshield/data": "*",
+    "@privacyshield/data": "0.1.0",
     "libphonenumber-js": "^1.13.11"
+  },
+  "peerDependencies": {
+    "@huggingface/transformers": "^4.2.0"
+  },
+  "peerDependenciesMeta": {
+    "@huggingface/transformers": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@huggingface/transformers": "^4.2.0"
   }
 }

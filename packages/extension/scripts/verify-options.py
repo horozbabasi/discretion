@@ -118,13 +118,19 @@ def main() -> int:
 
         print("\n-- every entity type is offered --")
         boxes = page.eval_on_selector_all(".types input[type=checkbox]", "els => els.length")
-        # 35 members of EntityType. A silently short list means a type nobody
-        # can switch off, which looks identical to one nobody wants to.
-        if boxes != 35:
-            failures.append(f"expected 35 type checkboxes, found {boxes}")
+        # 35 members of EntityType, MINUS the ones nothing can detect.
+        # DATE_OF_BIRTH is in the union deliberately (SPEC's Strict profile and
+        # substitution table need it) but has no Stage 1 detector and is not
+        # emitted by Stage 2, so offering a toggle for it would be a control
+        # that changes nothing in either position. A silently SHORT list is
+        # still a bug - a type nobody can switch off looks identical to one
+        # nobody wants to - so the count is pinned rather than loosened.
+        EXPECTED = 34
+        if boxes != EXPECTED:
+            failures.append(f"expected {EXPECTED} type checkboxes, found {boxes}")
             fail(f"{boxes} type checkboxes")
         else:
-            ok("35 type checkboxes, one per EntityType")
+            ok(f"{EXPECTED} type checkboxes (35 EntityTypes less DATE_OF_BIRTH, undetectable)")
 
         print("\n-- a change actually persists --")
         before = stored()

@@ -176,7 +176,9 @@ The eval reports **Stages 0–3**. The shipped extension additionally runs
 substantially for the weakest types. Both are given, because quoting only the
 better one would be the kind of thing this project exists not to do.
 
-**Stages 0–3, as the eval reports them** (34 types; full table in
+**Stages 0–3, as the eval reports them** (34 of the 35 entity types —
+`DATE_OF_BIRTH` has no Stage 1 detector and no corpus coverage, so it is
+offered in the options page and does not appear here; full table in
 `packages/eval/reports/stage2-baseline.md`):
 
 | type | P | R | F1 |
@@ -318,7 +320,7 @@ options) covers:
 | --- | --- |
 | Sensitivity | Minimal / Balanced / Strict. Strict catches more and asks more often. |
 | Replacement style | Realistic stand-ins, or labels like `[EMAIL_1]`. |
-| Per-type toggles | All 34 entity types, individually. Everything is on unless you switch it off. |
+| Per-type toggles | All 35 entity types, individually. Everything is on unless you switch it off. |
 | Never / always mask | Two lists, one entry per line. **Saved on your device as you type them** — the page says so, because a denylist can itself hold something sensitive. |
 | Your own patterns | Regular expressions, with a live tester that runs the real engine. A pattern that does not compile is refused at the input, not stored disabled. |
 | Phone region | For numbers written without a country code. Without it, a national-format number cannot be validated at all. |

@@ -62,6 +62,26 @@ const ALL_TYPES: Readonly<Record<EntityType, true>> = {
   DATE_OF_BIRTH: true,
 };
 
+/**
+ * Types the options page does NOT offer a toggle for.
+ *
+ * `DATE_OF_BIRTH` is in `EntityType` deliberately - core's own note says it is
+ * "carried here so both stay implementable", for SPEC's Strict profile and its
+ * substitution table - but NOTHING PRODUCES IT. It has no Stage 1 detector
+ * (`registerDetector` count: 0) and Stage 2 emits only PERSON, ORG and
+ * LOCATION.
+ *
+ * Rendering a checkbox for it, as this page did until M11's documentation pass
+ * counted the types, gives the user a control that changes nothing in either
+ * position. A switch that does nothing is worse than an absent one: it is a
+ * quiet claim that the type is being looked for.
+ *
+ * It comes back the moment a detector for it exists, and the compile-enforced
+ * `ALL_TYPES` record above is what guarantees this list is reconsidered when
+ * the union changes.
+ */
+const NOT_YET_DETECTED: ReadonlySet<EntityType> = new Set<EntityType>(['DATE_OF_BIRTH']);
+
 const FAMILY_ORDER: readonly EntityFamily[] = [
   'secret', 'financial', 'identity', 'health', 'document',
   'contact', 'person', 'location', 'network', 'other',
@@ -226,6 +246,7 @@ class OptionsPage {
 
     const byFamily = new Map<EntityFamily, EntityType[]>();
     for (const type of Object.keys(ALL_TYPES) as EntityType[]) {
+      if (NOT_YET_DETECTED.has(type)) continue;
       const family = familyOf(type);
       const list = byFamily.get(family) ?? [];
       list.push(type);

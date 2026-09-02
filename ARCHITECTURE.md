@@ -6871,6 +6871,69 @@ non-misleading mark for a privacy tool even though the name no longer says
 The four absolute paths in old commits. Rewriting 155 pushed commits to erase a
 generic Windows username was judged not worth invalidating every SHA.
 
+### D65 - Trademark posture for "Discretion": informed risk, not clearance
+
+**This is a permanent record of a risk accepted, not a resolved checkbox.** It
+should not be edited into a clean bill of health later.
+
+#### What was actually checked
+
+- **npm**, against the live registry: `discretion` free as a plain package and
+  as the `@discretion` scope; `discretions`, `discretion-core` and
+  `discretionary` also free.
+- **Chrome Web Store**, by search: no extension published under the name
+  "Discretion".
+- **Web search** for a software trademark on the word: nothing found.
+
+#### What was NOT checked, and cannot be from here
+
+**No trademark register was queried.** Web search cannot reach USPTO TESS or
+EUIPO eSearch, and a search engine's silence is not a register's answer. A
+mark can be registered, in force, and entirely absent from search results.
+
+So the position is: **nothing obvious collides, and nobody has looked in the
+place where collisions are recorded.** Those are different statements and only
+the first one is supported.
+
+#### The adjacent product, stated at full strength
+
+Search found **DiscreetTab** - a privacy browser extension for Chrome and
+Firefox that hides tab titles and favicons, published at
+`chromewebstore.google.com/detail/discreettab`.
+
+It would be convenient to file this as "different name, different product". It
+is worth being straight about why that is not the whole story, because the
+trademark test is similarity of mark WEIGHTED BY relatedness of goods, and both
+factors point the same way here:
+
+- **The marks share a root.** "Discreet" and "discretion" are cognates, and
+  the words are near-homophones in casual speech. This is closer than two
+  arbitrary words that happen to start with the same letters.
+- **The goods are related.** Both are browser extensions listed under privacy.
+  A consumer could plausibly wonder whether they come from the same maker.
+
+Against that: the products do different things (tab-title concealment versus
+detecting and masking sensitive data before it is sent), the names are not
+identical, and "DiscreetTab" appears to be an individual's project rather than
+a registered mark - though **that last point is an assumption, since no register
+was searched.**
+
+#### The decision
+
+The user has decided to proceed on this basis, with the risk stated rather than
+minimised. Recorded here so that the decision, and the specific thing that was
+not verified, remain visible after the name is in use.
+
+**The cost of being wrong is asymmetric and it changes shape at first publish.**
+Renaming an unpublished npm package is free. After publication npm has no
+rename - only deprecate-and-republish - and a Chrome Web Store listing carries
+its name to its users. Anyone revisiting this should know that the cheap moment
+has passed.
+
+If this matters commercially, the actions are a USPTO TESS and EUIPO eSearch
+search on "discretion" and "discreet" in class 9 (software) and class 42
+(SaaS), and, if anything turns up, counsel. None of that was done.
+
 ## Status after M11
 
 **M11's deliverables are complete**, with one measured caveat and the same two

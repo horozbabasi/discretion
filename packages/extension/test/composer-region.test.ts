@@ -19,7 +19,11 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { composerRegionOf, lastComposerRegionWalk } from '../src/adapters/claude.js';
-import { editableWithinRegion, isAdmissibleComposer } from '../src/adapters/binding.js';
+import {
+  editableWithinRegion,
+  isAdmissibleComposer,
+  lastRegionAdmission,
+} from '../src/adapters/binding.js';
 import { giveEverythingLayout, resetDocument } from './dom-helpers.js';
 
 beforeEach(resetDocument);
@@ -96,5 +100,48 @@ describe('the region walk and the uniqueness test use ONE admission rule', () =>
     const button = document.querySelector('button') as HTMLElement;
     const region = composerRegionOf(button);
     expect(editableWithinRegion(region as Element)).toBeNull();
+  });
+});
+
+describe('the uniqueness decision records what it saw', () => {
+  // The instrumentation exists because every reading taken either side of a
+  // live refusal disagreed with the refusal. A decision that contradicts the
+  // state before AND after it has to report its own inputs.
+
+  it('records the count, and which invariant rejected each candidate', () => {
+    const { button } = claudeLikeDom();
+    const region = composerRegionOf(button) as Element;
+    editableWithinRegion(region);
+
+    const trace = lastRegionAdmission();
+    expect(trace).not.toBeNull();
+    expect(trace?.admitted).toBe(1);
+    expect(trace?.examined).toBe(3);
+    expect(trace?.rejected).toHaveLength(2);
+    for (const rejection of trace?.rejected ?? []) {
+      expect(rejection.tag).toBe('input');
+      // The decoys are BOTH zero-size and aria-hidden, so both invariants
+      // name them. Either alone would be enough to reject.
+      expect(rejection.failedInvariants).toContain('not-aria-hidden');
+    }
+  });
+
+  it('carries no page text, only structure', () => {
+    // These strings reach a console and a bug report. Attribute NAMES, tags
+    // and invariant ids only - the same rule the rest of the diagnostics obey.
+    const { button } = claudeLikeDom();
+    editableWithinRegion(composerRegionOf(button) as Element);
+    const serialised = JSON.stringify(lastRegionAdmission());
+    expect(serialised).not.toContain('hello');
+    expect(serialised).not.toContain('absolute -z-10');
+  });
+
+  it('distinguishes "no region" from "a region with nothing admissible"', () => {
+    // The two produce the same refusal and need opposite fixes: one is the
+    // walk, the other is what the walk found.
+    document.body.innerHTML = '<div><button aria-label="Send message">s</button></div>';
+    giveEverythingLayout();
+    expect(composerRegionOf(document.querySelector('button') as HTMLElement)).toBeNull();
+    expect(lastComposerRegionWalk()?.outcome).not.toBe('found');
   });
 });

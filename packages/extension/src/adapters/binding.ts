@@ -171,6 +171,27 @@ let lastPath: readonly SubmitPathEntry[] = [];
 let lastPathAt = 0;
 
 /**
+ * Every submit intent raised this session, newest last.
+ *
+ * Bounded to 8. Answers a question no snapshot could: WHICH path produced the
+ * refusal. On claude.ai a keyboard send was reported refused as `undecidable`,
+ * which the key path cannot produce - when `originComposerOfKeyEvent` returns
+ * null the adapters do not call back at all, so the event is never
+ * intercepted. Either a second, button-shaped intent is being raised, or that
+ * reasoning is wrong; this says which.
+ */
+const intents: { kind: string; resolved: boolean; atMs: number }[] = [];
+
+export function recordIntent(kind: string, resolved: boolean): void {
+  intents.push({ kind, resolved, atMs: Date.now() });
+  if (intents.length > 8) intents.shift();
+}
+
+export function recentIntents(): readonly { kind: string; resolved: boolean; atMs: number }[] {
+  return intents;
+}
+
+/**
  * The composed path of the most recent submit attempt.
  *
  * Exists because `undecidable` - "the submit event did not resolve to exactly
@@ -244,11 +265,66 @@ export function isAdmissibleComposer(element: Element): boolean {
   return COMPOSER_INVARIANTS.every((invariant) => invariant.holds(element));
 }
 
+/**
+ * What the uniqueness test saw, the last time it ran.
+ *
+ * ─────────────────────────────────────────────────────────────────────────
+ * THE ONE THING THAT WAS NEVER CAPTURED. Every reading so far was taken
+ * BEFORE or AFTER a refusal - a forced diagnostic run afterwards showed the
+ * composer resolving perfectly, from both strategies, with healthCheck ok,
+ * while the submit in between was refused for finding "not exactly one
+ * editable element". Snapshots either side of the moment cannot explain the
+ * moment.
+ *
+ * This records the decision AS IT IS MADE: how many candidates the region
+ * held, how many were admissible, and for each rejection, which invariant
+ * said no. Structure only - tags, attribute NAMES, invariant ids - never text
+ * and never attribute values.
+ * ─────────────────────────────────────────────────────────────────────────
+ */
+export interface RegionAdmissionTrace {
+  readonly regionTag: string;
+  readonly examined: number;
+  readonly admitted: number;
+  readonly rejected: readonly {
+    readonly tag: string;
+    readonly attributes: readonly string[];
+    readonly failedInvariants: readonly string[];
+  }[];
+  readonly atMs: number;
+}
+
+let regionTrace: RegionAdmissionTrace | null = null;
+
+/** The most recent region uniqueness decision. */
+export function lastRegionAdmission(): RegionAdmissionTrace | null {
+  return regionTrace;
+}
+
 export function editableWithinRegion(region: Element): HTMLElement | null {
   const editables: HTMLElement[] = [];
-  for (const element of region.querySelectorAll<HTMLElement>('textarea, input, [contenteditable]')) {
-    if (isAdmissibleComposer(element)) editables.push(element);
+  const rejected: RegionAdmissionTrace['rejected'][number][] = [];
+  const candidates = region.querySelectorAll<HTMLElement>('textarea, input, [contenteditable]');
+
+  for (const element of candidates) {
+    if (isAdmissibleComposer(element)) {
+      editables.push(element);
+      continue;
+    }
+    rejected.push({
+      tag: element.tagName.toLowerCase(),
+      attributes: Array.from(element.attributes).map((a) => a.name),
+      failedInvariants: COMPOSER_INVARIANTS.filter((inv) => !inv.holds(element)).map((inv) => inv.id),
+    });
   }
+
+  regionTrace = {
+    regionTag: region.tagName.toLowerCase(),
+    examined: candidates.length,
+    admitted: editables.length,
+    rejected,
+    atMs: Date.now(),
+  };
   return editables.length === 1 ? (editables[0] as HTMLElement) : null;
 }
 
@@ -272,7 +348,9 @@ export function editableWithinRegion(region: Element): HTMLElement | null {
  * `verifyBinding`'s decision, made with the strict rule.
  */
 export function originComposerOfKeyEvent(event: KeyboardEvent): HTMLElement | null {
-  return editableOnPath(event);
+  const found = editableOnPath(event);
+  recordIntent('key', found !== null);
+  return found;
 }
 
 /**
@@ -286,9 +364,21 @@ export function originComposerOfButtonEvent(
   findRegion: (from: Element) => Element | null,
 ): HTMLElement | null {
   const clicked = event.composedPath()[0];
-  if (clicked === undefined || !(clicked instanceof Element)) return null;
+  if (clicked === undefined || !(clicked instanceof Element)) {
+    recordIntent('button:no-target', false);
+    return null;
+  }
   const region = findRegion(clicked);
-  return region === null ? null : editableWithinRegion(region);
+  if (region === null) {
+    // No trace from editableWithinRegion in this case, because it never ran.
+    // Distinguishing "no region" from "a region with the wrong contents" is
+    // the whole point of recording it here.
+    recordIntent('button:no-region', false);
+    return null;
+  }
+  const found = editableWithinRegion(region);
+  recordIntent('button', found !== null);
+  return found;
 }
 
 /**

@@ -87,6 +87,7 @@ import {
 } from '../ui/surfaceState.js';
 import { analyzeText } from './analyze.js';
 import { DomRestorer } from './restore.js';
+import { renderSubmitRefusal } from '../debug.js';
 import type { AnalyzedEntity, Analysis } from './analyze.js';
 import { DetectionSession } from './session.js';
 import { applyMasking, certifyForRelease, missingStages, PassThrough } from './sendGate.js';
@@ -590,6 +591,18 @@ export class DetectionController {
     // the one being sent), `detached` (the composer left the document since).
     const unwitnessed = !binding.ok && binding.code === 'no-input-witness';
     if (!binding.ok && !unwitnessed) {
+      // Emitted HERE, from the refusal itself, rather than left to a
+      // diagnostic the user triggers afterwards. Every reading taken either
+      // side of a refusal showed the composer resolving cleanly, which is the
+      // opposite of what the refusal concluded - so the decision has to
+      // report what IT was looking at, at the instant it made it.
+      renderSubmitRefusal({
+        intentKind: intent.kind,
+        code: binding.code,
+        detail: binding.detail,
+        composerResolved: composer.ok,
+        composerStrategy: composer.ok ? composer.value.strategyId : null,
+      });
       this.refuse(`This message was not sent. ${binding.detail}`);
       return;
     }

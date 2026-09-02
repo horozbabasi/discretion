@@ -22,7 +22,11 @@
 /** The extension's own injected host. Never evidence about the page. */
 const SURFACE_HOST_TAG = 'privacyshield-surface';
 
-import { lastSubmitPath } from './adapters/index.js';
+import {
+  lastRegionAdmission,
+  lastSubmitPath,
+  recentIntents,
+} from './adapters/index.js';
 import type { SubmitPathEntry } from './adapters/index.js';
 import type { AdapterDiagnostic, EnvironmentForensics } from './diagnostics.js';
 
@@ -752,4 +756,109 @@ function renderReading(f: EnvironmentForensics, diagnostic: AdapterDiagnostic): 
 export function renderUnsupported(url: string): void {
   if (!isDebugEnabled()) return;
   console.log(`${PREFIX}: no adapter claims ${new URL(url).hostname}; not active on this page.`);
+}
+
+/**
+ * Everything the binding gate saw, AT THE MOMENT IT REFUSED.
+ *
+ * ─────────────────────────────────────────────────────────────────────────
+ * Every reading before this was a snapshot taken either side of the refusal,
+ * and they said the opposite of the refusal: a forced diagnostic run
+ * immediately afterwards showed the composer resolving from both strategies
+ * with healthCheck ok, while the send in between had been refused for finding
+ * "not exactly one editable element".
+ *
+ * A check that disagrees with the state before it and the state after it is
+ * not explained by either. This prints what the decision itself was looking
+ * at, in the moment, and it is emitted from the refusal path rather than from
+ * a diagnostic the user triggers afterwards.
+ * ─────────────────────────────────────────────────────────────────────────
+ */
+export function renderSubmitRefusal(context: {
+  intentKind: string;
+  code: string;
+  detail: string;
+  composerResolved: boolean;
+  composerStrategy: string | null;
+}): void {
+  if (!isDebugEnabled()) return;
+
+  console.groupCollapsed(
+    `${PREFIX} SUBMIT REFUSED (${context.code}) via a ${context.intentKind} intent — click to expand`,
+  );
+  console.warn(context.detail);
+  console.log(
+    `at the moment of refusal: composer ${context.composerResolved ? 'RESOLVED' : 'NOT resolved'}` +
+      `${context.composerStrategy === null ? '' : ` by '${context.composerStrategy}'`}`,
+  );
+
+  // WHICH PATH raised it. `undecidable` from a keyboard send should be
+  // impossible - when originComposerOfKeyEvent returns null the adapters do
+  // not call back, so the event is never intercepted. If a 'key' intent
+  // appears here with resolved=false, that reasoning is wrong and this is
+  // where it shows.
+  const intents = recentIntents();
+  if (intents.length > 0) {
+    console.log('submit intents raised this session (newest last):');
+    console.table(
+      intents.map((i: { kind: string; resolved: boolean; atMs: number }) => ({
+        kind: i.kind,
+        resolvedAComposer: i.resolved,
+        msAgo: Date.now() - i.atMs,
+      })),
+    );
+  }
+
+  const region = lastRegionAdmission();
+  if (region !== null) {
+    console.log(
+      `region uniqueness test: <${region.regionTag}> held ${String(region.examined)} candidate(s), ` +
+        `${String(region.admitted)} admissible (${String(Date.now() - region.atMs)}ms ago)`,
+    );
+    if (region.rejected.length > 0) {
+      console.log('rejected, and by which invariant:');
+      console.table(
+        region.rejected.map((r) => ({
+          tag: r.tag,
+          failed: r.failedInvariants.join(', '),
+          attributes: r.attributes.join(' '),
+        })),
+      );
+    }
+    if (region.admitted === 0) {
+      console.warn(
+        'ZERO admissible editables in the region. Either the region is the wrong ' +
+          'container, or every candidate in it failed an invariant — the table above says which.',
+      );
+    } else if (region.admitted > 1) {
+      console.warn(
+        `${String(region.admitted)} admissible editables in one region. The uniqueness test ` +
+          'refuses rather than guessing which one the send belongs to.',
+      );
+    }
+  } else {
+    console.warn(
+      'The region uniqueness test NEVER RAN. For a button intent that means no ' +
+        'region was found at all; for a key intent it is expected, because that ' +
+        'path resolves from the composed path instead.',
+    );
+  }
+
+  const submit = lastSubmitPath();
+  if (submit.entries.length > 0) {
+    const editables = submit.entries.filter((e) => e.editable).length;
+    console.log(
+      `composed path of the last key event: ${String(submit.entries.length)} node(s), ` +
+        `${String(editables)} editable (${String(Date.now() - submit.atMs)}ms ago)`,
+    );
+    console.table(
+      submit.entries.map((e: SubmitPathEntry, i: number) => ({
+        depth: i,
+        tag: e.tag,
+        editable: e.editable,
+        attributes: e.attributes.join(' '),
+      })),
+    );
+  }
+  console.groupEnd();
 }

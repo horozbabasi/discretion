@@ -28,7 +28,7 @@
  */
 
 import type { EntityFamily, EntityType } from '@privacyshield/core';
-import { familyOf } from '@privacyshield/core';
+import { detectableEntityTypes, familyOf } from '@privacyshield/core';
 
 import { entityLabel, isRtl, plural, t, uiLocale } from '../i18n/index.js';
 import type { MessageKey } from '../i18n/index.js';
@@ -43,44 +43,24 @@ import {
 import { append, byId, clear, el } from '../popup/dom.js';
 
 /**
- * Every entity type, in the order the page lists them.
+ * Which entity types get a toggle.
  *
- * Written out rather than derived, because there is no runtime enumeration of
- * a TypeScript union — and `Record<EntityType, …>` below makes an omission a
- * compile error, which is the same guarantee the message catalogues get.
+ * MOVED TO CORE AT M12. This page used to carry its own
+ * `Record<EntityType, true>` plus a hand-maintained `NOT_YET_DETECTED` set.
+ * Both facts - which types exist, and which of them anything can actually
+ * produce - belong to the detection engine, not to a settings page, and the
+ * copy here could go stale the moment a detector was added.
+ *
+ * `detectableEntityTypes()` is DERIVED from the detector registry and Stage
+ * 2's output types, so a type appears here the moment something can produce
+ * it and disappears when nothing can. That is what M11's `DATE_OF_BIRTH`
+ * finding was about: the page offered a toggle for a type with no detector,
+ * which is a control that does nothing in either position.
+ *
+ * `verify-options.py` still pins the rendered count, so a list that silently
+ * SHRINKS is caught too - a type nobody can switch off looks identical to one
+ * nobody wants to.
  */
-const ALL_TYPES: Readonly<Record<EntityType, true>> = {
-  EMAIL: true, PHONE: true, IP_ADDRESS: true, MAC_ADDRESS: true,
-  URL_WITH_CREDENTIALS: true, CREDIT_CARD: true, IBAN: true, SWIFT_BIC: true,
-  US_ROUTING_NUMBER: true, UK_SORT_CODE: true, CA_TRANSIT_NUMBER: true,
-  AU_BSB: true, IN_IFSC: true, BR_AGENCIA: true, CRYPTO_WALLET: true,
-  NATIONAL_ID: true, TAX_ID: true, VAT_NUMBER: true, PASSPORT_MRZ: true,
-  DRIVERS_LICENSE: true, VIN: true, US_NPI: true, HEALTH_DATA: true,
-  API_KEY: true, PRIVATE_KEY: true, JWT: true, GENERIC_SECRET: true,
-  CONNECTION_STRING: true, POSTAL_CODE: true, STREET_ADDRESS: true,
-  COORDINATES: true, PERSON: true, ORG: true, LOCATION: true,
-  DATE_OF_BIRTH: true,
-};
-
-/**
- * Types the options page does NOT offer a toggle for.
- *
- * `DATE_OF_BIRTH` is in `EntityType` deliberately - core's own note says it is
- * "carried here so both stay implementable", for SPEC's Strict profile and its
- * substitution table - but NOTHING PRODUCES IT. It has no Stage 1 detector
- * (`registerDetector` count: 0) and Stage 2 emits only PERSON, ORG and
- * LOCATION.
- *
- * Rendering a checkbox for it, as this page did until M11's documentation pass
- * counted the types, gives the user a control that changes nothing in either
- * position. A switch that does nothing is worse than an absent one: it is a
- * quiet claim that the type is being looked for.
- *
- * It comes back the moment a detector for it exists, and the compile-enforced
- * `ALL_TYPES` record above is what guarantees this list is reconsidered when
- * the union changes.
- */
-const NOT_YET_DETECTED: ReadonlySet<EntityType> = new Set<EntityType>(['DATE_OF_BIRTH']);
 
 const FAMILY_ORDER: readonly EntityFamily[] = [
   'secret', 'financial', 'identity', 'health', 'document',
@@ -245,8 +225,7 @@ class OptionsPage {
     const grid = el('div', 'types');
 
     const byFamily = new Map<EntityFamily, EntityType[]>();
-    for (const type of Object.keys(ALL_TYPES) as EntityType[]) {
-      if (NOT_YET_DETECTED.has(type)) continue;
+    for (const type of detectableEntityTypes()) {
       const family = familyOf(type);
       const list = byFamily.get(family) ?? [];
       list.push(type);

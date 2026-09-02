@@ -153,3 +153,34 @@ export { Restorer, restore } from './mask/restorer.js';
 export type { RestorerOptions } from './mask/restorer.js';
 export { guardEgress } from './mask/egressGuard.js';
 export type { EgressLeak, EgressVerdict } from './mask/egressGuard.js';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// M12: the supported entry point, and the surface finalised for publication
+// ─────────────────────────────────────────────────────────────────────────────
+
+// `protect()` composes Stages 0-4 in the one order that is correct, so that a
+// consumer does not have to reproduce the extension's ninety lines of
+// orchestration to get a masked string. Everything above stays exported: this
+// is the supported path, not the only one.
+export { protect } from './protect.js';
+export type { ProtectOptions, ProtectResult, ProtectedEntity } from './protect.js';
+
+// A runtime enumeration of `EntityType`, which a TypeScript union does not
+// have. `detectableEntityTypes()` is DERIVED from the detector registry rather
+// than declared - see the header of entityTypes.ts for the M11 bug that makes
+// the distinction worth the indirection.
+export { ALL_ENTITY_TYPES, NER_ENTITY_TYPES, detectableEntityTypes } from './entityTypes.js';
+
+// The shipped calibration model, converted with a key check instead of the
+// `as unknown as CalibrationModel` cast every consumer used before M12.
+export { toCalibrationModel } from './fuse/defaultCalibration.js';
+export type { CalibrationConversion, GeneratedCalibrationModel } from './fuse/defaultCalibration.js';
+
+// ── leaks closed at M12 ──
+// Both of these were named in a public signature but not exported, so a
+// consumer could receive one and had no way to name its type.
+//   SeverityCategory  reached through ExposureReport, which computeExposure()
+//                     returns; it originates in @privacyshield/data.
+//   PersonPool        the element type of the exported PERSON_POOLS.
+export type { SeverityCategory } from '@privacyshield/data';
+export type { PersonPool } from './mask/surrogatePools.js';

@@ -145,23 +145,22 @@ export interface DetectedEntity {
   explanation: EntityExplanation;
 }
 
-/** Wall-clock timing for one pipeline stage. */
-export interface StageTiming {
-  stage: DetectionStage;
-  durationMs: number;
-}
-
-/** The result of running detection over one piece of text. */
-export interface DetectionResult {
-  entities: readonly DetectedEntity[];
-  /** Per-stage timing breakdown. */
-  timings: readonly StageTiming[];
-  /** The normalization the detectors ran on; needed to map offsets back. */
-  normalization: NormalizationResult;
-}
+// `StageTiming` and `DetectionResult` were declared here at M1 as shapes for
+// "later milestones" and were never implemented: no function ever returned
+// one, and nothing outside this file ever referenced them. M12 removed them
+// rather than publish them.
+//
+// A type in a published API is a promise that something produces it. Shipping
+// these would have put two entries in the generated reference that a reader
+// could search the whole package for and never find - the documentation
+// equivalent of a stub, which SPEC.md's fourth non-negotiable forbids.
+//
+// `protect()` is what M12 shipped for this job. Its result carries
+// `stagesRun`, which is DERIVED from the options, in place of `timings`,
+// which was merely declared.
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Policy / substitution (shapes only — implemented in later milestones)
+// Policy / substitution
 // ─────────────────────────────────────────────────────────────────────────────
 
 // `SensitivityProfile` used to be declared here as the string union

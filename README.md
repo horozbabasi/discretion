@@ -690,7 +690,31 @@ later by deliberate decision; **rejected** means permanent.
 | **Next** | Native review of the eight machine-translated locales — a release blocker. A privacy-policy URL and the remaining store assets. |
 | **Then** | The three send routes still open (ARCHITECTURE.md D57b), of which the unrecognised-control one needs care: the obvious fix would intercept the *stop* button, because "no send control resolves" is also every moment a response is streaming. |
 | **Then** | `GENERIC_SECRET` recall, the weakest published number in the project. |
-| **Later** | `packages/core` published as a standalone library (M12) — explicit exports, semver, docs written for someone who has never seen this repo. |
+| **Then** | First npm publish of `packages/core`. The package is ready and the workflow is written, but it has never run, and the product name has to be settled first: renaming an unpublished package is free and npm has no rename afterwards. |
+
+## Using the engine on its own
+
+The detection and masking engine is a standalone library, independent of the
+extension. It has no DOM dependency, no Node built-in dependency, and makes no
+network requests.
+
+```js
+import { protect, restore } from '@privacyshield/core';
+
+const result = await protect('Wire it to DE44500105175407324931.');
+// result.maskedText   -> a different, checksum-valid IBAN
+// result.entities     -> what was found, with calibrated confidence
+// restore(reply, result.vault) -> the originals back
+
+```
+
+Full guide, including the fail-closed contract a caller has to honour:
+[`packages/core/README.md`](packages/core/README.md). Generated API reference:
+[`docs/api/`](docs/api/). Version policy: [`VERSIONING.md`](VERSIONING.md).
+
+**Not yet on npm.** `npm run verify:consumer` packs the real tarballs, installs
+them into an empty project outside this repository, and runs the documented
+examples against them.
 
 ## Reading the repository
 

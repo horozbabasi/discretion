@@ -6181,6 +6181,242 @@ regression.
 how long it takes and not what it finds. The detection numbers above stand
 regardless.
 
+### D59 - M12: the surface was complete and the package was not usable
+
+M12's brief was "finalize core's public API surface with explicit exports and
+no internal leakage", with the acceptance test that "a developer who has never
+seen this repo can npm install the package and run detection and masking from
+the docs alone". Measuring the first found that the second was not reachable
+from it.
+
+#### Nothing was dead, and that was not the problem
+
+An audit of all 141 named exports against every consumer in the repo found
+**zero unreferenced exports**. By the obvious metric the surface was clean.
+
+The obvious metric was the wrong one. What the audit could not see is that
+getting from a string to masked text required composing eight core calls in a
+specific order, holding an identity map between two of them, and importing the
+fitted calibration model from a SECOND package through an unchecked cast. The
+extension's `analyzeText` does exactly that in about ninety lines, and two of
+the orderings in it are bugs fixed in earlier milestones - resolving overlaps
+BEFORE scoring exposure, and taking surrogates from the masker rather than
+from `chooseSurrogate` so that the string displayed is the string substituted.
+
+Documenting those ninety lines would have satisfied the letter of the
+acceptance test. It would also have handed every consumer the chance to make
+two mistakes this project already made once, in a context where getting the
+order wrong produces quietly worse results rather than an error.
+
+Hence `protect()`. The stage functions stay exported; this is the supported
+path, not the only one.
+
+**`mask()` is the trap this replaces.** It also takes a string and returns
+masked text, and it looks like `protect()`'s smaller sibling. It runs STAGE 1
+ONLY - no context scoring, no calibration, no profile decision, no NER. A
+consumer reaching for the obvious name would have got uncalibrated confidences
+and none of Stage 3's suppression, with nothing in the result to indicate the
+difference. `stagesRun` on `ProtectResult` is what makes that distinction
+legible now.
+
+#### Leakage is a real category, and it needed its own check
+
+Two types were named in public signatures without being exported:
+`SeverityCategory`, reached through the `ExposureReport` that
+`computeExposure()` returns, and `PersonPool`, the element type of the exported
+`PERSON_POOLS`. `tsc` never complains about this - the type is reachable
+through the generated `.d.ts`, so the package compiles and consumers can even
+call the function. What they cannot do is NAME what they received, which means
+no typed wrapper, no typed field, no re-export. It is discovered by the
+consumer.
+
+`public-api.test.ts` now walks the compiler AST and asserts every type named in
+a public signature is itself exported. **It caught a leak in the code written
+for M12 itself** - `GeneratedCalibrationModel`, the parameter type of the new
+`toCalibrationModel`, which was local when written. A check that finds a defect
+in the change that introduced it is the cheapest evidence that it works.
+
+Two false-positive classes had to be removed first, and both were the same
+mistake: walking the whole declaration rather than the SIGNATURE. The first
+version reported types used by local variables inside exported function bodies,
+and types used by private class fields. Neither is visible to a consumer. A
+surface check that cries wolf is one nobody reads.
+
+TypeDoc's own `notExported` validation, configured separately, agrees with the
+result - two independent implementations reaching the same answer.
+
+#### Declared versus derived, again
+
+There was no runtime enumeration of `EntityType` anywhere in core. The only one
+lived in the extension's OPTIONS PAGE, hand-written, which is exactly where M11
+found the `DATE_OF_BIRTH` toggle that could not do anything.
+
+`ALL_ENTITY_TYPES` must be declared - a TypeScript union has nothing to derive
+from - so it is annotated `Record<EntityType, true>`, making an omission a
+compile error. `detectableEntityTypes()` is the opposite: DERIVED from the
+detector registry and Stage 2's output types. It independently reproduces
+M11's hand-counted answer, 34, excluding exactly `DATE_OF_BIRTH`, and the
+options page now asks core instead of keeping a copy.
+
+**The first version memoised it, and that was a bug.** The reasoning was that
+the registry only grows, which is true. But `registerDetector` is public API,
+so a consumer who registers a detector for their own identifier format and then
+asks which types are detectable would have been handed the answer from before
+their own call. A cache that is only correct until someone uses another part of
+the same API is worse than no cache. Removed; the scan is 35 types over ~113
+detectors.
+
+`entity-types-derived.test.ts` registers a `DATE_OF_BIRTH` detector and asserts
+the list changes on its own. Without it, a derived list and a hardcoded list
+that happens to be right today are indistinguishable.
+
+#### The cast that was hiding a question
+
+Every consumer converted the fitted calibration model with
+`as unknown as CalibrationModel`, because `@privacyshield/data` types its keys
+as `Record<string, …>` - the generator has no access to the union.
+
+The cast asserts the keys are valid entity types without checking. A model
+fitted before a type was renamed would carry a key matching nothing,
+`calibrate()` would fall through to the pooled curve for that type forever, and
+nothing would say so: the numbers would just be quietly worse than the
+published ones. `toCalibrationModel()` reports unknown keys instead, and a test
+asserts the shipped model has none.
+
+#### Two types that were promises nothing kept
+
+`DetectionResult` and `StageTiming` were declared at M1 as shapes for "later
+milestones" and never implemented - nothing returned one, nothing referenced
+them. Removed rather than published.
+
+A type in a published API is a promise that something produces it. Shipping
+these would have put two entries in the generated reference that a reader could
+search the whole package for and never find, which is the documentation
+equivalent of the stub SPEC.md's fourth non-negotiable forbids.
+
+#### The 200 MB nobody was using
+
+`@huggingface/transformers` was a hard dependency of core although exactly one
+file imports it, behind the separate `./ner-transformers` entry point, and it
+pulls in `onnxruntime-node`.
+
+Now an optional peer dependency. Measured in an empty project installing the
+real tarballs: **node_modules is 20 MB, against a little over 220 MB before.**
+
+Verified by REMOVING the runtime rather than by reading the manifest: a Node
+loader hook makes `@huggingface/transformers` and `onnxruntime*` unresolvable,
+and core's root import still works. The same run then asserts that
+`./ner-transformers` DOES fail under that hook - without which the first result
+would pass equally well if the hook did nothing.
+
+The extension now declares transformers itself. It imports it directly in
+`offscreen.ts` and had been relying on core's dependency being hoisted to the
+root by npm, which is fragile independently of this change.
+
+#### The package would not have installed at all
+
+Both packages were `private: true`, and core pinned `@privacyshield/data` at
+`*`. Published as-is, npm would have tried to resolve `@privacyshield/data@*`
+from the public registry, where it does not exist - and where the name is
+UNCLAIMED. That is not merely a broken install; an unclaimed name that a
+published package tries to resolve is a supply-chain hazard. `data` is now
+published alongside core at an exact pin.
+
+#### The name, which SPEC asked to be decided here
+
+`@privacyshield/core` and `@privacyshield/data`. Checked against the registry
+rather than assumed: both return E404, and the same run resolves a package that
+does exist, so E404 means absent rather than unreachable.
+
+The decision has a real dependency worth stating: SPEC records that the
+PrivacyShield product name is still an open pre-public question, and the scoped
+package name is coupled to it. That coupling costs nothing while nothing is
+published - renaming an unpublished package is free - and becomes expensive
+immediately afterwards, because npm has no rename, only deprecate-and-republish.
+
+**So the product-name question has to be settled BEFORE the first publish, not
+before the first release.** Recorded here rather than discovered at the point
+where the cheap option has expired.
+
+#### The defect the documentation found
+
+The README's first example printed masked text that had lost its full stop.
+
+`API_KEY`'s pattern body charset includes `.`, correctly - plenty of provider
+tokens contain one - and the match ran on into the sentence punctuation. The
+consequence is worse than cosmetic: the vault keys on the matched value, so the
+same key at the end of a sentence and mid-sentence were two DIFFERENT values
+and got two different stand-ins. That breaks the consistency guarantee the
+README was in the middle of documenting.
+
+Fixed by requiring the final character to be non-`.`. Only `.`, although
+trailing `-` and `_` are also unlikely to be part of a real token: they are not
+what this found, and tightening them would be an unmeasured change riding on a
+measured one.
+
+Measured, Stage 1 + Stage 2 over 2,611 documents and 6,645 ground-truth
+entities, diffed against the committed reports rather than eyeballed:
+
+| | before | after |
+| --- | --- | --- |
+| API_KEY recall | 99.6% | **100.0%** |
+| API_KEY F1 | 97.6% | **97.9%** |
+| API_KEY false negatives | 2 | **0** |
+| API_KEY false positives | 20 | 20 |
+| GENERIC_SECRET false positives | 2,075 | 2,077 |
+| every other entity type | - | identical |
+
+Two previously missed keys are found. Two extra GENERIC_SECRET false positives
+appear in the same two Dutch documents. **The mechanism behind those two was
+not isolated.** The direction is consistent with the shorter API_KEY span
+leaving text that the generic high-entropy detector then matches, but that was
+not confirmed. Recorded as unexplained rather than given a tidy reason - the
+lesson from M11's discrepancy script is that an explanation invented to close a
+gap is as likely to be wrong as the gap.
+
+#### The acceptance test, run rather than asserted
+
+`verify-standalone-consumer.sh` packs both tarballs, installs them into an
+empty project OUTSIDE the repository, and runs the five documented examples
+against them. Nothing resolves from the workspace, so a missing `files` entry
+or a hoisted dependency fails it.
+
+It also checks the two things that are invisible locally:
+
+- **The optional peer, tested by absence.** `onnxruntime-*` and
+  `@huggingface/transformers` must not be installed.
+- **No network at runtime**, by replacing `dns.lookup`, `net.connect` and
+  `fetch` with throwing stubs - AND a separate check that those stubs actually
+  fire, so that "no network was used" is something the script established
+  rather than something it assumed.
+
+Plus a strict TypeScript consumer compiling against the published types, which
+is the half of the acceptance test that the examples cannot cover.
+
+#### Three more of my own mistakes, all caught by running the examples
+
+Consistent with M9's observation that nearly every defect is a check that
+looked like it held - except these were docs, where the check is execution:
+
+- **`ctx.text` is the whole normalized document, not the matched substring.**
+  The first custom-detector example destructured `text` and sliced it, which
+  silently validated a slice of the surrounding sentence, failed the checksum,
+  and reported nothing. It fails quietly in exactly the way a consumer would
+  hit, so it is now called out in the README.
+- `ExposureReport` has no `band` field; there is an `exposureBand()` function.
+  The example printed `undefined` and still exited 0, which is why the examples
+  assert rather than only print.
+- There is no `TransformersClassifier` class. It is
+  `createTransformersClassifier` composed with `NerEngine`.
+
+And a fourth, in the smoke probe rather than the examples: it used
+`4111111111111111` and `GB82 WEST 1234 5698 7654 32` and reported that NOTHING
+was detected. Both are canonical PUBLISHED test values that the engine
+classifies non-sensitive on purpose - the third time this project has picked a
+reserved value and misread correct behaviour as a failure, after M10's RFC 2606
+e-mail domain. Tests now generate their values with core's own seeded
+generators instead of hand-picking them.
+
 ## Status after M11
 
 **M11's deliverables are complete**, with one measured caveat and the same two
@@ -6264,3 +6500,107 @@ what the last three milestones of building checks was for.
 
 Details and rationale: header comments in `packages/core/src/offsetMap.ts`
 and the transform files.
+
+## Status after M12
+
+**M12's deliverables are complete.** SPEC's M12: "finalize core's public API
+surface with explicit exports and no internal leakage; semver from 0.x with a
+documented policy; generated plus hand-curated API docs; npm publish workflow
+with provenance; a standalone 'using the library' guide with examples fully
+independent of the extension; a CHANGELOG. Final package name decided at M12.
+Acceptance test: a developer who has never seen this repo can npm install the
+package and run detection and masking from the docs alone."
+
+| deliverable | state |
+| --- | --- |
+| Public API finalised, no internal leakage | **DONE.** Two leaks closed, two unimplemented types removed, `protect()` added, and `public-api.test.ts` pins the surface and checks leakage on every run |
+| Semver policy | **DONE.** `VERSIONING.md`, stricter than 0.x requires: a minor bump is the breaking one |
+| Generated + hand-curated docs | **DONE.** `docs/api/` (325 files, TypeDoc, 0 warnings) plus `packages/core/README.md` |
+| npm publish workflow with provenance | **WRITTEN, NOT EXERCISED.** `.github/workflows/publish.yml`. It has never run - the repo has no other CI, so its first execution will be its first test (see below) |
+| Standalone usage guide, independent of the extension | **DONE.** The README plus five runnable examples, executed against the packed tarball |
+| CHANGELOG | **DONE** |
+| Package name decided | **DONE.** `@privacyshield/core`, `@privacyshield/data`; both verified unregistered |
+| Acceptance test | **DONE, and it passes.** `verify-standalone-consumer.sh` |
+
+### What the numbers say now
+
+| | |
+| --- | --- |
+| tests | 1,297 across 84 files |
+| detectors | 113, over 35 entity types (34 detectable, now derived rather than declared) |
+| public exports | 159 declared, 81 at runtime, pinned by a test |
+| installed size, empty project | **20 MB** (was ~220 MB before the optional peer) |
+| API_KEY | recall 100.0%, F1 97.9% - up from 99.6% / 97.6% |
+| everything else in the eval | unchanged, diffed against the committed reports |
+| generated API reference | 325 files, 0 TypeDoc warnings |
+
+### Still open
+
+Unchanged in substance from M11 except where noted.
+
+1. **The eight non-English catalogues are machine-translated and unreviewed.**
+   Still the release blocker, and still a store-submission blocker.
+
+   M12 added a scoping that did not exist before: of 116 catalogue keys, **21
+   are safety-critical** - the ones where a mistranslation causes a wrong
+   safety decision rather than confusion (the two send controls,
+   `keepOriginal`/`maskThis`, all four `panel.degraded.*` notices,
+   `unwitnessed`, the three `popup.status.*` states, and Quick Redact's
+   `mask`/`restore`/`unavailable`/`memoryOnly`). That is **254 words per
+   locale**, a 20-30 minute read for a native speaker rather than a
+   translation contract.
+
+   The recommended policy: a locale ships when a speaker has read its 21; a
+   locale with no reviewer is DROPPED from the build rather than shipped
+   unreviewed. `manifest.default_locale = 'en'` makes the fallback clean, and
+   a user seeing English is honest where a confidently wrong safety button is
+   not.
+
+2. **Three send routes remain open**, one permanently. Unchanged.
+
+3. **"Screen-reader tested" is half done.** Unchanged. Confirmed at M12 that
+   no shipping document claims accessibility, so there is nothing to retract -
+   it becomes a blocker only if the store listing starts claiming it.
+
+4. **D27a stays open.** Unchanged.
+
+5. **The publish workflow has never executed.** It is the one M12 deliverable
+   that is written rather than verified: the repository has no other CI, so
+   nothing has exercised `actions/setup-node`, the workspace publish order, or
+   the provenance attestation. The `workflow_dispatch` input defaults to a dry
+   run for that reason, and the first real tag should be treated as a test of
+   the workflow and not only of the release.
+
+6. **The package name is coupled to an unsettled product name.** Renaming an
+   unpublished package is free; npm has no rename afterwards, only
+   deprecate-and-republish. The product-name question therefore has to be
+   settled BEFORE the first publish, not before the first release.
+
+7. From M8, untouched: `TAX_ID` recall 91.2%, one over-confident calibration
+   bucket, thin mid-range calibration, and the p50 budget missed by 5.8 ms
+   under favourable conditions.
+
+### The shape of what went wrong, at the last milestone
+
+M9 recorded that nearly every defect it found was a check that looked like it
+held. M10 reproduced that five times, M11 three. M12's four are a different
+shape, and the difference is worth naming:
+
+- **An audit that answered the wrong question.** All 141 exports were
+  referenced somewhere; by that measure the surface was clean. The measure
+  could not see that the package was unusable, because "is this export used"
+  and "can a stranger get from a string to masked text" are unrelated
+  questions.
+- **A cache that was correct until someone used the API.** Memoising
+  `detectableEntityTypes()` was right about the registry only growing and
+  wrong about who else can grow it.
+- **A defect found by RUNNING the documentation.** The API_KEY trailing-dot
+  bug had survived every unit test, the property tests, the fuzz tests and two
+  full eval runs. It appeared the first time a README example was executed and
+  its output read.
+- **Three API mistakes in my own examples**, each of which a reader would have
+  hit, and one of which - slicing `ctx.text` - fails completely silently.
+
+The through-line: M11's defects were found by counting while writing prose;
+M12's were found by EXECUTING the prose. Documentation that runs is a test,
+and it caught things four kinds of test had not.

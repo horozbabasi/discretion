@@ -4915,6 +4915,93 @@ seven controls in the region and refuses. The send gate does not depend on it
 (it binds through the submit event, not a send selector), so the gate works
 regardless; but healthCheck reports a `send-button` failure. Whether the
 logged-IN page still resolves it is unverified since 2026-08-29.
+### D50 - The Claude send refusal: one mechanism, two admission rules (M9)
+
+Live on claude.ai, 2026-09-02, on a fully settled page with the composer
+visible and text typed in: the send was refused as `undecidable` - "the submit
+event did not resolve to exactly one editable element, so which text is about
+to be sent cannot be established."
+
+**What the page actually contains.** Six editable-ish elements beside the
+composer:
+
+  - FIVE `<input>` decoys, each carrying `aria-hidden="true"` ON ITSELF
+    (levelsUp 0) and zero-size. One is
+    `class="absolute -z-10 h-0 w-0 overflow-hidden opacity-0 select-none"`.
+  - ONE `div[role="textbox"].tiptap.ProseMirror` - the real composer, not
+    hidden, genuinely editable.
+
+**The defect.** `composerRegionOf` walked up from the send button and stopped
+at the first ancestor containing a send button and
+`querySelector('textarea, input, [contenteditable="true"]')`. A zero-size
+`aria-hidden` decoy satisfies that selector perfectly well. So the walk
+answered "a composer is in here" about a container holding only decoys -
+and `editableWithinRegion` then applied the FULL composer invariants, found
+nothing admissible, and returned null.
+
+One mechanism, two different notions of "editable", disagreeing. The button
+submit path therefore had no origin composer, and `verifyBinding` correctly
+refused a send it could not attribute.
+
+The same line had been visible in every reading and was not read:
+`claude/composer-in-send-region 0/0` - the region-based composer strategy
+finding nothing, on a page where the composer was plainly there.
+
+**The fix is one rule, named.** `isAdmissibleComposer` is now exported from
+binding.ts, and both the region walk's stopping condition and
+`editableWithinRegion` use it. A container qualifies as the composer region
+only if it holds something that would actually be ADMITTED.
+
+**What was deliberately NOT changed, and why each.**
+
+`REGION_HOP_LIMIT` stays at 8. The stopping condition was wrong; raising a
+bound at the same time would make it impossible to say which change did the
+work - standing rule 8, which this project earned once already at D34n.
+`lastComposerRegionWalk()` now reports `found` / `hop-limit` / `reached-root`
+with a hop count, so if the bound IS the next constraint the next reading says
+so with a number instead of a null.
+
+`originComposerOfKeyEvent` keeps the LOOSE test, and tightening it would be
+actively dangerous. It answers a different question - "is this keystroke
+plausibly a send at all" - and its answer decides whether the event is
+INTERCEPTED. When it returns null the adapters do not call back, so the
+keystroke is never intercepted and THE PAGE SENDS. It is the one place in this
+system where a stricter check fails OPEN rather than closed. A composer
+transiently failing an invariant must still have its Enter intercepted;
+whether the send is then allowed is `verifyBinding`'s decision, made with the
+strict rule.
+
+**Verified by varying the condition.** With the stopping condition reverted to
+the loose test, the new regression suite reproduces the live failure exactly:
+the walk stops at the decoy container and `editableWithinRegion` returns null.
+With the fix, the region resolves to the container holding the real composer
+and the uniqueness test returns it. The suite also pins that two admissible
+composers in one region still refuse - the uniqueness guarantee is not
+weakened by any of this.
+
+### D50a - The transient DEGRADED on claude.ai is real, and the paint fix worked (M9)
+
+Three console blocks became two after D49's paint-gate fix, and the remaining
+DEGRADED is a different thing from the one that was removed.
+
+  before   reading #1 at   7 ms, 126 elements,  0 controls, 1 custom -> PAINTED
+  after    reading #1 at  15 ms, 764 elements, 39 controls, 0 custom -> PAINTED
+
+`0 custom elements` is the fix: our own `privacyshield-surface` no longer
+counts as evidence that the page painted. The 126-element shell reading is gone
+entirely.
+
+What remains is a LEGITIMATE reading of a genuinely painted page - 764
+elements, 39 controls, response-root resolved - on which the composer really
+was inside an `aria-hidden` subtree at 15 ms and really was not 450 ms later.
+claude.ai marks it hidden during hydration.
+
+**The console still reports it, and that is correct.** The console emits on
+every verdict change by design (D31/D32): seeing a bad reading superseded by a
+good one is what it is for. The 2500 ms grace period (D49) governs the PANEL,
+which is what the user sees. The two are driven by different code paths -
+`renderDiagnostic` on a verdict change, `detection.refresh()` for the surface -
+and only the second should be quiet about a page still assembling itself.
 
 ## Standing contracts (established in M1)
 

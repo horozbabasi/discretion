@@ -225,15 +225,52 @@ function editableOnPath(event: Event): HTMLElement | null {
  * `composer-region-clone` in both directions: an inert clone must not block,
  * and two genuine editables still must.
  */
+/**
+ * THE ONE ADMISSION RULE for "is this a composer candidate".
+ *
+ * Exported and named because it was being applied in one place and not
+ * another, which is the defect this exists to prevent recurring.
+ *
+ * `isEditableSurface` alone is NOT this rule: it answers "can text be typed
+ * here", which a zero-size `aria-hidden` decoy input satisfies perfectly well.
+ * claude.ai carries five of them next to its real composer. Any code deciding
+ * whether a region CONTAINS a composer must use this, or it will disagree with
+ * the code that then tries to pick the composer out of that region.
+ */
+export function isAdmissibleComposer(element: Element): boolean {
+  // Narrowed rather than cast: the invariants are declared over HTMLElement,
+  // and a non-HTML element cannot be a composer anyway.
+  if (!(element instanceof HTMLElement)) return false;
+  return COMPOSER_INVARIANTS.every((invariant) => invariant.holds(element));
+}
+
 export function editableWithinRegion(region: Element): HTMLElement | null {
   const editables: HTMLElement[] = [];
   for (const element of region.querySelectorAll<HTMLElement>('textarea, input, [contenteditable]')) {
-    if (COMPOSER_INVARIANTS.every((invariant) => invariant.holds(element))) editables.push(element);
+    if (isAdmissibleComposer(element)) editables.push(element);
   }
   return editables.length === 1 ? (editables[0] as HTMLElement) : null;
 }
 
-/** Derives the element a keyboard submit would send, from the event alone. */
+/**
+ * Derives the element a keyboard submit would send, from the event alone.
+ *
+ * DELIBERATELY USES THE LOOSE TEST, and this is not the inconsistency that
+ * `isAdmissibleComposer` was introduced to fix. The two are different
+ * questions:
+ *
+ *   - `composerRegionOf` / `editableWithinRegion` ask "which element IS the
+ *     composer", and must agree with each other.
+ *   - this asks "is this keystroke plausibly a send at all", and its answer
+ *     decides whether the event is INTERCEPTED.
+ *
+ * Tightening this would be actively dangerous. When it returns null the
+ * adapters do not call back at all, so the keystroke is never intercepted and
+ * the PAGE SENDS - the one place in this system where a stricter check fails
+ * OPEN rather than closed. A composer transiently failing an invariant must
+ * still have its Enter intercepted; whether the send is then allowed is
+ * `verifyBinding`'s decision, made with the strict rule.
+ */
 export function originComposerOfKeyEvent(event: KeyboardEvent): HTMLElement | null {
   return editableOnPath(event);
 }

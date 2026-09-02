@@ -39,7 +39,11 @@ import { COMPOSER_INVARIANTS, RESPONSE_ROOT_INVARIANTS, isEditableSurface } from
 import { resolveUnique, writeAndVerify } from './resolve.js';
 import { readEditableText, writeEditableText } from './text.js';
 import type { InputWitness } from './binding.js';
-import { originComposerOfButtonEvent, originComposerOfKeyEvent } from './binding.js';
+import {
+  isAdmissibleComposer,
+  originComposerOfButtonEvent,
+  originComposerOfKeyEvent,
+} from './binding.js';
 
 // Re-exported because the tests and the live probe import it from here; the
 // implementation is shared with every other adapter in text.ts.
@@ -173,15 +177,65 @@ export const CLAUDE_RESPONSE_STRATEGIES: readonly ElementStrategy[] = [
 export function composerRegionOf(from: Element): Element | null {
   let node: Element | null = from;
   let hops = 0;
-  while (node !== null && hops < 8) {
+  while (node !== null && hops < REGION_HOP_LIMIT) {
     if (node.tagName === 'FORM') return node;
-    if (node.querySelector(SEND_BUTTON_SELECTOR) !== null && node.querySelector(EDITABLE_SELECTOR) !== null) {
+    if (
+      node.querySelector(SEND_BUTTON_SELECTOR) !== null &&
+      containsAdmissibleComposer(node)
+    ) {
+      lastRegionWalk = { hops, outcome: 'found' };
       return node;
     }
     node = node.parentElement;
     hops += 1;
   }
+  lastRegionWalk = { hops, outcome: node === null ? 'reached-root' : 'hop-limit' };
   return null;
+}
+
+/**
+ * Does this container hold an element that would actually be ADMITTED as the
+ * composer?
+ *
+ * The stopping condition used to be `querySelector(EDITABLE_SELECTOR)`, which
+ * is satisfied by anything text can be typed into - including the five
+ * zero-size `aria-hidden` decoy inputs claude.ai renders beside its real
+ * composer. So the walk answered "yes, a composer is in here" about a
+ * container holding only decoys, and `editableWithinRegion` then applied the
+ * STRICT rule, found none admissible, and returned null. One mechanism, two
+ * different notions of "editable", disagreeing.
+ *
+ * Live on claude.ai, 2026-09-02: every send button produced a null region, the
+ * `claude/composer-in-send-region` strategy reported 0/0 in every reading, and
+ * a real send was refused as `undecidable` - "the submit event did not resolve
+ * to exactly one editable element" - on a settled page where exactly one
+ * admissible composer was plainly visible.
+ */
+function containsAdmissibleComposer(container: Element): boolean {
+  for (const candidate of queryAll<HTMLElement>(container, EDITABLE_SELECTOR)) {
+    if (isAdmissibleComposer(candidate)) return true;
+  }
+  return false;
+}
+
+/**
+ * How far up from a send button the region may be.
+ *
+ * NOT raised as part of the fix above, deliberately. The stopping condition
+ * was wrong, and raising a bound at the same time would make it impossible to
+ * tell which change did the work - standing rule 8. `lastRegionWalk` reports
+ * `hop-limit` if this turns out to be the next constraint, with the number.
+ */
+const REGION_HOP_LIMIT = 8;
+
+let lastRegionWalk: { hops: number; outcome: 'found' | 'hop-limit' | 'reached-root' } | null = null;
+
+/** The most recent region walk, for the diagnostic. */
+export function lastComposerRegionWalk(): {
+  hops: number;
+  outcome: 'found' | 'hop-limit' | 'reached-root';
+} | null {
+  return lastRegionWalk;
 }
 
 export class ClaudeAdapter implements SiteAdapter {

@@ -160,7 +160,7 @@ function start(): void {
 
   /** Emits a diagnostic regardless of whether the verdict has changed. */
   const forceDiagnostic = (): void => {
-    renderDiagnostic(buildDiagnostic(adapter, document));
+    renderDiagnostic(buildDiagnostic(adapter, document), true);
   };
 
   const check = (): void => {

@@ -10,7 +10,7 @@
  * a 280 MB model into jsdom.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { generate } from '@privacyshield/core';
 import type { NerRecognizer } from '@privacyshield/core';
@@ -27,6 +27,9 @@ import {
 
 const IBAN = generate.generateValidIban(31);
 
+/** Mirrors DEGRADED_GRACE_MS in the controller. */
+const DEGRADED_GRACE_MS = 2500;
+
 beforeEach(resetDocument);
 
 /** A recognizer that finds nothing but reports that Stage 2 ran. */
@@ -38,6 +41,7 @@ const SILENT_RECOGNIZER: NerRecognizer = {
 
 interface Harness {
   controller: DetectionController;
+  adapter: ClaudeAdapter;
   composer: HTMLElement;
   errors: unknown[];
   /** Every send the page would actually have performed. */
@@ -78,6 +82,7 @@ function harness(recognizer: NerRecognizer | null = SILENT_RECOGNIZER): Harness 
 
   return {
     controller,
+    adapter,
     composer,
     errors,
     pageSends,
@@ -521,6 +526,76 @@ describe('D29: a composer the user never typed into', () => {
     await settle();
 
     expect(h.state()).toBe('review');
+    expect(h.pageSends).toEqual([]);
+    h.controller.destroy();
+  });
+});
+
+describe('a transient health failure is not announced, and is still enforced', () => {
+  // Measured live on claude.ai: within one page load, composer not-found at
+  // 7ms, invariant-rejected at 434ms, resolved at 2325ms. Both failures were
+  // real readings of a page still assembling itself, and announcing either
+  // says "PrivacyShield is not protecting this page" about a page that is fine.
+
+  it('does NOT show degraded for a failure that has just started', async () => {
+    const h = harness();
+    vi.spyOn(h.adapter, 'healthCheck').mockReturnValue({
+      ok: false,
+      failures: [{ kind: 'not-found', target: 'composer', detail: 'x', triedStrategies: [] }],
+      warnings: [],
+      checkedAt: Date.now(),
+    });
+    h.controller.refresh();
+    await settle();
+    expect(h.state()).not.toBe('degraded');
+    h.controller.destroy();
+  });
+
+  it('DOES show degraded once the failure has persisted', async () => {
+    // Driven against the REAL clock rather than a counter: the grace period is
+    // about elapsed time, and a mock that hands out timestamps is testing the
+    // mock's arithmetic. The wait is real, which is why this test is slow.
+    const h = harness();
+    vi.spyOn(h.adapter, 'healthCheck').mockImplementation(() => ({
+      ok: false,
+      failures: [{ kind: 'not-found', target: 'composer', detail: 'x', triedStrategies: [] }],
+      warnings: [],
+      checkedAt: Date.now(),
+    }));
+    h.controller.refresh();
+    await settle();
+    expect(h.state()).not.toBe('degraded');
+
+    await new Promise((resolve) => setTimeout(resolve, DEGRADED_GRACE_MS + 300));
+    h.controller.refresh();
+    await settle();
+    expect(h.state()).toBe('degraded');
+    h.controller.destroy();
+  }, 15_000);
+
+  it('STILL REFUSES A SEND during the grace window', async () => {
+    // The property the whole change rests on: the grace period suppresses the
+    // MESSAGE, never the enforcement. The gate resolves independently at
+    // submit and does not consult the surface state.
+    const h = harness();
+    type(h.composer, `my iban is ${IBAN}`);
+    await settle();
+
+    vi.spyOn(h.adapter, 'getComposer').mockReturnValue({
+      ok: false,
+      failure: { kind: 'not-found', target: 'composer', detail: 'gone', triedStrategies: [] },
+    });
+    vi.spyOn(h.adapter, 'healthCheck').mockReturnValue({
+      ok: false,
+      failures: [{ kind: 'not-found', target: 'composer', detail: 'gone', triedStrategies: [] }],
+      warnings: [],
+      checkedAt: Date.now(),
+    });
+
+    pressEnter(h.composer);
+    await settle();
+
+    // Nothing sent, whatever the panel is or is not saying.
     expect(h.pageSends).toEqual([]);
     h.controller.destroy();
   });

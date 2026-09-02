@@ -110,6 +110,34 @@ const DEBOUNCE_MS = 180;
  */
 const SETTLE_MS = 400;
 
+/**
+ * How long a health failure must PERSIST before the panel says so.
+ *
+ * ─────────────────────────────────────────────────────────────────────────
+ * Measured on the live claude.ai, 2026-09-02, in one page load with no reload:
+ *
+ *   reading #1     7 ms   composer not-found      (126-element shell)
+ *   reading #2   434 ms   composer invariant      (6 of 7 editables sit
+ *                                                  inside an aria-hidden
+ *                                                  subtree mid-transition)
+ *   reading #3  2325 ms   composer RESOLVED, health ok
+ *
+ * Both failures were real readings of a real DOM, and both described a page
+ * that was still assembling itself. Reporting either to the user is reporting
+ * a broken site that is not broken - and "PrivacyShield is not protecting this
+ * page" is the loudest thing this extension says.
+ *
+ * So a failure has to last before it is shown. 2500 ms clears the transition
+ * measured above with room, and is far shorter than a user reading a reply.
+ *
+ * THIS CHANGES WHAT IS DISPLAYED AND NEVER WHAT IS ALLOWED. The send gate does
+ * its own resolution at submit time and refuses on its own terms; nothing in
+ * the gate consults the surface state. A send attempted during the grace
+ * window still fails closed, and a test pins exactly that.
+ * ─────────────────────────────────────────────────────────────────────────
+ */
+const DEGRADED_GRACE_MS = 2500;
+
 /** The surface's custom element name, which restoration must not write into. */
 const SURFACE_HOST_TAG = 'privacyshield-surface';
 
@@ -194,6 +222,8 @@ export class DetectionController {
    * the next edit, because an edit is the user saying they have seen it.
    */
   private surfaceOwner: 'idle' | 'gate' | 'paste' = 'idle';
+  /** When the current run of health failures began. Null while healthy. */
+  private failingSince: number | null = null;
 
   constructor(options: ControllerOptions) {
     this.options = options;
@@ -759,6 +789,8 @@ export class DetectionController {
    */
   private stateForHealth(handle: ComposerHandle | null): SurfaceState {
     const health = this.options.adapter.healthCheck();
+    if (health.failures.length === 0) this.failingSince = null;
+    else this.failingSince ??= health.checkedAt;
     const evidence = [];
 
     const missingSend = health.failures.some((failure) => failure.target === 'send-button');
@@ -772,7 +804,17 @@ export class DetectionController {
       const found = composerTemporarilyDisabled(failure);
       if (found !== null) evidence.push(found);
     }
-    return surfaceStateFor(health, evidence);
+    const state = surfaceStateFor(health, evidence);
+    if (state.kind !== 'degraded') return state;
+
+    // A failure that has not lasted is a page still assembling itself, not a
+    // broken one. See DEGRADED_GRACE_MS - and note this suppresses only the
+    // MESSAGE; the send gate resolves independently and still refuses.
+    const since = this.failingSince;
+    if (since !== null && health.checkedAt - since < DEGRADED_GRACE_MS) {
+      return { kind: 'hidden' };
+    }
+    return state;
   }
 
   private bindInput(node: HTMLElement | null): void {
@@ -856,7 +898,13 @@ export class DetectionController {
       if (text.length === 0) {
         this.lastEntities = [];
         this.lastExposure = 0;
-        this.surface.setState({ kind: 'hidden' });
+        // The HEALTH-derived state, not a bare `hidden`. An empty composer
+        // means there is nothing to report about the MESSAGE; it says nothing
+        // about whether the page is healthy. Setting `hidden` here wiped a
+        // standing degraded warning roughly 180 ms after it appeared - the
+        // same shape as D42a, where the debounced analysis overwrote the
+        // gate's refusal. Found by a test written for the grace period.
+        this.surface.setState(this.stateForHealth(composer.value));
         return;
       }
 
@@ -876,7 +924,12 @@ export class DetectionController {
       this.lastExposure = analysis.exposure.score;
       this.surface.setState(
         analysis.entities.length === 0
-          ? { kind: 'hidden' }
+          ? // The HEALTH state, not a bare `hidden` - the same defect as the
+            // empty-composer branch above. "Nothing sensitive was found" is a
+            // statement about the MESSAGE; it says nothing about whether the
+            // page is healthy, and setting `hidden` here wiped a standing
+            // degraded warning about 180 ms after it appeared.
+            this.stateForHealth(composer.value)
           : {
               kind: 'findings',
               content: {

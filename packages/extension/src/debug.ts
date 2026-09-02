@@ -19,6 +19,9 @@
  * this module only formats what it is given.
  */
 
+/** The extension's own injected host. Never evidence about the page. */
+const SURFACE_HOST_TAG = 'privacyshield-surface';
+
 import { lastSubmitPath } from './adapters/index.js';
 import type { SubmitPathEntry } from './adapters/index.js';
 import type { AdapterDiagnostic, EnvironmentForensics } from './diagnostics.js';
@@ -73,12 +76,18 @@ function verdictLine(diagnostic: AdapterDiagnostic): string {
  * that floods the console gets muted by whoever is trying to debug their own
  * page, which would restore the silence this exists to remove.
  */
-export function renderDiagnostic(diagnostic: AdapterDiagnostic): void {
+export function renderDiagnostic(diagnostic: AdapterDiagnostic, forced = false): void {
   if (!isDebugEnabled()) return;
 
   const { composer, responseRoot, health } = diagnostic;
   console.groupCollapsed(
-    `${PREFIX} [${diagnostic.displayName}] ${verdictLine(diagnostic)} — click to expand`,
+    // A FORCED reading is labelled as one. The passive log emits only on a
+    // VERDICT CHANGE, so pressing the shortcut when nothing has changed
+    // produced a block identical to the ones already on screen - and the only
+    // report back was "the shortcut did nothing". It did; it was
+    // indistinguishable.
+    `${PREFIX} [${diagnostic.displayName}] ${verdictLine(diagnostic)}` +
+      `${forced ? ' — FORCED by Ctrl+Alt+Shift+P' : ''} — click to expand`,
   );
 
   console.log(
@@ -172,7 +181,17 @@ export function paintEvidence(f: EnvironmentForensics): {
   const controls =
     (f.probes['button']?.deep ?? 0) + (f.probes['[role="button"]']?.deep ?? 0);
   const editables = f.editableCandidates.length;
-  const customElements = f.customElements.length;
+  // OUR OWN HOST IS NOT EVIDENCE THE PAGE PAINTED, and counting it was
+  // circular: `privacyshield-surface` is mounted by this extension, on every
+  // page, before anything is measured - so `painted` was true by construction
+  // and the gate could never report NOT PAINTED once we had attached.
+  //
+  // Measured on claude.ai, 2026-09-02: reading #1 at 7 ms, readyState
+  // "interactive", 126 elements, zero controls, and it declared PAINTED on the
+  // strength of "1 custom elements" - which was us. A DEGRADED verdict went
+  // out from an unpainted shell, which is precisely the failure the paint gate
+  // was built to prevent.
+  const customElements = f.customElements.filter((name) => name !== SURFACE_HOST_TAG).length;
   return {
     controls,
     editables,

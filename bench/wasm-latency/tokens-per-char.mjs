@@ -11,11 +11,16 @@
 // this runs correctly in Node.
 //
 // Run: node bench/wasm-latency/tokens-per-char.mjs
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { AutoTokenizer, env } from '@huggingface/transformers';
 
 env.allowRemoteModels = false;
 env.allowLocalModels = true;
-env.localModelPath = 'C:/Users/Pc/dev/privacyshield/.hf-cache';
+// Resolved from this file rather than hardcoded to one machine's home
+// directory, which made this unrunnable by anyone else.
+env.localModelPath = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '.hf-cache');
 
 const MODEL = 'jiting/xlm-roberta-base-ner-hrl_onnx';
 const MAX_TOKENS = 512;

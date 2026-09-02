@@ -21,7 +21,7 @@ privacyshield is a browser extension that detects and redacts sensitive informat
 6. **The npm publish workflow has NEVER EXECUTED.** `.github/workflows/publish.yml` is the one M12 deliverable that is written rather than verified: this repo has no other CI, so nothing has exercised the workspace publish order, the registry-visibility wait, or the provenance attestation. Its `workflow_dispatch` input defaults to a dry run for that reason. Treat the first real tag as a test of the workflow, not only of the release (D59).
 7. **The package name is coupled to an unsettled product name.** SPEC records that "PrivacyShield" is still an open pre-public question, and the packages are `@privacyshield/core` / `@privacyshield/data` (both verified unregistered). Renaming an UNPUBLISHED package is free; npm has no rename afterwards, only deprecate-and-republish. **Settle the product name BEFORE the first publish, not before the first release** (D59).
 
-**THIS MACHINE HAS TWO CHECKOUTS.** `C:\Users\Pc\dev\privacyshield` is the live one and holds all work from M2 onward. `C:\Users\Pc\OneDrive\Desktop\privacyshield` is frozen at M1 (`f4c9a6f`) with `packages/extension` still an empty placeholder, and some tooling reports it as the working directory. Run `git log --oneline -1` before trusting the tree you are in.
+**THIS MACHINE HAS TWO CHECKOUTS**, and only one of them is current. The live tree holds all work from M2 onward; the other is frozen at M1 (`f4c9a6f`) with `packages/extension` still an empty placeholder, and some tooling reports THAT one as the working directory. **Run `git log --oneline -1` before trusting the tree you are in** - if it says `f4c9a6f`, you are in the stale one. (Absolute paths deliberately omitted: this file is public.)
 
 ### Complete
 
@@ -65,7 +65,7 @@ Milestones run M1–M12: a post-M5 scope amendment (ARCHITECTURE.md D15) added M
 
 ## Environment (this machine)
 
-- Node lives at `C:\Users\Pc\tools\node`, `gh` at `C:\Users\Pc\tools\gh\bin` — both already on user PATH.
+- Node and `gh` are installed outside the usual locations but are already on PATH, so invoke them by name. (Paths omitted: this file is public.)
 - PowerShell execution policy blocks `.ps1` wrappers. Use `npm.cmd` / `npx.cmd`, not bare `npm`/`npx`.
 - LF line endings are pinned repo-wide via `.gitattributes` (`* text=auto eol=lf`) — don't fight this on a Windows checkout.
 - Node version pinned via `.nvmrc` (24.18.0).

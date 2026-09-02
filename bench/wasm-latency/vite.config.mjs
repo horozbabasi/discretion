@@ -1,8 +1,12 @@
 import { defineConfig } from 'vite';
 import { createReadStream, statSync } from 'node:fs';
-import { join, normalize } from 'node:path';
+import { dirname, join, normalize, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const MODELS = 'C:/Users/Pc/dev/privacyshield/.hf-cache';
+// Resolved from this file, not hardcoded. It used to be an absolute path on
+// one machine, which made the benchmark unrunnable by anyone else and put a
+// local home directory into a repository that is going public.
+const MODELS = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '.hf-cache');
 
 // Serve the already-downloaded model cache at /hfmodels/ so the browser build
 // fetches exactly the bytes the Node benchmark used — same model, same dtype,

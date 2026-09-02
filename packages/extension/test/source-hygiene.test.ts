@@ -97,3 +97,36 @@ describe('the source tree', () => {
     expect(offenders).toEqual([]);
   });
 });
+
+describe('nothing machine-specific ships in a public repository', () => {
+  // Added when the repo was about to be made public. Two absolute paths from
+  // one developer's home directory had reached committed files - in CLAUDE.md
+  // as environment notes, and in bench/wasm-latency/ as hardcoded constants
+  // that ALSO made those benchmarks unrunnable by anyone else.
+  //
+  // The check is deliberately about the shape of the path, not about one
+  // username: `/home/<name>/` and `/Users/<name>/` fail here too.
+  it('contains no absolute home-directory paths', () => {
+    const patterns: readonly { readonly name: string; readonly re: RegExp }[] = [
+      // `[\\\\/]` - a class of backslash OR slash. Written with an explicit
+      // escape because the first version of this line lost one backslash in
+      // transit, leaving `[\\/]` - a class of slash alone - so the Windows
+      // pattern could never match a Windows path. The test passed, on nothing.
+      { name: 'Windows user directory', re: new RegExp('[A-Za-z]:[\\\\/]Users[\\\\/][^\\s"' + "'" + '`,)]+', 'u') },
+      { name: 'macOS user directory', re: /\/Users\/[A-Za-z0-9._-]+\/[^\s"'`,)]+/u },
+      { name: 'Linux home directory', re: /\/home\/[A-Za-z0-9._-]+\/[^\s"'`,)]+/u },
+    ];
+    const offenders: string[] = [];
+    for (const path of FILES) {
+      const text = readFileSync(path, 'utf8');
+      for (const { name, re } of patterns) {
+        const hit = re.exec(text);
+        // The test file naming the patterns is not itself a violation.
+        if (hit !== null && !path.endsWith('source-hygiene.test.ts')) {
+          offenders.push(`${relative(path)}: ${name} — ${hit[0].slice(0, 60)}`);
+        }
+      }
+    }
+    expect(offenders, 'a home directory in a public repo is noise at best').toEqual([]);
+  });
+});

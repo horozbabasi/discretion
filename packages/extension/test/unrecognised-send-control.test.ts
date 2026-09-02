@@ -41,6 +41,9 @@
  * ─────────────────────────────────────────────────────────────────────────
  */
 
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { ChatGptAdapter } from '../src/adapters/chatgpt.js';
@@ -185,5 +188,168 @@ describe('what still protects the user while the gap is open', () => {
 
     expect(intent).not.toBeNull();
     expect((intent as unknown as SubmitIntent).kind).toBe('button');
+  });
+});
+
+describe('two more instances of the same shape, found by adversarial review', () => {
+  /**
+   * INSTANCE 2: the key path is NOT locale-blind after all.
+   *
+   * This corrects a claim made in the first version of this file and in
+   * ARCHITECTURE.md: that a user who presses Enter is protected on every
+   * locale because the keydown handler never consults the send control.
+   *
+   * True of the SEND CONTROL, false of the handler. Every adapter opens with
+   *
+   *   if (event.key !== 'Enter' || event.shiftKey || event.isComposing) return;
+   *
+   * and `isComposing` can only ever be true for someone typing through an
+   * INPUT METHOD EDITOR - Japanese, Chinese, Korean. It is a silent return
+   * with no callback and no suppression: the same shape as the click hole, on
+   * the path that was supposed to be the safe one.
+   *
+   * Whether it LEAKS depends on whether the site's own Enter handler also
+   * consults `isComposing`. If it does, both sides agree the keystroke is a
+   * composition commit and nothing is sent - correct. If it does not, the site
+   * sends and the extension has already decided not to look. That is a
+   * question about someone else's code and is NOT claimed here either way.
+   *
+   * What IS claimed, and asserted below: the branch is live, it is
+   * locale-correlated, and until now no test on any adapter exercised it -
+   * `grep -rn isComposing packages/extension/test` returned nothing.
+   */
+  it('an IME composition Enter is dropped silently on chatgpt', () => {
+    const { composer } = unrecognisableComposer();
+    const witness = new InputWitness(document);
+    witness.start();
+    witnessTyping(composer);
+    const adapter = new ChatGptAdapter(document, witness);
+
+    let captured: SubmitIntent | null = null;
+    const off = adapter.onSubmitIntent((intent) => {
+      captured = intent;
+    });
+    composer.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'Enter',
+        isComposing: true,
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    off();
+    witness.stop();
+
+    // Dropped. Correct IF chatgpt.com agrees this keystroke is a commit.
+    expect(captured).toBeNull();
+  });
+
+  it('the same Enter WITHOUT composition is intercepted, so the branch is live', () => {
+    // The control that turns the assertion above from "nothing happens here"
+    // into "the isComposing clause is what stopped it".
+    const { composer } = unrecognisableComposer();
+    const witness = new InputWitness(document);
+    witness.start();
+    witnessTyping(composer);
+    const adapter = new ChatGptAdapter(document, witness);
+
+    let captured: SubmitIntent | null = null;
+    const off = adapter.onSubmitIntent((intent) => {
+      captured = intent;
+    });
+    composer.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true }),
+    );
+    off();
+    witness.stop();
+
+    expect(captured).not.toBeNull();
+  });
+
+  it('claude RECORDS the composing Enter; chatgpt and gemini do not', () => {
+    // claude.ts:347-352 calls recordIntent BEFORE its guard, with the comment
+    // "Without this the absence of a record is silent." That is the right
+    // pattern and only one of the three adapters has it - so on the other two
+    // an IME-related miss would leave no trace at all to diagnose it by.
+    const chatgpt = readFileSync(
+      join(process.cwd(), 'packages', 'extension', 'src', 'adapters', 'chatgpt.ts'),
+      'utf8',
+    );
+    const claude = readFileSync(
+      join(process.cwd(), 'packages', 'extension', 'src', 'adapters', 'claude.ts'),
+      'utf8',
+    );
+    expect(claude).toContain('+composing');
+    expect(chatgpt).not.toContain('+composing');
+  });
+
+  /**
+   * INSTANCE 3: `closest()` cannot cross a shadow boundary.
+   *
+   * `event.composedPath()[0]` deliberately returns the node INSIDE a shadow
+   * tree, and `target.closest(SEND_BUTTON_SELECTOR)` then searches only that
+   * node's own tree. So a send button carrying EVERY marker the adapter looks
+   * for - test id, element id, type=submit - is invisible to the click path
+   * once it is inside a shadow root.
+   *
+   * Only gemini.ts imports `closestAcrossShadow`; claude.ts and chatgpt.ts use
+   * the plain DOM method. Nothing about this is locale-related, which is the
+   * point: it is a third independent route to the same silent fall-through.
+   */
+  it('an icon in a nested shadow root INSIDE the button is not intercepted', () => {
+    // THE CORRECT CONSTRUCTION, and it took a failed attempt to find it.
+    //
+    // An adversarial reviewer reported this by moving the whole button into a
+    // shadow root. That does NOT reproduce: `closest` starts at the element
+    // itself, so a click on the button matches the button, boundary or not.
+    // Written that way the test passed and the claim looked refuted.
+    //
+    // The real case is the other way round - the BUTTON stays in the light DOM
+    // and the click lands on something inside a shadow root WITHIN it, which
+    // is what a web-component icon produces. `composedPath()[0]` hands back
+    // the inner node by design, and `closest` then stops at the boundary
+    // below the button and never sees it.
+    document.body.innerHTML = `
+      <main>
+        <div id="composer-region">
+          <div class="ProseMirror" contenteditable="true" role="textbox">hello</div>
+          <button type="submit" id="composer-submit-button" data-testid="send-button">
+            <span id="icon"></span>
+          </button>
+        </div>
+      </main>
+    `;
+    giveEverythingLayout();
+    const composer = document.querySelector<HTMLElement>('[contenteditable="true"]')!;
+    const button = document.querySelector<HTMLElement>('button')!;
+    const iconHost = document.querySelector<HTMLElement>('#icon')!;
+
+    // The icon lives in the host's shadow tree; the button is above it.
+    const shadow = iconHost.attachShadow({ mode: 'open' });
+    const glyph = document.createElement('i');
+    shadow.append(glyph);
+    giveEverythingLayout();
+
+    // Every marker the adapter looks for is present on the button.
+    expect(button.matches('button[data-testid="send-button"]')).toBe(true);
+    // And `closest` from the glyph cannot see it.
+    expect(glyph.closest('button[data-testid="send-button"]')).toBeNull();
+
+    const witness = new InputWitness(document);
+    witness.start();
+    witnessTyping(composer);
+    const adapter = new ChatGptAdapter(document, witness);
+
+    let captured: SubmitIntent | null = null;
+    const off = adapter.onSubmitIntent((intent) => {
+      captured = intent;
+    });
+    glyph.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
+    off();
+    witness.stop();
+
+    // Not intercepted, with three correct markers on the button.
+    // gemini.ts is the only adapter that imports `closestAcrossShadow`.
+    expect(captured).toBeNull();
   });
 });

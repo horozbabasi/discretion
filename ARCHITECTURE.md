@@ -5672,6 +5672,72 @@ where M9 spent six rounds - is precisely what this project refuses to do.
 M11 inherits a named defect with a designed fix and a measurement, rather than
 a sentence in a list.
 
+### D57a - Two more instances, and a correction to D57 (M10)
+
+An adversarial review of D57 could not overturn its verdict, and found three
+things anyway. Two are new instances of the same shape; one is a correction to
+something D57 asserted.
+
+**THE CORRECTION. "The Enter path is unaffected" was wrong.** D57 said a user
+who presses Enter is protected on every locale, because the keydown handler
+never consults the send control. True of the SEND CONTROL, false of the
+handler. Every adapter opens with
+
+```
+if (event.key !== 'Enter' || event.shiftKey || event.isComposing) return;
+```
+
+and `isComposing` can only ever be true for someone typing through an INPUT
+METHOD EDITOR - Japanese, Chinese, Korean. It is a silent return with no
+callback and no suppression: the same shape as the click hole, on the path that
+was supposed to be the safe one. So the key path is locale-CORRELATED after
+all, and the claim that only pointer sends are exposed does not hold.
+
+Whether it LEAKS depends on whether the site's own Enter handler also consults
+`isComposing`. If it does, both sides agree the keystroke is a composition
+commit and nothing is sent - correct. If it does not, the site sends and the
+extension has already decided not to look. That is a question about someone
+else's code, is not answerable from this repository, and is NOT claimed here in
+either direction.
+
+Two facts that ARE answerable and are both bad: `claude.ts:347-352` calls
+`recordIntent('key:enter-seen...+composing')` BEFORE its guard, with the
+comment "Without this the absence of a record is silent" - and **chatgpt.ts and
+gemini.ts do not**, so on two of three adapters an IME-related miss would leave
+no trace to diagnose it by. And `grep -rn isComposing packages/extension/test`
+returned NOTHING: no test on any adapter had ever exercised composition. There
+are now three.
+
+**INSTANCE 3: `closest()` cannot cross a shadow boundary.** All the markers can
+be present and the click path still silently fails.
+`event.composedPath()[0]` deliberately returns the node inside a shadow tree,
+and `target.closest(SEND_BUTTON_SELECTOR)` then searches only that node's own
+tree. Only `gemini.ts` imports `closestAcrossShadow`; `claude.ts` and
+`chatgpt.ts` use the plain DOM method. Nothing locale-related about it, which
+is the point: a third independent route to the same fall-through.
+
+**And the first attempt to demonstrate it PASSED, which nearly buried it.** The
+reviewer's stated repro moved the whole button into a shadow root. That does
+not reproduce - `closest` starts at the element itself, so a click on the
+button matches the button, boundary or not. Written that way the test passed
+and the finding looked refuted. The real case is inverted: the BUTTON stays in
+the light DOM and the click lands on something inside a shadow root WITHIN it,
+which is what a web-component icon produces. Then `closest` stops at the
+boundary below the button and never sees it.
+
+That is the ninth time in two milestones that a check reported success about a
+thing it was not looking at - and this one arrived inside the finding itself.
+Taking the reviewer's repro at face value would have closed a real defect as
+unreproducible. Verified both ways before it was believed.
+
+**Neither changes the M11 recommendation.** Both are the same defect shape on
+the same fail-closed path, and the constraint on fixing was never severity - it
+was that spurious firing during page load can only be ruled out against
+signed-in sessions on two of the three sites. Both are pinned in
+`test/unrecognised-send-control.test.ts` alongside the original, written to
+fail when the fix lands.
+
+
 ## Status after M10
 
 **M10 IS CLOSED, with two items explicitly left open** (below). The extension
@@ -5746,9 +5812,11 @@ click does not match their send selector, so the page's own handler runs with
 the user's ORIGINAL text — a fail-OPEN path, with no other net behind it, and
 `healthCheck` blocks nothing. Locale is one route into that state; Gemini's
 ambiguity path (`gemini.ts:762`, where two candidates return an EMPTY list) and
-any ordinary markup change are others. The Enter path is unaffected, which is
-what makes it easy to miss: the extension looks like it is working right up
-until someone clicks instead of pressing Enter.
+any ordinary markup change are others. A third route is an icon inside a nested
+shadow root within the button, which `closest` cannot see past (D57a). And the
+Enter path is NOT the safe harbour D57 first claimed: every adapter drops an
+Enter with `isComposing` set, which can only be true for an IME user - Japanese,
+Chinese, Korean (D57a).
 
 Measured live 2026-09-02: **there is no leak today.** Gemini resolves through a
 locale-independent clause in Turkish; ChatGPT has no English clause at all;

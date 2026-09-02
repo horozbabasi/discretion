@@ -1,69 +1,349 @@
 # PrivacyShield
 
-Local-first PII detection and masking.
+**Finds passwords, keys, card and ID numbers in what you type into ChatGPT,
+Claude and Gemini — and masks them before you send.**
 
-> **Status: milestone M3.** This README is a placeholder; it gets written properly at M11.
+Everything runs on your device. The extension makes no network request of any
+kind after it is installed: not for detection, not for telemetry, not to update
+a word list. There is no account and nothing to sign in to.
 
-Monorepo layout:
+<!-- DEMO GIF PLACEHOLDER — the review panel intercepting a send on a real
+     site. Needs a signed-in session to record; see STORE-LISTING.md. -->
 
-- `packages/core` — detection pipeline library (M1: shared types, script detection, Stage 0 normalization with an exact bidirectional offset map)
-- `packages/data` — generated Unicode data (M1: confusables table)
-- `packages/eval` — evaluation harness (M3: seeded corpus, hard negatives, metrics, error analysis, regression gates)
-- `packages/extension` — browser extension (placeholder)
-- `packages/web` — web playground (placeholder)
+---
 
-## Development
+## The problem
 
-The library targets Node 20+ (`engines`). Development uses the version pinned
-in `.nvmrc` (24.18.0).
+People paste things into AI chat that they would never paste into a public
+forum: a production API key while debugging, a customer's IBAN while drafting
+an email, a colleague's phone number, a patient's record. The text is gone the
+moment it is sent, and "I'll remember not to" is not a control.
+
+The usual answers are worse than the problem. A server-side scanner means
+sending the secret to one more party. A regex denylist misses everything it was
+not told about and blocks half of what it was. An enterprise DLP appliance is
+not something an individual can install.
+
+## What it does
+
+1. Watches the composer on the three supported sites.
+2. When you send, it checks the text — validated identifiers, a local
+   multilingual model for names and places, and context scoring around both.
+3. Shows you what it found, grouped by type, each with a calibrated confidence
+   and an explanation of which evidence fired.
+4. Replaces what you approve with realistic stand-ins, verifies the composer
+   really contains the masked text, and only then lets the send through.
+5. Puts your real values back into the reply as it streams in, so the
+   conversation still reads correctly.
+
+**If it cannot check, it stops the message.** A detection error, a timeout, or
+a page whose layout it no longer recognises all block the send and say so. It
+never treats "could not look" as "found nothing".
+
+## Install
+
+**From the Chrome Web Store** — not yet published. See `STORE-LISTING.md` for
+the submission draft and the blockers still in front of it.
+
+**Unpacked, from source:**
 
 ```sh
-npm install
-npm run build      # tsc project-references build
-npm test           # vitest (unit + property + fuzz)
-npm run lint
-npm run bench      # normalization throughput benchmark
+git clone https://github.com/horozbabasi/privacyshield
+cd privacyshield
+npm ci
+npm run ext:fetch-model    # ~280 MB, verified against recorded SHA-256 digests
+npm run build
 ```
 
-### Regenerating the Unicode confusables table
+Then `chrome://extensions` → Developer mode → Load unpacked →
+`packages/extension/build`.
 
-`packages/data/src/confusables.ts` is generated and **committed**, so neither
-the build nor the runtime ever touches the network. Regeneration is a
-deliberate, occasional step:
+The download is large and that is a deliberate trade — see
+[Size](#size-and-why).
 
-```bash
-npm run generate -w @privacyshield/data
+## Supported sites
+
+`chatgpt.com`, `claude.ai`, `gemini.google.com`. Exactly these three, in
+`host_permissions`, and nothing else. Quick Redact covers every other
+destination without widening that list, which is the point.
+
+## What it does NOT protect
+
+Stated before the feature list, because a security tool that oversells itself
+is worse than one that does not exist.
+
+- **Attachments.** Files, images and screenshots are not inspected.
+- **Other applications.** Anything you send from your email client or Slack is
+  untouched unless you put it through Quick Redact first.
+- **What you type, before you send it.** The site's own JavaScript can read the
+  composer as you type. Only what you *send* is masked.
+- **Everything.** Detection misses things. `GENERIC_SECRET` recall is 55.4% and
+  is printed here rather than rounded away. Read the review panel.
+- **The sites themselves.** This protects what you send *to* them; it is not a
+  defence against the service you are deliberately talking to.
+- **Four send routes**, of which one is permanently open: a form submitted by
+  `form.submit()` from page script fires no event any listener can see. See
+  ARCHITECTURE.md D57b.
+
+It is not a certified security product and carries no compliance guarantee.
+
+## How it works
+
+```
+  your keystrokes
+        │
+        ▼
+┌───────────────────┐
+│ Stage 0           │  Unicode normalisation with an exact, reversible
+│ normalisation     │  offset map — so a span found in normalised text
+└─────────┬─────────┘  maps back to the exact original bytes to replace.
+          │            Homoglyph folding, invisible stripping, digit folding.
+          ▼
+┌───────────────────┐
+│ Stage 1           │  113 detectors. Every identifier is VALIDATED, not
+│ validated         │  matched: Luhn for cards, mod-97 for IBAN, real
+│ identifiers       │  phone parsing. A wrong checksum does not match.
+└─────────┬─────────┘
+          │
+          ▼
+┌───────────────────┐
+│ Stage 2  (+2b)    │  Multilingual NER for names, organisations, places,
+│ local NER model   │  in an offscreen document because a content script
+└─────────┬─────────┘  cannot compile WebAssembly under the host page CSP.
+          │            Bundled gazetteers corroborate.
+          ▼
+┌───────────────────┐
+│ Stage 3           │  Trigger proximity, structural position, negative
+│ context scoring   │  rules. "test key" and a docs example score
+└─────────┬─────────┘  differently from the same string in production prose.
+          │
+          ▼
+┌───────────────────┐
+│ Stage 4           │  Overlap resolution, isotonic calibration, and the
+│ fusion            │  sensitivity profile's thresholds.
+└─────────┬─────────┘
+          │
+          ▼
+  review panel → masked write → verified readback → your send
 ```
 
-This **fetches over the network** from
-<https://www.unicode.org/Public/security/latest/confusables.txt>, and requires
-Node 22.6+ for native TypeScript type stripping (the `.nvmrc` version
-satisfies this; Node 20 does not). Set `CONFUSABLES_URL` to override the
-source — a numbered version directory once Unicode publishes one for this
-release, or a local file for offline regeneration.
+The whole pipeline is `packages/core` and has no environment dependency: the
+same code runs in the extension, the playground and the eval harness.
 
-The generated module records the Unicode version and the **SHA-256 of the
-source bytes** it consumed. Unicode serves the current release from
-`latest/` before publishing a numbered directory for it, so there is no
-stable versioned URL to pin; the digest is the pin. Re-run the generator and
-compare `CONFUSABLES_SOURCE_SHA256` to detect upstream drift.
+## Privacy guarantees
 
-## Evaluation
+| guarantee | how it is enforced |
+| --- | --- |
+| No runtime network access | `connect-src 'self'` in the manifest CSP — the browser enforces it, not our good intentions |
+| Fail closed | Any error, timeout or unresolvable element blocks the send |
+| No plaintext persistence | Detected values live in one in-memory object, per tab session, dropped on navigation |
+| Nothing the page can read | Injected UI is in a **closed** shadow root; the panel names entity types, never values |
+| No `innerHTML` | Every node is constructed programmatically; a test sweeps the tree on every commit |
 
-`npm run eval` builds a seeded synthetic corpus (25 languages, 11 document
-types, hard negatives) and writes the Stage 1 baseline to
-`packages/eval/reports/baseline.md`. Per-type accuracy floors live in
-`packages/eval/gates.config.json` and are enforced by the regression test in
-every `npm test` run — a change that regresses accuracy fails the build.
+### Verify the zero-network claim yourself
 
-**The corpus is synthetic.** Entity values are generator-made, carrier
-sentences are templates, and the hard negatives are constructed categories.
-The published numbers measure the detectors against this corpus, not against
-real-world text; treat them as an upper bound on recall (generators and
-detectors agree by construction) and a rough, optimistic guide to precision.
-Real-world performance will differ, and the context-free detector numbers in
-particular will not survive contact with real documents until Stage 3
-context scoring (M7) exists.
+Do not take it on trust — the whole point is that you do not have to.
+
+```sh
+python packages/extension/scripts/verify-live-site.py
+```
+
+It asks the extension's own service worker to fetch three external origins and
+records what happens. All three are refused, and a **same-origin control**
+proves the probe can tell a blocked request from an allowed one — without that
+control, a probe that could see nothing at all would report the same clean
+result.
+
+By hand: open DevTools on any supported site, filter Network to the extension's
+origin, and use it.
+
+## Detection quality
+
+Measured on a seeded synthetic corpus of **2,600 documents** (2,000 labelled +
+600 hard negatives, seeds `0xc0ffee`/`0xbeef`) carrying **6,645 ground-truth
+entities** across 25 languages and 11 document types. Reproduce with
+`npm run eval -- --ner jiting/xlm-roberta-base-ner-hrl_onnx --dtype q8`.
+
+**The corpus is synthetic**, and that bounds what these numbers mean: entity
+values are generator-made and carrier sentences are templates, so recall is an
+upper bound (generator and detector agree by construction) and precision is
+optimistic. Real text will differ.
+
+### Two tables, because the pipeline has two halves
+
+The eval reports **Stages 0–3**. The shipped extension additionally runs
+**Stage 4** — overlap resolution and calibration — which changes the picture
+substantially for the weakest types. Both are given, because quoting only the
+better one would be the kind of thing this project exists not to do.
+
+**Stages 0–3, as the eval reports them** (34 types; full table in
+`packages/eval/reports/stage2-baseline.md`):
+
+| type | P | R | F1 |
+| --- | ---: | ---: | ---: |
+| IBAN, PHONE, JWT, PRIVATE_KEY, MAC_ADDRESS, PASSPORT_MRZ, VIN, VAT_NUMBER, CONNECTION_STRING, AU_BSB, BR_AGENCIA, IN_IFSC, UK_SORT_CODE, SWIFT_BIC | 100% | 100% | **100%** |
+| CRYPTO_WALLET | 98.7% | 100% | 99.4% |
+| EMAIL | 99.0% | 100% | 99.5% |
+| COORDINATES | 100% | 97.4% | 98.7% |
+| CREDIT_CARD | 96.8% | 100% | 98.4% |
+| STREET_ADDRESS | 95.9% | 100% | 97.9% |
+| API_KEY | 95.8% | 99.6% | 97.6% |
+| PERSON | 98.0% | 97.1% | 97.5% |
+| HEALTH_DATA | 92.9% | 100% | 96.3% |
+| CA_TRANSIT_NUMBER | 88.9% | 100% | 94.1% |
+| IP_ADDRESS | 87.8% | 100% | 93.5% |
+| ORG | 88.1% | 85.9% | 87.0% |
+| US_NPI | 75.0% | 100% | 85.7% |
+| NATIONAL_ID | 68.2% | 100% | 81.1% |
+| LOCATION | 63.3% | 99.1% | 77.3% |
+| TAX_ID | 46.0% | 100% | 63.0% |
+| US_ROUTING_NUMBER | 35.7% | 100% | 52.6% |
+| URL_WITH_CREDENTIALS | 33.6% | 100% | 50.4% |
+| POSTAL_CODE | 23.5% | 75.8% | 35.9% |
+| DRIVERS_LICENSE | 20.0% | 100% | 33.3% |
+| **GENERIC_SECRET** | **2.0%** | **56.8%** | **3.8%** |
+
+**What Stage 4 then does to the worst of them** (measured at M8, and the
+inputs above reproduce its published figures exactly):
+
+| type | precision | false positives | recall |
+| --- | ---: | ---: | ---: |
+| GENERIC_SECRET | 2.0% → **100%** | 2,075 → **0** | 56.8% → 55.4% |
+| POSTAL_CODE | 23.5% → **100%** | 224 → **0** | 75.8% → 72.5% |
+| URL_WITH_CREDENTIALS | 33.6% → **100%** | 140 → 0 | held |
+| IP_ADDRESS | 87.8% → **100%** | 32 → 0 | held |
+| NATIONAL_ID | 68.2% → **81.2%** | 268 → 112 | 100% → 98.0% |
+| TAX_ID | 46.0% → **56.3%** | 149 → 80 | 100% → 91.2% |
+| **all Stage-1 types** | — | **2,991 → 246 (−92%)** | — |
+
+Most of that is **reassignment, not elimination**: a `GENERIC_SECRET` false
+positive is usually a real secret that a more specific detector also matched,
+and overlap resolution gives it to the specific one.
+
+### The failures that ship
+
+- **`GENERIC_SECRET` recall 55.4%.** Roughly two in five generic
+  high-entropy secrets are missed. A detection gap, not an overlap one, open
+  since M7 and published rather than smoothed over.
+- **`TAX_ID` recall 91.2%** after fusion, down from 100% before it.
+- **`POSTAL_CODE`** is the weakest type that ships.
+- **One over-confident calibration bucket**, and thin coverage in the
+  mid-range.
+
+### Per-language
+
+Names, organisations and places, 25 languages, PERSON/ORG/LOCATION only:
+
+| | best | worst | floor |
+| --- | --- | --- | --- |
+| F1 | uk 96.4 · ro 96.3 · nl 95.9 | ja 82.0 · hi 84.4 · ar 85.3 | **no language below 82.0** |
+
+Full table in `packages/eval/reports/stage2-baseline.md`.
+
+### Confidence means something
+
+Calibrated with isotonic regression on a split proved disjoint from the
+evaluation split: **expected calibration error 2.63%**, against 12.33% for the
+raw detector scores. When the panel says 80%, it is close to 80%.
+
+### The model
+
+| | |
+| --- | --- |
+| model | `jiting/xlm-roberta-base-ner-hrl_onnx` |
+| revision | `478a2a3e99ef680e4a107c80a7d0c59d51f185ae` — content-addressed, so the pin fixes the exact bytes |
+| quantization | q8, **measured lossless** against fp32 on this corpus |
+| weights | 265.8 MiB (`model_quantized.onnx`) + 16.3 MiB tokenizer |
+| licence | afl-3.0, inherited from `Davlan/xlm-roberta-base-ner-hrl` |
+
+Chosen over three alternatives on **best macro F1 (87.8) with the highest
+per-language floor**, and it happened to be the second-fastest too. DistilBERT
+would have saved 143 MB and cost 26 macro F1 points. Full matrix, methodology
+and per-language results in `BENCHMARKS.md`.
+
+Every file is verified against a recorded SHA-256 at fetch time, so the check
+is not "did we get what the repo serves today" but "did we get the bytes this
+project's published numbers describe".
+
+### Size, and why
+
+**~364 MB installed**, almost all of it the model. The model runs on your
+device, so it has to be on your device. The Chrome Web Store package limit is
+2 GB, so it fits with room; SPEC ranks accuracy above size, and the measured
+alternative was 26 F1 points worse.
+
+## The exposure score
+
+Each message gets a 0–100 score, shown on the review panel and aggregated in
+the popup. It is not a count: it weights each finding by the severity of its
+type, so one private key outranks five postal codes, and it saturates rather
+than growing without bound. Severity weights and their rationale are a data
+file in `packages/core`, and a property test pins monotonicity — adding a
+finding can never lower the score.
+
+The popup reports a session **peak** and **mean**. Never a sum: the score is
+0–100 for one document, and adding them produces a number with no meaning.
+
+## Quick Redact
+
+A box in the popup. Paste anything, get it back masked, copy it wherever you
+like — email, a ticket, Slack. Paste the reply back into the same box and your
+real values are restored.
+
+This is what lets `host_permissions` stay at three origins while the tool
+remains useful everywhere else.
+
+The mapping between your text and its stand-ins lives in memory for as long as
+the popup is open and is gone when it closes. The UI says so where you use it.
+
+It applies the same fail-closed rule as the send gate: if the second detection
+stage did not run, it produces **no output at all** rather than a partly-masked
+string you would paste somewhere trusting it.
+
+## Local Insights
+
+A count of what you have protected, by category, by month.
+
+Counts only — never a value, never any text, never which site, and no
+timestamp finer than a month. Two years are kept and the reset button removes
+the record rather than writing zeroes over it. The point is to make ongoing
+protection visible instead of silent.
+
+## Configuration
+
+The options page (`chrome://extensions` → PrivacyShield → Details → Extension
+options) covers:
+
+| | |
+| --- | --- |
+| Sensitivity | Minimal / Balanced / Strict. Strict catches more and asks more often. |
+| Replacement style | Realistic stand-ins, or labels like `[EMAIL_1]`. |
+| Per-type toggles | All 34 entity types, individually. Everything is on unless you switch it off. |
+| Never / always mask | Two lists, one entry per line. **Saved on your device as you type them** — the page says so, because a denylist can itself hold something sensitive. |
+| Your own patterns | Regular expressions, with a live tester that runs the real engine. A pattern that does not compile is refused at the input, not stored disabled. |
+| Phone region | For numbers written without a country code. Without it, a national-format number cannot be validated at all. |
+| Settings file | Export and import. The file contains your two lists in plain text, and the page warns before you save it. |
+
+Settings save as you change them. There is no Save button, deliberately: a
+change that looks applied and is not is worse on a protection tool than a
+surprise write.
+
+The popup additionally has a **per-site toggle**, which takes effect in an open
+tab without a reload.
+
+## Nine languages
+
+The UI is available in English, Spanish, German, French, Portuguese, Turkish,
+Japanese, Hindi and Arabic, with right-to-left layout.
+
+> **The eight non-English catalogues are machine-translated and have not been
+> reviewed by a native speaker.** Structure is enforced by tests — placeholder
+> budgets, plural categories, no copy-pasted English — but structure is not
+> meaning. This is a release blocker, recorded as one, not a nicety.
+
+Plurals go through `Intl.PluralRules` rather than a one/other pair: Arabic has
+six categories and uses every one, Japanese has one, and Turkish does not mark
+the plural after a numeral at all.
 
 ## Performance
 
@@ -380,6 +660,102 @@ different thing — the corpus's documents are p50 164 and p95 347 characters,
 far shorter than the 2000-character benchmark input, and that figure includes
 NER. The two numbers should not be read against each other or against the
 budget; only the table above is measured as SPEC specifies.
+
+## Non-goals — decided, not open
+
+Recorded so they are never silently relitigated. **Roadmap** means possible
+later by deliberate decision; **rejected** means permanent.
+
+| | | why |
+| --- | --- | --- |
+| Attachment and file scanning | roadmap | Interception is heavy and fragile today. The limitation is stated plainly instead of half-implemented. |
+| More chat sites than the three | roadmap | Quick Redact already covers other destinations without widening host permissions, and minimal permissions **is** the trust claim this product depends on. |
+| Exporting the vault / unmask mapping | **rejected, permanently** | An unmask file is itself a secret. Memory-only is the feature, not a limitation to fix. |
+| Accounts, sync, any cloud component | **rejected, permanently** | Contradicts the zero-network claim that everything else rests on. |
+
+## Roadmap
+
+| | |
+| --- | --- |
+| **Next** | Native review of the eight machine-translated locales — a release blocker. A privacy-policy URL and the remaining store assets. |
+| **Then** | The three send routes still open (ARCHITECTURE.md D57b), of which the unrecognised-control one needs care: the obvious fix would intercept the *stop* button, because "no send control resolves" is also every moment a response is streaming. |
+| **Then** | `GENERIC_SECRET` recall, the weakest published number in the project. |
+| **Later** | `packages/core` published as a standalone library (M12) — explicit exports, semver, docs written for someone who has never seen this repo. |
+
+## Reading the repository
+
+| file | what it is for |
+| --- | --- |
+| `SPEC.md` | Authoritative for design. Everything else answers to it. |
+| `ARCHITECTURE.md` | Every non-obvious judgement call, with the reasoning and the measurement behind it. Long, and the interesting parts are the ones that record being wrong. |
+| `BENCHMARKS.md` | Model selection, methodology, per-language results. Every number measured, none asserted. |
+| `SECURITY.md` | The guarantees, how to verify each yourself, and the disclosure process. |
+| `PERMISSIONS.md` | One justification per permission, written when the reasoning was fresh. |
+| `ADAPTER-VERIFICATION.md` | What the offline fixtures can and cannot tell you about a live site. |
+| `STORE-LISTING.md` | Submission draft, and the blockers in front of it. |
+
+## Development
+
+Monorepo layout:
+
+| package | what it is |
+| --- | --- |
+| `packages/core` | The detection pipeline. Environment-agnostic — `"types": []`, and eslint bans DOM and Node globals inside it — so the same code runs in the extension, the playground and the eval harness. |
+| `packages/data` | Generated Unicode data (the confusables table), committed. |
+| `packages/eval` | Seeded corpus, hard negatives, metrics, error analysis, regression gates. |
+| `packages/extension` | The Chrome MV3 extension. |
+| `packages/web` | The playground — the try-before-installing surface. |
+
+The library targets Node 20+ (`engines`). Development uses the version pinned
+in `.nvmrc` (24.18.0).
+
+```sh
+npm install
+npm run build      # tsc project-references build
+npm test           # vitest (unit + property + fuzz)
+npm run lint
+npm run bench      # normalization throughput benchmark
+```
+
+### Regenerating the Unicode confusables table
+
+`packages/data/src/confusables.ts` is generated and **committed**, so neither
+the build nor the runtime ever touches the network. Regeneration is a
+deliberate, occasional step:
+
+```bash
+npm run generate -w @privacyshield/data
+```
+
+This **fetches over the network** from
+<https://www.unicode.org/Public/security/latest/confusables.txt>, and requires
+Node 22.6+ for native TypeScript type stripping (the `.nvmrc` version
+satisfies this; Node 20 does not). Set `CONFUSABLES_URL` to override the
+source — a numbered version directory once Unicode publishes one for this
+release, or a local file for offline regeneration.
+
+The generated module records the Unicode version and the **SHA-256 of the
+source bytes** it consumed. Unicode serves the current release from
+`latest/` before publishing a numbered directory for it, so there is no
+stable versioned URL to pin; the digest is the pin. Re-run the generator and
+compare `CONFUSABLES_SOURCE_SHA256` to detect upstream drift.
+
+## Evaluation
+
+`npm run eval` builds a seeded synthetic corpus (25 languages, 11 document
+types, hard negatives) and writes the Stage 1 baseline to
+`packages/eval/reports/baseline.md`. Per-type accuracy floors live in
+`packages/eval/gates.config.json` and are enforced by the regression test in
+every `npm test` run — a change that regresses accuracy fails the build.
+
+**The corpus is synthetic.** Entity values are generator-made, carrier
+sentences are templates, and the hard negatives are constructed categories.
+The published numbers measure the detectors against this corpus, not against
+real-world text; treat them as an upper bound on recall (generators and
+detectors agree by construction) and a rough, optimistic guide to precision.
+Real-world performance will differ. Stage 3 context scoring and Stage 4
+fusion both exist now and are what turn the context-free detector numbers
+into the shipped ones; the two tables above give both.
 
 ## Licensing
 

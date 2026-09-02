@@ -4721,13 +4721,32 @@ rather than the thing you think you edited.
 
 ## Status after M9
 
-**M9 is complete.** The extension detects, intercepts, masks, verifies, sends,
-and restores. **1,153 tests**; typecheck covers source and test files; lint
-clean; every figure below taken with its own exit code checked.
+**M9 IS CLOSED.** The extension detects, intercepts, reviews, masks, verifies,
+sends, and restores — confirmed working end to end on all three target sites,
+against their real editors.
+
+**1,171 tests**; typecheck covers source and test files; lint clean; the
+extension builds and loads. Every figure here was taken with its own exit code
+checked.
 
 SPEC's M9: "Extension: manifest, adapters, content script, review UI, streaming
 restoration in the DOM. Paste guard; review panel shows the document exposure
 score." All of it ships.
+
+### Verified live, all three, against real editors
+
+| site | method | result |
+| --- | --- | --- |
+| Gemini | harness (`scripts/verify-live-site.py`, exit 0) | real Quill accepts the masked write and it survives 7 s of reconciliation |
+| ChatGPT | human, real account | masked surrogate **released into a real sent message**; the original never reached the page |
+| Claude | human, real account | send intercepted, reviewed, masked, released |
+
+The methods are not equivalent evidence and the table says which is which. The
+harness is repeatable on demand; the human results are point-in-time
+observations by a person with real credentials, which is the strongest evidence
+available for a site that cannot be automated — and automating the two
+logged-in sites was abandoned deliberately rather than worked around (D49's
+Cloudflare reasoning).
 
 ### The whole content-script flow
 
@@ -4736,75 +4755,71 @@ score." All of it ships.
 | 1. identify site, load adapter, healthCheck, warm the recognizer | `content.ts`, `adapters/` |
 | 2. intercept the submit before the page acts | `controller.onSubmit` |
 | 3. run detection on what is about to be sent | `analyze.ts` + offscreen NER |
-| 4. mask, certify, write, release | `sendGate.ts` |
+| 4. mask, certify, verified write, release | `sendGate.ts` |
 | 5. review panel, grouped by type, with the exposure score | `ui/surface.ts` |
 | 8. restore surrogates as the response streams | `detection/restore.ts` |
 | paste guard | `controller.onPaste` |
 
 **One surface, five contents**: hidden, findings, paste, review, degraded.
-Closed shadow root, top layer, theme sampled from the page, anchor treated as
-borrowed because all three sites replace the composer mid-session.
+Closed shadow root, top layer, theme sampled from the page, positioning driven
+through custom properties because `all: initial !important` outranks inline
+styles from the outer tree (D48).
 
 **Stage 2 runs in an offscreen document** with the gazetteers beside it:
-`content.js` 4,613,033 -> 1,230,588 bytes, one IPC crossing per analysis at
-0.4-0.5 ms p50, incremental path 97 -> ~104 ms.
+`content.js` 4,613,033 → 1,269,540 bytes, one IPC crossing per analysis at
+0.4–0.5 ms p50, incremental path 97 → ~104 ms.
+
+**Zero runtime network confirmed by observation, not by reading config** (D45a):
+the extension's own service worker is asked to fetch three external origins and
+all three are refused, with a same-origin control proving the probe can tell
+blocked from allowed.
 
 ### The blocker set, all four closed
 
 | | |
 | --- | --- |
 | **D29** programmatic fills | CLOSED (D47). The block became a question: "Check this is your message", action relabelled "Protect and send". Only `no-input-witness` becomes a question; every other binding failure still refuses. |
-| **D34i** ChatGPT mid-generation | CLOSED at the health model; its detached-node half fixed at the surface (D38a). |
+| **D34i** ChatGPT mid-generation | CLOSED at the health model; detached-node half fixed at the surface (D38a). |
 | **D34v** Gemini empty composer | CLOSED at the health model. |
-| **D36** no visible degraded state | CLOSED. The state exists, renders, and blocks. |
+| **D36** no visible degraded state | CLOSED. It exists, renders, and blocks. |
 
-### What M9 measured, and what it corrected
+### What M9 corrected about itself
 
-Four things this milestone published were WRONG when it started, and are
-recorded corrected rather than quietly restated:
+Six things this milestone published or believed were wrong when it started, and
+each is recorded corrected rather than quietly restated:
 
-- **The latency harness fetched its runtime from a CDN** (D40b), in a project
-  whose first non-negotiable is zero runtime network access. Every WASM figure
-  before it described a build that does not ship.
+- **The latency harness fetched its runtime from a CDN** (D40b) — in a project
+  whose first non-negotiable is zero runtime network access.
 - **No test file in the repository was typechecked** (D40). Every
-  `@ts-expect-error` across the suite was inert; enabling it found three tests
-  asserting nothing.
+  `@ts-expect-error` in the suite was inert.
 - **A detection fixture used reserved documentation values** (D40), so a whole
   file asserted against an empty entity set.
-- **The panel was never positioned** (D48). It rendered in the top-left corner
-  of every page for three batches, in every screenshot, because every
-  assertion asked about state and text and none asked about WHERE.
-
-Each was found by looking at the thing rather than at the report of it.
-
-### Verified live
-
-`scripts/verify-send-gate.py` - all three adapters against committed fixtures
-served at their real origins, exit 0: intercepted with the page's own handler
-firing zero times, masked, released, original never reaching the page.
-
-`scripts/verify-live-site.py` - gemini.google.com, real Quill, exit 0: the
-prefilled send is intercepted and asks (D29); confirming writes the surrogate,
-which Quill accepts and which survives 7 s of its own reconciliation (D43a).
-Nothing was sent; every POST was aborted first.
+- **The panel was never positioned** (D48) — top-left corner of every page, for
+  three batches, in every screenshot.
+- **The paint gate counted our own element as evidence the page had painted**
+  (D49) — circular, and it could never report NOT PAINTED.
+- **The region walk and the uniqueness test used two different admission
+  rules** (D50), which is what made every Claude send fail.
 
 ### Carried into M10, none of it closed
 
-- **claude.ai and chatgpt.com are unverified against their real editors.**
-  claude.ai sits behind a challenge, chatgpt.com's logged-out page has only a
-  marketing textarea; both need credentials. This is the one piece of M9's own
-  work that could not be finished here, and it is flagged for M11 acceptance.
-- **On the logged-out Gemini page the send control does not resolve.** The gate
-  does not depend on it - it binds through the submit event - but healthCheck
-  reports the failure. Whether the logged-in page still resolves it is
-  unverified since 2026-08-29.
-- **D27a** - the 4-5x machine slow state. FLAGGED, not resolved (D27b).
-- **D41f** - the extension's cold path measures 3x faster than the in-page
-  harness, six candidate causes refuted, none named.
+- **Send-button selectors depend on an English `aria-label`** on all three
+  sites. Every locale-independent clause fails, so on a non-English interface
+  nothing matches and pointer sends become undecidable. The extension warns
+  about this in its own diagnostic on every load, and it is invisible to anyone
+  testing in English. **This is M10's problem**: it is an i18n defect in
+  disguise, and M10 is the i18n milestone.
+- **D27a** — the unexplained 4–5× machine slow state. FLAGGED, not resolved
+  (D27b): a canary records the machine's state on every latency measurement.
+- **D41f** — the extension's cold path measures 3× faster than the in-page
+  harness under matched conditions, six candidate causes refuted, none named.
 - From M8, untouched: **GENERIC_SECRET recall 55.4%**, TAX_ID recall 91.2%, one
   over-confident calibration bucket, thin mid-range calibration, **p50 latency
   255.8 ms against a 250 ms budget**.
-- **D40a** - known-test-value suppression is scoped to one detector.
+- **D40a** — known-test-value suppression is scoped to one detector.
+- **The transient DEGRADED on claude.ai** is real and correctly reported by the
+  console; the panel suppresses it for 2500 ms (D49). Not a defect, but the
+  console remains chatty during page load.
 
 ### The shape of what went wrong, across the whole milestone
 
@@ -4812,13 +4827,14 @@ Nearly every defect M9 found was a CHECK THAT LOOKED LIKE IT HELD. The
 brand-forgery test that never compiled. The benchmark that measured a CDN. The
 probe built from minified markup that could not reproduce the bug it existed to
 find. The positioning assertion that passed in jsdom while the browser computed
-zero. The fixture whose values the detectors correctly ignored.
+zero. The paint gate that measured itself. The request log that saw 124
+requests and none from the extension, and would have passed.
 
-None of these failed loudly. Each reported success. The thing that caught every
-one of them was running the check against a condition where it should FAIL and
-confirming that it did - which is now the default here, and is why the brand
-test, the canary, the model fetcher and the write path were each verified by
-breaking them on purpose.
+None of these failed loudly. Each reported success. What caught every one was
+running the check against a condition where it should FAIL and confirming that
+it did — now the default here, and why the brand test, the canary, the model
+fetcher, the write path, the zero-network probe and the region walk were each
+verified by breaking them on purpose.
 
 ### D47 - D29 closed: the block became a question (M9)
 
@@ -5056,6 +5072,86 @@ elsewhere.
 **Not yet confirmed live.** This is the fix the evidence names; whether
 claude.ai now completes a send is a separate claim, and it is the user's next
 reproduction that establishes it.
+### D52 - The Claude diagnosis, consolidated: four defects behind one symptom (M9)
+
+Recorded as one entry because the individual fixes (D49, D50, D50a, D50b, D51)
+read as unrelated, and the useful thing is the SHAPE they share: every one was
+a check that reported confidently about something it could not actually see.
+
+**The symptom, unchanged across six rounds.** On claude.ai, a real send was
+refused as `undecidable` - "the submit event did not resolve to exactly one
+editable element" - on a page where a forced diagnostic run seconds later
+showed the composer resolving cleanly from three separate strategies with
+healthCheck ok. A refusal that contradicts the state before it and the state
+after it is explained by neither.
+
+**Defect 1: the paint gate counted our own element as evidence the page had
+painted** (D49). `paintEvidence` summed custom elements, and
+`privacyshield-surface` is mounted by this extension on every page before
+anything is measured - so `painted` was true BY CONSTRUCTION and the gate could
+never report NOT PAINTED once we had attached. It declared a 126-element shell
+PAINTED at 7 ms on the strength of "1 custom element", which was us. Circular
+evidence. Excluding our own host removed one of the three console readings
+entirely.
+
+**Defect 2: one mechanism, two admission rules** (D50). `composerRegionOf`
+stopped at the first ancestor holding a send button and
+`querySelector('textarea, input, [contenteditable="true"]')`. claude.ai renders
+FIVE zero-size `aria-hidden` decoy inputs beside its composer, and every one
+satisfies that selector. So the walk answered "a composer is in here" about a
+container holding only decoys, and `editableWithinRegion` then applied the FULL
+invariants, found nothing admissible, and returned null.
+`isAdmissibleComposer` is now one exported rule used by both.
+
+**Defect 3: two paths silently wiped a standing degraded warning** (D49). When
+the composer was empty, and again when analysis found nothing, `analyse()` set
+a bare `hidden` - overwriting the health verdict about 180 ms after it
+appeared. Both are statements about the MESSAGE being made to override a
+statement about the PAGE. Same shape as D42a, where the debounced analysis
+overwrote the gate's refusal.
+
+**Defect 4: the walk stopped three hops short, and the bound was doing the
+wrong job** (D51). `hasSendButton` used `querySelector` alone, which searches
+DESCENDANTS - so it was false while standing ON the send button and on the
+nodes inside it that a click originates from, spending three hops of an
+eight-hop budget before the walk had cleared the control. And the button and
+composer share no ancestor within 8 hops of each other. The bound is now a loop
+backstop; tightness comes from halting at the first ancestor holding both, and
+fail-closed comes from the uniqueness test rather than from a number that also
+broke the feature.
+
+### What actually moved the diagnosis forward
+
+**Instrumenting the decision, not the moments around it.** Five rounds of
+readings were taken BEFORE or AFTER the refusal, and all of them disagreed with
+it. The round that solved it put the capture inside `editableWithinRegion` and
+the region walk - the code that literally decides "exactly one or not" - and
+recorded what each saw as it decided. That produced `button:no-region` and "the
+uniqueness test NEVER RAN" in one reading, which eliminated three of four
+candidate causes immediately.
+
+**Testing a hypothesis by construction instead of arguing about it.** The
+final reading - `hasAdmissibleComposer` false at all 8 hops - reads like a
+composer that climbing can never reach, a sibling or cousin rather than a
+descendant. That is a reasonable inference and it is wrong. Building the tree
+it describes, with the composer in a separate branch meeting the button 12 hops
+up, reproduced the live shape exactly while `querySelectorAll` on the common
+ancestor found the composer immediately. `querySelectorAll` covers every
+descendant including branches that are siblings lower down, and any two
+connected nodes share an ancestor. Ten minutes of construction settled what
+would otherwise have been a plausible argument for redesigning the walk in the
+wrong direction.
+
+**Owning a gap in my own instrumentation.** The round-4 decision table promised
+that `lastComposerRegionWalk` would report the outcome and hop count, and it
+was never wired into the refusal renderer - so a trace containing everything
+else could not answer the one question it was built for. That cost a round
+trip, and saying so was cheaper than explaining the missing data away.
+
+**The reading that was there all along.** `claude/composer-in-send-region 0/0`
+appeared in every diagnostic from the first, on pages where three other
+strategies matched 1/1. The region-based strategy finding nothing WAS the bug,
+visible for six rounds, in output that was being read for other things.
 
 ## Standing contracts (established in M1)
 

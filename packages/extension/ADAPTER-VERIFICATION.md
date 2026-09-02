@@ -281,12 +281,13 @@ finding:
 
 ## Current verification status
 
-**Mixed, and the mix is the point.** Dated per D35: a Claim B result is
-evidence about the day it was taken, and "verified" decays.
+**All three adapters WORKING END TO END, 2026-09-02.** Dated per D35: a
+Claim B result is evidence about the day it was taken, and "verified" decays.
+The METHOD column matters as much as the verdict - see below.
 
 | | Claim A (logic) | Claim B (live) | Method | State verified in | Date |
 | --- | --- | --- | --- | --- | --- |
-| Claude | verified — 20 fixture tests | **FAILING** | human, real account | empty chat, and populated | 2026-09-02 |
+| Claude | verified — 20 fixture tests | **WORKING, end to end** | human, real account | populated, real send | 2026-09-02 |
 | ChatGPT | verified — 23 fixture tests | **WORKING, end to end** | human, real account | populated, real send | 2026-09-02 |
 | Gemini | verified — 40 fixture tests | **WORKING, end to end** | harness | prefilled composer | 2026-09-02 |
 
@@ -321,45 +322,27 @@ write, release — observed working against a real ProseMirror composer with a
 real send. It also closes D43a for ChatGPT: the write survived ProseMirror's
 reconciliation well enough to be sent.
 
-### Claude — CONFIRMED LIVE DEFECT, 2026-09-02
+### Claude — CONFIRMED WORKING END TO END, 2026-09-02
 
-Two failures, both **fail-closed**: nothing was sent either time, and no value
-leaked. This is the machinery working; the adapter is what is broken.
+Human-verified with real credentials on the real site, to the same standard as
+ChatGPT: the send was intercepted, the review panel shown, and on confirming,
+the masked surrogate reached the composer and was released. The original never
+reached the page.
 
-**1. Fresh empty chat — the composer does not resolve at all.**
-`Could not find: composer`. Every candidate failed the SAME invariant:
+**It got here through four defects and six rounds of diagnosis**, all recorded
+together in ARCHITECTURE.md D52. In summary: the paint gate counted our own
+injected element as evidence the page had painted; the region walk and the
+uniqueness test used two different notions of "editable", so five zero-size
+`aria-hidden` decoy inputs satisfied one and failed the other; two paths wiped
+a standing degraded warning ~180 ms after it appeared; and the walk from the
+send button stopped three hops short of the ancestor it shared with the
+composer, having burnt three of eight hops failing to notice the button it was
+standing on.
 
-```
-attribute/claude/composer-role-textbox : not-aria-hidden
-class/claude/composer-prosemirror      : not-aria-hidden
-```
-
-So candidates ARE found — the selectors match elements — and are then rejected
-because the element sits inside an `aria-hidden="true"` subtree. The invariant
-is a blunt `element.closest('[aria-hidden="true"]') === null`, written to
-reject inert duplicates, and on the current claude.ai it is rejecting the real
-composer.
-
-**2. Populated retry — detection worked, the SEND was refused.**
-The paste guard fired and the panel showed exposure 51/100 with the IBAN
-validated, so `getComposer()` resolved. The send was then refused with:
-
-> The submit event did not resolve to exactly one editable element, so which
-> text is about to be sent cannot be established.
-
-That is `verifyBinding`'s `undecidable`, meaning `originComposerOfKeyEvent`
-found no editable on the key event's composed path — a DIFFERENT failure from
-(1), on a page state where resolution had already succeeded.
-
-**These are distinct from D43a.** D43a is about whether a real editor accepts
-and keeps the masked write. Neither Claude failure reaches the write: one
-cannot find the composer, the other cannot bind the submit to it. D43a remains
-untested for Claude because the run never gets that far.
-
-**Not diagnosed from a fixture.** Both need the real DOM, and the fixtures
-cannot supply it — `composer.html` is a snapshot that still passes its 20
-tests, which is precisely the point: the fixture and the live site have
-diverged and only the live site says so.
+**Not one of those was visible from a fixture.** `claude/composer.html` passed
+its 20 tests throughout. What found them was instrumenting the decision itself
+rather than the moments around it, and testing one plausible hypothesis by
+construction instead of arguing about it.
 
 ## The fixture boundary — what two live failures proved
 

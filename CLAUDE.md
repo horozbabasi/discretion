@@ -8,7 +8,7 @@ privacyshield is a browser extension that detects and redacts sensitive informat
 - **ARCHITECTURE.md** records decisions made while implementing SPEC.md and the reasoning behind them — append to it, don't just read it.
 - **CLAUDE.md** (this file) is working conventions only. It does not restate SPEC.md.
 
-**Milestones are built strictly one at a time**, tests passing, before the next starts. **M1-M9 COMPLETE. M10 is next and has not started.** Verified 2026-09-02: **1,153 tests**, typecheck (source AND test files) and lint all clean, each confirmed by its own exit code.
+**Milestones are built strictly one at a time**, tests passing, before the next starts. **M1-M9 COMPLETE — the extension protects, confirmed live on all three sites. M10 IN PROGRESS.** Verified 2026-09-02: **1,171 tests**, typecheck (source AND test files) and lint all clean, each confirmed by its own exit code.
 
 ### Complete
 

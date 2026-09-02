@@ -5730,8 +5730,37 @@ thing it was not looking at - and this one arrived inside the finding itself.
 Taking the reviewer's repro at face value would have closed a real defect as
 unreproducible. Verified both ways before it was believed.
 
-**Neither changes the M11 recommendation.** Both are the same defect shape on
-the same fail-closed path, and the constraint on fixing was never severity - it
+**INSTANCE 4: no `submit` listener exists at all.** Verified by enumerating
+every `addEventListener` in `packages/extension/src`: beforeinput, blur,
+change, click, input, keydown, message, pagehide, paste, popstate, resize,
+scroll. **No `submit`.** A click on `form[data-type="unified-composer"]
+button[type="submit"]` is caught by the click path and `preventDefault`
+cancels the native submission, so the common case is covered indirectly. But a
+submission raised any other way - `form.requestSubmit()` from a page script, or
+`form.submit()`, which fires no submit event at all and therefore cannot be
+intercepted by any listener - reaches the site untouched. Locale-independent,
+and a fourth route to the same outcome.
+
+**A nuance on `isComposing`, in both directions.** D57a above gives the leak
+direction: the site sends and we have already decided not to look. The other
+direction is a FALSE BLOCK - if a browser/IME reports `isComposing === false`
+on the keystroke that commits a candidate, the gate runs on a half-composed
+message. Neither direction is resolved here, and which one occurs is a property
+of the browser and the input method rather than of this code. What is settled:
+only `shiftKey` is excluded from the Enter guard, so **Ctrl+Enter and Cmd+Enter
+ARE intercepted** on all three adapters.
+
+**COVERAGE GAP IN THE AUDIT ITSELF.** The adversarial pass ran seven agents and
+one failed - `trace:claude`, on a connection error mid-response. So the
+**Claude adapter's click path was never independently audited**, and the
+refutation phase ran only over ChatGPT and Gemini. Its click path was read
+directly instead (`claude.ts:368-372`, the same
+`closest(SEND_BUTTON_SELECTOR)` / bare `return` shape) and its selectors
+measured against the same table, but that is one reader rather than two, and it
+is recorded here rather than left to look like full coverage.
+
+**Neither changes the M11 recommendation.** All four are the same defect shape
+on the same fail-closed path, and the constraint on fixing was never severity - it
 was that spurious firing during page load can only be ruled out against
 signed-in sessions on two of the three sites. Both are pinned in
 `test/unrecognised-send-control.test.ts` alongside the original, written to

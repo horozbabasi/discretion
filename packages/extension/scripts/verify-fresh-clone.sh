@@ -24,12 +24,38 @@ fail() { printf '  FAIL  %s\n' "$1"; FAILURES=$((FAILURES+1)); }
 ok()   { printf '  ok    %s\n' "$1"; }
 FAILURES=0
 
+# IS THE REPOSITORY PUBLIC? Asked separately, and first, because the answer
+# changes what the rest of this script proves.
+#
+# `git clone` uses the local credential helper. On the maintainer's machine
+# that silently authenticates, so a PRIVATE repository clones fine and the run
+# reports success - which is what happened through M11. The claim "a fresh
+# clone builds and loads it" was therefore true of the OWNER and not of anyone
+# else, and nothing here said so.
+step "is the repository reachable WITHOUT credentials?"
+if GIT_TERMINAL_PROMPT=0 git -c credential.helper= ls-remote "$REPO_URL" HEAD >/dev/null 2>&1; then
+  ok "public: an anonymous clone can reach it"
+  PUBLIC=1
+else
+  PUBLIC=0
+  printf '  NOTE  NOT PUBLIC - an anonymous clone is refused.
+'
+  printf '        The build check below still runs, using your credentials, and
+'
+  printf '        still proves the BUILD works from a clean tree. It does NOT
+'
+  printf '        prove a stranger can obtain the source, and every
+'
+  printf '        github.com link in README/STORE-LISTING/PRIVACY 404s for them.
+'
+fi
+
 step "clone into $WORK"
 if ! git clone --depth 1 "$REPO_URL" "$WORK/privacyshield" 2>&1 | tail -2; then
   fail "clone failed"; exit 1
 fi
 cd "$WORK/privacyshield" || exit 1
-ok "cloned $(git log --oneline -1)"
+ok "cloned $(git log --oneline -1)$([ "$PUBLIC" = "0" ] && printf ' (AUTHENTICATED, not anonymous)')"
 
 # THE PRECONDITION THIS TEST IS ABOUT. If the model were somehow already
 # present the run would prove nothing, so it is asserted rather than assumed.

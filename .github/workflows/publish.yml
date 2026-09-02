@@ -69,6 +69,21 @@ jobs:
           done
           echo "tag $tag matches both manifests"
 
+      # The README links to this repository. Published from a private one,
+      # every link on the npm page is a 404 - and the package's whole claim is
+      # that it can be audited. Checked ANONYMOUSLY on purpose: the runner's
+      # own token would authenticate and hide exactly the failure being looked
+      # for, which is how this went unnoticed until a curl returned 404.
+      - name: the repository is publicly readable
+        run: |
+          url="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/main/README.md"
+          code=$(curl -s -o /dev/null -w '%{http_code}' "$url")
+          if [ "$code" != "200" ]; then
+            echo "::error::repo is not public (HTTP $code); README links would 404 on npm"
+            exit 1
+          fi
+          echo "public: README fetched anonymously"
+
       # Proves the tarball a consumer would download actually works, before it
       # is uploaded rather than after.
       - name: a fresh consumer can install and use it

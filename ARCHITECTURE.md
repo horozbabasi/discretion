@@ -6643,6 +6643,90 @@ a design that excludes them.
 real reviewers, and the build enforces it rather than relying on anyone to
 remember.**
 
+### D62 - The repository is private, and several published claims assumed it was not
+
+Found by fetching the privacy-policy URL that the previous commit had just
+recorded as **DONE**, instead of trusting the entry that said so.
+
+```
+https://github.com/horozbabasi/privacyshield/blob/main/PRIVACY.md   404
+https://raw.githubusercontent.com/.../main/README.md                404
+git ls-remote without credentials                                   refused
+gh repo view --json isPrivate                                       true
+```
+
+The repo root 404s too, so it was never about the file.
+
+#### What it invalidates
+
+1. **The privacy-policy URL, which the store requires.** Marked RESOLVED one
+   commit earlier. It is not.
+2. **Every reviewer-visible link in the listing** - homepage, support, and the
+   "OPEN SOURCE" paragraph that invites the reader to inspect source they
+   cannot reach.
+3. **Every `github.com` link in `packages/core/README.md`**, which would ship
+   to npm as dead links on the package page - for a package whose stated claim
+   is that it can be audited.
+4. **An M11 result, in a way worth naming precisely.**
+   `verify-fresh-clone.sh` runs `git clone https://github.com/...`, which uses
+   the local credential helper. On the maintainer's machine that authenticates
+   silently, so a PRIVATE repository clones fine and the run reports success.
+
+   The check was real and its conclusion was true: the build works from a clean
+   tree, with no `node_modules` and no model. What it did NOT establish - and
+   what its output implied - is that a stranger can obtain the source. It
+   measured the owner's experience and was read as measuring everyone's.
+
+   The script now asks anonymously first (`git -c credential.helper= ls-remote`)
+   and labels the clone `(AUTHENTICATED, not anonymous)` when the repo is
+   private, with the caveat repeated in its final summary.
+
+#### The shape of it
+
+This is the same failure as the store tile that depicted a format-preserving
+API-key swap, and the IME probe that reported WAITS CORRECTLY against a page
+with no send handler: **a check that could only have produced the answer it
+produced.** A credentialed clone cannot fail for lack of public access, so it
+never reported on it.
+
+The environment supplied the credential, so no amount of reading the script
+would have shown it. Only fetching the URL the way a reviewer would.
+
+`publish.yml` now checks public readability before publishing, and
+deliberately checks it ANONYMOUSLY with `curl` rather than with the runner's
+token - a `GITHUB_TOKEN`-authenticated request would authenticate and hide
+exactly the failure being looked for, which is how this went unnoticed in the
+first place.
+
+#### Not a defect: the popup's Status panel
+
+While framing store screenshots, `popup-en-status.png` showed the Status tab
+selected above Quick Redact's content, and a probe was written to decide
+between "the screenshot script moved focus without activating" and "the panel
+does not follow the tab", the second of which would be a real accessibility
+bug.
+
+It was neither. On an UNSUPPORTED page the Status panel deliberately renders
+the Quick Redact pitch - `renderStatus` says the badge already reports that the
+extension does not run here, so the panel is better spent telling the user what
+they CAN do. The probe's first assertion was a text heuristic
+("Status selected while 'mask text for anywhere' shows => bug") and it fired on
+correct behaviour.
+
+Rewritten to assert the actual invariant - the visible panel is the one the
+selected tab's `aria-controls` names - which passes, and which says nothing
+about content that legitimately varies by context. Third false positive in this
+stretch of work, and the same lesson each time: a check built on what the
+output LOOKS like rather than on the property being claimed.
+
+The screenshot itself was dropped rather than recaptioned. Framing a popup that
+reads "PrivacyShield does not run on this site" under a caption about pages
+being protected would sell the product with a picture of it doing nothing. An
+honest "Protecting this page" capture needs the popup opened while a supported
+site is the ACTIVE TAB, which this harness cannot arrange - the popup asks the
+active tab who it is, and a `popup.html` opened directly is its own tab. Left
+undone rather than faked.
+
 ## Status after M11
 
 **M11's deliverables are complete**, with one measured caveat and the same two

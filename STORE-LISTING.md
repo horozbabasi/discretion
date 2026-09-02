@@ -238,7 +238,7 @@ person with an account.** It cannot be automated and must not be faked.
 | --- | --- |
 | Homepage | `https://github.com/horozbabasi/privacyshield` |
 | Support | `https://github.com/horozbabasi/privacyshield/issues` |
-| Privacy policy | **DONE** — `https://github.com/horozbabasi/privacyshield/blob/main/PRIVACY.md` (public repo, stable URL, renders as a page) |
+| Privacy policy | **BLOCKED.** `PRIVACY.md` is written, but the repository is PRIVATE, so the URL returns 404 to anyone but the owner. Measured, not assumed: an anonymous `git ls-remote` is refused and the repo root returns HTTP 404. |
 
 ---
 
@@ -246,37 +246,59 @@ person with an account.** It cannot be automated and must not be faked.
 
 Listed here rather than left for the submission to discover.
 
-1. **Translations: eight locales are unreviewed, and are therefore NOT
-   SHIPPED.** This is no longer a blocker on the submission — it is a decision
-   already taken and enforced in the build. `scripts/build.mjs` drops any
-   locale without a speaker's sign-off, so the package currently contains
-   `_locales/en` alone and a Turkish user gets an English UI via
+1. **THE REPOSITORY IS PRIVATE, and most of this listing depends on it not
+   being.** Found by fetching the privacy-policy URL rather than by trusting
+   the entry that said it was done: the repo root, the raw README and
+   `PRIVACY.md` all return **HTTP 404** to an unauthenticated request, and
+   `git ls-remote` without credentials is refused.
+
+   What that breaks, all of it reviewer-visible:
+
+   - the **privacy policy URL**, which the store requires;
+   - the **homepage** and **support** links in this listing;
+   - the "OPEN SOURCE" paragraph of the detailed description, which invites the
+     reader to inspect source they cannot reach;
+   - every `github.com` link in `packages/core/README.md`, which would ship to
+     npm as dead links.
+
+   **Either make the repository public, or host the privacy policy somewhere
+   public and remove the source-inspection claims.** Making it public is the
+   option consistent with what the listing already says about itself.
+
+   This also qualifies an M11 result: `verify-fresh-clone.sh` passed because
+   `git clone` used the local credential helper. It proved the build works from
+   a clean tree; it did not prove a stranger can obtain the source. The script
+   now checks and reports that distinction.
+
+2. **Translations: eight locales are unreviewed and NOT SHIPPED.** Not a
+   blocker on the submission - a decision already taken and enforced in the
+   build. `_locales/en` ships alone and a Turkish user gets an English UI via
    `default_locale`.
 
-   The listing must therefore be **English-only at first submission**. Adding a
-   localised listing for a language whose UI ships in English would promise
-   something the package does not do.
-
-   Review sheets for all eight are ready in `docs/translation-review/`: 21
-   safety-critical strings, roughly 254 words, per locale. A locale ships when
-   a speaker signs it off.
-
-2. ~~A privacy policy URL is required and does not exist.~~ **RESOLVED.**
-   `PRIVACY.md` is published in the public repository.
+   The listing must therefore be **English-only at first submission**: a
+   localised listing would promise a localised product. Review sheets are ready
+   in `docs/translation-review/` (21 strings, ~254 words per locale).
 
 3. ~~The review-panel screenshot and the promotional tile.~~ **RESOLVED**, with
    the caveat above about what the panel screenshot does and does not depict.
+   Popup and options screenshots still need the same 1280x800 framing.
 
 ### Still genuinely open
 
-- **The `isComposing` Enter path is unverified against the real site.** Our
-  side is settled: the adapter skips a composing Enter. What is unknown is
-  whether ChatGPT's own handler does the same, and answering it needs a
-  signed-in session with a CJK IME — a person at a keyboard, not a script. See
-  `docs/manual-checks/isComposing.md`, which reduces it to a paste-in
-  diagnostic and a single keypress.
+- **The `isComposing` Enter is unverified on ALL THREE sites.** Our side is
+  settled: the adapters skip a composing Enter. Whether each site's own handler
+  does the same is unknown, and if one submits, a CJK user sends ungated text.
+
+  The route to answer it now exists and needs no IME: a browser you launch
+  yourself with `--remote-debugging-port`, logged into by hand, and
+  `probe-ime-live.py --attach`. Nobody has run it. See
+  `docs/manual-checks/isComposing.md`.
 
 - `form.submit()` cannot be intercepted by any listener (ARCHITECTURE.md D57b),
-  and a click on a control no adapter recognises is not gated. A reviewer
-  reading the source will find both; neither is a submission blocker, but they
-  should not be a surprise.
+  and a click on a control no adapter recognises is not gated. Neither is a
+  submission blocker, but a reviewer reading the source will find both.
+
+- Not tested with a screen reader. The accessibility TREE is audited; nobody
+  has driven the pages with NVDA, VoiceOver or Orca. No shipping document
+  claims otherwise, which is what keeps this a limitation rather than a false
+  claim.

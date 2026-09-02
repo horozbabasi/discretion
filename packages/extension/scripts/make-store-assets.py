@@ -125,7 +125,7 @@ def document(width: int, height: int, scale: float) -> str:
 </body></html>"""
 
 
-def framed_screenshot(png: Path, caption: str, scale: float) -> str:
+def framed_screenshot(png: Path, caption: str, subtitle: str, shot_width: int, scale: float) -> str:
     """A 1280x800 store screenshot: the real panel, on an abstract backdrop.
 
     The backdrop is deliberately NOT a mock chat interface. A panel composited
@@ -170,8 +170,7 @@ def framed_screenshot(png: Path, caption: str, scale: float) -> str:
 </style></head><body>
   <h2>{caption}</h2>
   <div class="shot"><img src="data:image/png;base64,{data}" alt=""></div>
-  <p class="sub">Every item is listed with a calibrated confidence and the evidence that
-  triggered it. Keep any of them unmasked, one at a time. Nothing is sent until you decide.</p>
+  <p class="sub">{subtitle}</p>
 </body></html>"""
 
 
@@ -221,31 +220,65 @@ def main() -> int:
             print(f"  wrote {path.name}  ({width}x{height})")
             context.close()
 
-        # The 1280x800 store screenshot, framed from the real panel capture.
-        panel = OUT / "review-panel.png"
-        if panel.exists():
+        # The 1280x800 store screenshots, framed from real captures.
+        #
+        # RAW captures come from verify-popup.py / verify-options.py, which
+        # take them at the sizes the surfaces actually are (380x600 popup,
+        # 900x900 options). The store wants 1280x800, so they are placed on the
+        # product's own backdrop rather than upscaled - a 380px-wide PNG
+        # stretched to 1280 looks exactly as bad as it is.
+        FRAMED = [
+            ("review-panel.png", "You see exactly what will be replaced, before anything is sent.",
+             "Every item is listed with a calibrated confidence and the evidence that triggered it. "
+             "Keep any of them unmasked, one at a time. Nothing is sent until you decide.",
+             "screenshot-review-panel-1280x800.png", 1000),
+            # NO popup-Status FRAME, deliberately.
+            #
+            # verify-popup.py opens the popup against a chrome-extension:// page,
+            # where the extension correctly reports "does not run on this site"
+            # and the Status panel deliberately shows the Quick Redact pitch
+            # instead (see renderStatus). Framing that under a caption like
+            # "whether this page is protected" would sell the product with a
+            # picture of it doing nothing.
+            #
+            # An honest "Protecting this page" capture needs the popup opened
+            # while a SUPPORTED site is the active tab, which this harness
+            # cannot arrange: the popup asks the active tab who it is, and a
+            # popup.html opened directly is its own tab. Left undone rather
+            # than faked.
+            ("raw/popup-en-quick.png", "Quick Redact: mask text for anywhere else.",
+             "Paste text from any app. The masked version is safe to send, and pasting a reply "
+             "back restores the real values. Nothing leaves your device.",
+             "screenshot-quick-redact-1280x800.png", 420),
+            # The caption names what is VISIBLE in the crop. The first version
+            # said "34 detectors you can switch off individually" over a
+            # screenshot showing sensitivity profiles and replacement style -
+            # true of the page, not of the picture.
+            ("raw/options-en.png", "Choose how much it catches, and what it leaves alone.",
+             "Sensitivity profiles, per-type toggles, an allowlist and denylist, and custom rules "
+             "with a live tester. All stored on your device.",
+             "screenshot-options-1280x800.png", 820),
+        ]
+        for source_name, caption, subtitle, out_name, width in FRAMED:
+            source = OUT / source_name
+            if not source.exists():
+                print(f"  SKIP  {out_name}: {source_name} is missing")
+                print("        Run make-panel-screenshot.py, verify-popup.py --out and")
+                print("        verify-options.py --out first.")
+                failures.append(f"{source_name} missing")
+                continue
             context = browser.new_context(
                 viewport={"width": 1280, "height": 800}, device_scale_factor=1
             )
             page = context.new_page()
             page.set_content(
-                framed_screenshot(
-                    panel,
-                    "You see exactly what will be replaced, before anything is sent.",
-                    1.0,
-                ),
-                wait_until="load",
+                framed_screenshot(source, caption, subtitle, width, 1.0), wait_until="load"
             )
             page.evaluate("document.fonts.ready")
-            page.wait_for_timeout(500)
-            shot = OUT / "screenshot-review-panel-1280x800.png"
-            page.screenshot(path=str(shot))
-            print(f"  wrote {shot.name}  (1280x800)")
+            page.wait_for_timeout(400)
+            page.screenshot(path=str(OUT / out_name))
+            print(f"  wrote {out_name}  (1280x800)")
             context.close()
-        else:
-            print("  SKIP  screenshot-review-panel-1280x800.png:")
-            print("        review-panel.png is missing. Run make-panel-screenshot.py first.")
-            failures.append("review-panel.png missing")
 
         browser.close()
     print()

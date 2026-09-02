@@ -68,6 +68,11 @@ first.
 
 ## Release process
 
+0. **The repository must be public.** `packages/core/README.md` links to
+   `BENCHMARKS.md`, `VERSIONING.md` and the source; published from a private
+   repo, every one of those is a 404 on the npm page. This was found the hard
+   way — see ARCHITECTURE.md D62 — and `publish.yml` now checks it rather than
+   trusting anyone to remember.
 1. `npm test`, `npm run typecheck`, `npm run lint` — all clean.
 2. If detection changed, re-run the eval and paste the delta into the
    CHANGELOG.

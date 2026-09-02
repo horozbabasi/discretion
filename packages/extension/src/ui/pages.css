@@ -375,7 +375,7 @@ body.options legend { padding: 0; }
   cursor: pointer;
 }
 .choice:hover { border-color: var(--accent); }
-.choice input { accent-color: var(--accent); margin-top: 2px; }
+.choice input { accent-color: var(--accent); margin-top: 2px; width: 16px; height: 16px; }
 .choice[data-selected='true'] { border-color: var(--accent); background: var(--accent-weak); }
 .choice .why { grid-column: 2; color: var(--muted); font-size: 12px; }
 
@@ -386,10 +386,15 @@ body.options legend { padding: 0; }
   display: flex;
   align-items: center;
   gap: 8px;
+  /* WCAG 2.5.8 wants an interactive target of at least 24x24 CSS px. A native
+     checkbox renders at 13x13 and cannot be resized reliably across platforms,
+     so the TARGET is the whole label - which is clickable, is what a pointer
+     user actually hits, and is what the exception in 2.5.8 is written for. */
+  min-height: 24px;
   padding: 3px 0;
   cursor: pointer;
 }
-.type input { accent-color: var(--accent); }
+.type input { accent-color: var(--accent); width: 16px; height: 16px; }
 .family-head {
   grid-column: 1 / -1;
   margin: 10px 0 2px;
@@ -413,6 +418,7 @@ body.options legend { padding: 0; }
   padding: 7px 0;
 }
 .rule + .rule { border-top: 1px solid var(--rule); }
+.rule input[type='checkbox'] { width: 16px; height: 16px; accent-color: var(--accent); }
 @media (max-width: 640px) { .rule { grid-template-columns: auto 1fr auto; } }
 
 input[type='text'] {

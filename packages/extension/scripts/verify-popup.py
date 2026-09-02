@@ -314,6 +314,49 @@ def main() -> int:
                         fail(f"unexpected fields: {unexpected}")
                     else:
                         ok("the reply carries only the four contracted fields")
+
+                # ── the per-site toggle, end to end ──
+                #
+                # The popup writes `disabledSites`; the CONTENT SCRIPT is what
+                # has to act on it. Checking that the popup wrote the setting
+                # would only prove the popup works. This writes the setting the
+                # way the popup does and then asks the tab what it is doing,
+                # which is the only way to see the other half.
+                toggled = worker.evaluate(
+                    """async (url) => {
+                        const tabs = await chrome.tabs.query({});
+                        const tab = tabs.find((t) => (t.url || '').startsWith(url));
+                        if (!tab || tab.id === undefined) return { error: 'no tab' };
+                        const ask = () => chrome.tabs.sendMessage(tab.id, { kind: 'popup-status' });
+                        const first = await ask();
+                        await chrome.storage.local.set({
+                          settings: { profile: 'balanced', mode: 'surrogate', disabledTypes: [],
+                                      disabledSites: [first.siteId], allowlist: [], denylist: [],
+                                      customRules: [], phoneRegion: 'US' },
+                        });
+                        await new Promise((r) => setTimeout(r, 800));
+                        const off = await ask();
+                        await chrome.storage.local.remove('settings');
+                        await new Promise((r) => setTimeout(r, 800));
+                        const backOn = await ask();
+                        return { before: first.enabled, off: off.enabled, backOn: backOn.enabled };
+                    }""",
+                    args.site,
+                )
+                print(f"  toggle: {toggled}")
+                if not isinstance(toggled, dict) or "before" not in toggled:
+                    failures.append(f"the toggle round trip did not complete: {toggled}")
+                    fail("no toggle result")
+                elif toggled["before"] is not True or toggled["off"] is not False:
+                    failures.append(f"disabling the site did not reach the tab: {toggled}")
+                    fail(f"enabled went {toggled['before']} -> {toggled['off']}")
+                elif toggled["backOn"] is not True:
+                    # Removing the key must protect again: an absent setting is
+                    # the protective default, not "still off".
+                    failures.append(f"clearing the setting left the site unprotected: {toggled}")
+                    fail("did not re-enable when the setting was removed")
+                else:
+                    ok("disabling reaches the tab, and clearing the setting re-protects it")
             finally:
                 site_page.close()
 

@@ -5456,6 +5456,186 @@ The `innerHTML` guarantee is the one SECURITY.md tells a reader to verify with
 `grep`, so the same check now runs on every commit - a claim in a security
 document that nothing enforces is a claim with a shelf life.
 
+### D56 - Accessibility, audited rather than asserted (M10)
+
+SPEC.md: "Full keyboard navigation, ARIA roles, screen-reader tested, visible
+focus states."
+
+`scripts/verify-a11y.py` loads the built extension into a real browser and
+inspects the ACCESSIBILITY TREE through CDP - the same structure the browser
+hands an assistive technology - plus the styles the browser actually computed.
+Both pages, both colour schemes:
+
+| check | popup | options |
+| --- | --- | --- |
+| controls with an accessible name | 3 / 3 | 49 / 49 |
+| tab stops reached | 2 of 2 expected | 46 of 46 expected |
+| Shift+Tab walks back | yes | yes |
+| focus changes the computed style | 2px outline | 2px outline |
+| lowest text contrast, light | 5.50:1 | 5.85:1 |
+| lowest text contrast, dark | 5.70:1 | 6.39:1 |
+| targets below 24x24 | none | none |
+
+WCAG AA wants 4.5:1 for normal text; the worst case anywhere in either page in
+either scheme is 5.50:1.
+
+**What it does NOT claim.** It cannot test with a screen reader. Announcement
+order, verbosity, and whether a live region interrupts at the wrong moment are
+judgements a tree walk cannot make, and the polite/assertive choices in this
+codebase are reasoned but unverified by a human listener. SPEC's phrase is
+"screen-reader tested" and this is the machine-checkable half of it. **The
+other half is open, and is recorded as open rather than absorbed into a green
+tick.**
+
+### Three things the audit itself got wrong first
+
+The audit is verification code, and verification code gets production scrutiny.
+All three of these would have produced a confident wrong answer:
+
+**Tab order keyed on `tag#id.class`.** Every one of the 35 type checkboxes
+renders as `input#.` with no id and no class, so the second one looked like a
+repeat, the loop concluded it had cycled, and the check reported "Tab reached 1
+of 49 controls" on a page with no keyboard problem at all. Identity is now a
+marker attribute SET ON THE ELEMENT, which cannot collide.
+
+**The focusable count included controls in hidden panels.** The filter used
+`getComputedStyle(e).display !== 'none'`, and the computed display of a child
+inside a `display: none` ANCESTOR still resolves to its own value - so every
+control in the popup's two hidden tab panels was counted. `checkVisibility()`
+is the API that answers the question actually being asked.
+
+**The expectation was a fudge factor.** With the count inflated, the threshold
+had been written as `len(focusables) - 8`, which let the popup pass at "2 of 8"
+without anyone knowing whether 2 was right. It now MODELS the page: a tab stop
+is a visible element whose effective `tabIndex` is not -1, with a radio group
+counted once - which is exactly how a roving tablist collapses three tabs into
+one stop. The popup's answer of 2 is now a match against 2 rather than against
+a guess.
+
+### The one real finding, and why the fix is not a loosening
+
+Every native checkbox rendered 13x13, under WCAG 2.5.8's 24x24 minimum. Two
+responses were possible and only one is honest: raise the minimum, or measure
+the right thing. A checkbox wrapped in a `<label>` is activated anywhere on
+that label, so the label IS the target a pointer hits - which is the exception
+2.5.8 is written for. So the check now measures `e.closest('label') ?? e`,
+falling back to the input itself when there is no label to be the target, and
+the CSS gives `.type` a `min-height: 24px` so the label genuinely is one. Both
+halves were needed; either alone would have been a way around the criterion
+rather than a way to meet it.
+
+### Verified by breaking it
+
+Setting `--muted` to a plausible-looking `#a8b0b8` and removing the
+`:focus-visible` rule produced 11 named contrast failures with their exact
+ratios and elements, and "resting and focused styles are identical". Restored,
+both pass. An accessibility check that has never been seen failing is a
+decoration.
+
+## Status after M10
+
+**M10 IS CLOSED, with two items explicitly left open** (below). The extension
+now has a popup, an options page, nine locales, a values-free history, and an
+accessibility audit that has been seen failing.
+
+**1,255 tests / 79 files**; typecheck covers source and test files; lint clean;
+the extension builds and loads. Every figure was taken with its own exit code
+checked.
+
+SPEC's M10: "Popup, options, i18n, accessibility, security hardening. Quick
+Redact, Local Insights, and the exposure session aggregate in the popup." All
+of it ships.
+
+### What M10 built
+
+| | |
+| --- | --- |
+| **i18n** | Nine locales. Catalogues authored in TypeScript so a missing key is a COMPILE error; `_locales/*/messages.json` generated at build time. Plurals through `Intl.PluralRules` — Arabic uses all six categories, Japanese one, Turkish none after a numeral. RTL driven by the UI locale. |
+| **Popup** | Per-site toggle, adapter health, session counts by type, peak and mean session exposure, profile switcher, Quick Redact, Local Insights. |
+| **Options** | Per-entity toggles for all 35 types, profile, surrogate/token, allowlist, denylist, custom patterns with a live tester, phone region, settings export/import, and a plain-language account of what this does not protect. |
+| **Local Insights** | Counts by FAMILY by MONTH. No values, no text, no type, no site, no timestamp finer than a month, 24-month retention, and `reset()` removes the key rather than writing zeroes over it. |
+| **Quick Redact** | The full pipeline, and it REFUSES when Stage 2 did not run — under-masking is worse here than at the send gate, because there is no review panel between the output and someone's clipboard. |
+| **SECURITY.md** | Five guarantees, each with the check a reader can run themselves, and three admissions rather than claims. |
+| **Accessibility** | Both pages, both colour schemes, through the real accessibility tree. |
+
+### Verified in a real browser, not in jsdom
+
+Three scripts load the built extension into Edge and drive it:
+
+| script | what it proves |
+| --- | --- |
+| `verify-popup.py` | No CSP violation, a non-empty body, roving tabindex with arrow keys, Quick Redact masking a real address and a checksummed IBAN out of its output, Arabic rendering `dir=rtl` and the DUAL plural form for exactly two items, the content script answering `popup-status` on the live claude.ai with exactly its four contracted fields, and the per-site toggle reaching the tab and re-protecting when cleared |
+| `verify-options.py` | 35 type checkboxes, every change read back out of `chrome.storage` rather than out of the DOM, the live tester counting real regex matches, an uncompilable pattern refused at the input and not stored |
+| `verify-a11y.py` | Every control named, tab stops matching a model of the page, focus changing the computed style, worst-case contrast 5.50:1 against AA's 4.5, no target under 24×24 |
+
+### What M10 found in code that already shipped
+
+- **`NATIONAL_ID` rendered as "National id"** — the exact "Iban" case
+  `labelOf`'s own header warns about, wrong since M1, and `labelOf` had no test
+  at all.
+- **A NUL byte in a source comment**, which survived `tsc`, `eslint`, 1,245
+  tests and a production build. The second to reach this repository.
+- **A dead `SensitivityProfile` string union** in `types.ts` that `index.ts`
+  shadowed with the profile OBJECT — unreachable through the public API while
+  still being the first definition a reader finds by name.
+- **Three settings with no consumer**: the allow/deny lists, the phone region,
+  and per-type toggles were all writable and none of them reached detection.
+  Shipping the options page without wiring them would have been three stubs
+  behind a settings screen.
+
+### Left open, deliberately
+
+- **The eight translations are machine-generated and unreviewed.** Structure is
+  enforced by tests — placeholder budgets, plural categories, no copy-pasted
+  English — and structure is not meaning. **A release blocker** (D53), not a
+  nicety, because "it compiles and the tests pass" is exactly the condition
+  under which a wrong translation ships quietly.
+- **"Screen-reader tested" is half done.** The accessibility tree is audited;
+  nobody has used these pages with NVDA, VoiceOver or Orca. Announcement
+  order and live-region interruption are judgements a tree walk cannot make
+  (D56).
+- **Adapter `ResolutionFailure.detail` strings are still English** (D53), so a
+  non-English user sees a translated title above an English explanation.
+  Closing it means turning ~20 sites on the fail-closed path from strings into
+  keys plus arguments, which deserves its own reviewed batch.
+- **`${name}: ${message}` on the failure path** carries a library's error
+  message verbatim into a DOM node. Fixed in Quick Redact, where this batch
+  owned the whole path; the same pattern remains in `content.ts` and the
+  controller and is scoped, not closed (D54).
+- **`onnxruntime-web` resolves to a `-dev` nightly** — a transitive resolution
+  and a weaker supply-chain position than a tagged release (SECURITY.md).
+
+Carried from earlier and untouched: D27a's unexplained machine slow state,
+D41f's 3× gap, GENERIC_SECRET recall 55.4%, TAX_ID 91.2%, one over-confident
+calibration bucket, p50 255.8 ms against a 250 ms budget, D40a.
+
+**The send-button English-`aria-label` fragility carried in from M9 is NOT
+fixed.** It was recorded as "M10's problem because it is an i18n defect in
+disguise", and M10 localised the extension's own UI without touching how the
+adapters find a send control on a non-English interface. That is a real gap
+between what was promised and what was done, and it is stated here rather than
+quietly dropped.
+
+### The shape of what went wrong, again
+
+M9 recorded that nearly every defect it found was A CHECK THAT LOOKED LIKE IT
+HELD. M10 reproduced that five more times, all in code written this milestone:
+
+- a Quick Redact test whose input used an RFC 2606 domain SPEC classifies
+  NON-SENSITIVE, so it asserted that nothing happened and reported that nothing
+  happening was fine — the same trap a detection fixture fell into in M8;
+- a fixed 4-second wait that raced the 6,568 ms cold model load and produced a
+  different verdict on two consecutive runs of identical code;
+- a summary printing "All popup checks passed" while a requested check was
+  silently absent;
+- a tab-order audit whose element identity collided across 35 unlabelled
+  checkboxes, reporting "1 of 49" on a page with no keyboard problem;
+- a focusable count that included every control inside a `display: none` panel,
+  making the threshold it was compared against meaningless.
+
+Each was caught by the same move that caught M9's: running the check against a
+condition where it must FAIL, and confirming it does.
+
 ## Standing contracts (established in M1)
 
 - **Offset map:** `offsetMap[i]` is the original index of the cluster that

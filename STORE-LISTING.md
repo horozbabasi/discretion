@@ -187,15 +187,50 @@ anything over.
 
 ## Assets
 
+All generated from source and reproducible:
+`python packages/extension/scripts/make-store-assets.py` (after
+`make-panel-screenshot.py`). They live in `packages/extension/store-assets/`.
+
 | asset | state |
 | --- | --- |
-| Icon 128×128 | present (`packages/extension/src/icons/icon128.png`) |
-| Screenshot — popup, Status | have (`verify-popup.py --out`) at 380×600; **needs upscaling to 1280×800 with a framed background** |
-| Screenshot — popup, Quick Redact | same |
-| Screenshot — options page | have at 900×900; same treatment |
-| Screenshot — the review panel on a real site | **MISSING.** The most important one, and it needs a signed-in session |
-| Promotional tile 440×280 | **MISSING** |
+| Icon 128x128 | present (`packages/extension/src/icons/icon128.png`) |
+| Promotional tile 440x280 | **DONE** — `promo-tile-440x280.png` |
+| Marquee 1400x560 | **DONE** — `promo-marquee-1400x560.png` |
+| Screenshot — the review panel, 1280x800 | **DONE** — `screenshot-review-panel-1280x800.png` |
+| Screenshot — popup, Status | have at 380x600 from `verify-popup.py --out`; needs the same 1280x800 framing |
+| Screenshot — options page | have at 900x900; same |
 | Demo video | optional; not planned for first submission |
+
+### What the promotional images claim, and why they can
+
+The tile shows an IBAN becoming a different IBAN. **Those two values are
+measured output**, not a designer's illustration: `protect()` was run on the
+first with seed 42 and returned the second, which passes the same mod-97
+checksum.
+
+The first draft showed `sk_live_...` becoming another `sk_live_...` and was
+withdrawn, because it was not true — API_KEY surrogates are drawn from the
+whole provider pool, so a Stripe key is actually replaced by a Google, npm or
+Hugging Face one. An IBAN and a card number really are replaced in kind; an API
+key is not.
+
+### The review-panel screenshot is cropped, deliberately
+
+It shows the panel and nothing else: no page behind it, no URL bar, no site
+chrome.
+
+The content script only activates on the three matched origins, so rendering
+the panel at all means serving a fixture from one of them. A full-page capture
+taken that way would show a browser at `chatgpt.com` displaying a page that is
+not ChatGPT — a fabricated record of the product running somewhere it did not,
+however genuine the panel in it happens to be.
+
+The panel itself is entirely real: three detections from the real engine, with
+its calibrated confidences (98%, 95%, 95%), its own explanations, and the
+exposure score it computed.
+
+**A screenshot of the panel over an actual signed-in conversation still needs a
+person with an account.** It cannot be automated and must not be faked.
 
 ## Support and links
 
@@ -203,7 +238,7 @@ anything over.
 | --- | --- |
 | Homepage | `https://github.com/horozbabasi/privacyshield` |
 | Support | `https://github.com/horozbabasi/privacyshield/issues` |
-| Privacy policy | **MISSING — required.** `SECURITY.md` covers the guarantees but a store submission needs a privacy policy at a stable public URL |
+| Privacy policy | **DONE** — `https://github.com/horozbabasi/privacyshield/blob/main/PRIVACY.md` (public repo, stable URL, renders as a page) |
 
 ---
 
@@ -211,16 +246,37 @@ anything over.
 
 Listed here rather than left for the submission to discover.
 
-1. **The eight non-English catalogues are machine-translated and unreviewed.**
-   Store listings are per-locale; shipping the UI in nine languages while
-   only one has been read by a speaker of it is the same problem this project
-   flagged as a release blocker in ARCHITECTURE.md D53.
-2. **A privacy policy URL is required** and does not exist yet.
-3. **The review-panel screenshot needs a signed-in session** on one of the
-   three sites, and the promotional tile has not been made.
+1. **Translations: eight locales are unreviewed, and are therefore NOT
+   SHIPPED.** This is no longer a blocker on the submission — it is a decision
+   already taken and enforced in the build. `scripts/build.mjs` drops any
+   locale without a speaker's sign-off, so the package currently contains
+   `_locales/en` alone and a Turkish user gets an English UI via
+   `default_locale`.
 
-Two further things are open and are NOT submission blockers, but a reviewer
-reading the source will find them and they should not be a surprise:
-`form.submit()` cannot be intercepted by any listener (ARCHITECTURE.md D57b),
-and an `isComposing` Enter is skipped unilaterally, which is safe only if the
-site agrees.
+   The listing must therefore be **English-only at first submission**. Adding a
+   localised listing for a language whose UI ships in English would promise
+   something the package does not do.
+
+   Review sheets for all eight are ready in `docs/translation-review/`: 21
+   safety-critical strings, roughly 254 words, per locale. A locale ships when
+   a speaker signs it off.
+
+2. ~~A privacy policy URL is required and does not exist.~~ **RESOLVED.**
+   `PRIVACY.md` is published in the public repository.
+
+3. ~~The review-panel screenshot and the promotional tile.~~ **RESOLVED**, with
+   the caveat above about what the panel screenshot does and does not depict.
+
+### Still genuinely open
+
+- **The `isComposing` Enter path is unverified against the real site.** Our
+  side is settled: the adapter skips a composing Enter. What is unknown is
+  whether ChatGPT's own handler does the same, and answering it needs a
+  signed-in session with a CJK IME — a person at a keyboard, not a script. See
+  `docs/manual-checks/isComposing.md`, which reduces it to a paste-in
+  diagnostic and a single keypress.
+
+- `form.submit()` cannot be intercepted by any listener (ARCHITECTURE.md D57b),
+  and a click on a control no adapter recognises is not gated. A reviewer
+  reading the source will find both; neither is a submission blocker, but they
+  should not be a surprise.

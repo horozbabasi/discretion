@@ -59,6 +59,22 @@ export default tseslint.config(
     },
   },
   {
+    // Diagnostics meant to be PASTED INTO A BROWSER CONSOLE by a person, on a
+    // page this project does not control (docs/manual-checks/). They are
+    // browser scripts by definition, and they are not bundled into anything.
+    //
+    // Globals only, like every other exemption here: the snippet still has to
+    // pass the rest of the rules, because a diagnostic someone runs on their
+    // own signed-in session is the last place to relax review.
+    files: ['docs/manual-checks/**/*.js'],
+    languageOptions: {
+      globals: {
+        console: 'readonly', document: 'readonly', window: 'readonly',
+        performance: 'readonly', MutationObserver: 'readonly',
+      },
+    },
+  },
+  {
     // The documented examples under packages/core/examples/. These are Node
     // programs written from a CONSUMER's point of view - they import the
     // package the way a stranger would and are executed against the packed

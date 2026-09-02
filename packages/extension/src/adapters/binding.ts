@@ -354,6 +354,20 @@ export function originComposerOfKeyEvent(event: KeyboardEvent): HTMLElement | nu
 }
 
 /**
+ * Derives the element a FORM SUBMISSION would send.
+ *
+ * Uses `editableWithinRegion` on the form itself, which is the same admission
+ * rule the region walk and the uniqueness test use - one mechanism, one rule
+ * (D50). A form holding no admissible composer is not a send: a site search
+ * box is a form too, and gating it would block the page for no reason.
+ */
+export function originComposerOfSubmitEvent(form: Element): HTMLElement | null {
+  const found = editableWithinRegion(form);
+  recordIntent('submit', found !== null);
+  return found;
+}
+
+/**
  * Derives the element a button submit would send.
  *
  * `findRegion` walks up from the clicked control to the container the adapter

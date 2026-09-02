@@ -559,6 +559,27 @@ export class DetectionController {
    * would hand it back.
    */
   private captureReplay(intent: SubmitIntent): (() => void) | null {
+    if (intent.kind === 'submit') {
+      // `requestSubmit`, not `submit()`: it fires a submit event, so the
+      // site's own handler runs exactly as it would have. `form.submit()`
+      // would bypass that handler entirely and send a raw form POST, which is
+      // not what the user asked for.
+      //
+      // The submitter is carried over so the site sees the same button it
+      // would have seen. The replayed event re-enters this method, and
+      // PassThrough - armed by `release` for the duration of the replay -
+      // consumes it.
+      const form = intent.event.target;
+      if (!(form instanceof HTMLFormElement)) return null;
+      const submitter = (intent.event as SubmitEvent).submitter;
+      return submitter instanceof HTMLElement
+        ? () => {
+            form.requestSubmit(submitter as HTMLButtonElement);
+          }
+        : () => {
+            form.requestSubmit();
+          };
+    }
     if (intent.kind === 'button') {
       const path = intent.event.composedPath();
       const target = path.find((node): node is HTMLElement => node instanceof HTMLElement);

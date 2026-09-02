@@ -5767,6 +5767,143 @@ signed-in sessions on two of the three sites. Both are pinned in
 fail when the fix lands.
 
 
+### D57b - The submit backstop, and the two audit gaps closed (M10)
+
+Three things were outstanding after D57a: the Claude click path had never been
+independently read, the `isComposing` question was being handed to a human, and
+the `form.submit()` route had no fix. All three are resolved below - two by
+doing the work, one by establishing precisely why it cannot be done here.
+
+### Gap 1 - Claude's click path, read by a second reader
+
+The audit's `trace:claude` agent died on a connection error, so D57a recorded
+Claude as having one reader. Read again, against ChatGPT and Gemini side by
+side. **CONFIRMED: it is the same shape.**
+
+| | claude.ts:368 | chatgpt.ts:276 | gemini.ts:1007 |
+| --- | --- | --- | --- |
+| target | `composedPath()[0]` | same | same |
+| non-Element | bare `return` | same | same |
+| recognition | `closest(SEND_BUTTON_SELECTOR)` | same, inlined | `findSendButtons()` + identity/containment |
+| on failure | bare `return` | same | same |
+| emits | `kind:'button'` + `originComposerOfButtonEvent` | same | same |
+
+Claude differs from ChatGPT only in binding `closest()`'s result to a local it
+then discards; functionally identical. Gemini differs only in the recognition
+test, and reaches the same silent return through `{ buttons: [] }` - which it
+returns for AMBIGUITY as well as for no match (`gemini.ts:762`).
+
+Two things the side-by-side reading added that neither original trace had:
+
+- **All three are traceless on the unrecognised path.** `recordIntent` is
+  called only inside `originComposerOfButtonEvent` (`binding.ts:368-380`),
+  which runs AFTER the guard. The single pre-guard record in the whole file
+  set is `claude.ts:349`, and it is on the key path. So a click that is not
+  recognised leaves no diagnostic anywhere, on any adapter.
+- **Claude shares ChatGPT's shadow-boundary limitation**, since both use plain
+  `closest()`. Only `gemini.ts` imports `closestAcrossShadow` - though
+  `button.contains(target)` cannot cross a boundary either, so Gemini's
+  mitigation is partial.
+
+Gap 1 is closed. Claude is no longer unaudited.
+
+### Gap 2 - `isComposing`, automated as far as it can be
+
+A harness now exists that does not need anyone to type Japanese by hand.
+`scripts/probe-submit-routes.py` serves a ChatGPT-shaped document **at
+https://chatgpt.com/** through Playwright route interception, so the origin is
+real, `host_permissions` matches, the content script runs and `siteAdapter()`
+resolves ChatGptAdapter by hostname - while the DOM and the "site's own send
+handler" are both ours to vary.
+
+An ordinary Enter is tested first and the run ABORTS if it is not intercepted,
+so a dead harness cannot report four leaks that are really one broken probe.
+
+Measured, with real browser event semantics and a real `isComposing` flag:
+
+| the modelled site | result |
+| --- | --- |
+| checks `isComposing` | nothing sent - no leak |
+| does NOT check | **the page sent, carrying the ORIGINAL value** |
+
+So the extension's half is settled: it skips a composing Enter unilaterally,
+and that is safe **iff** the site agrees. The hazard is reproduced rather than
+hypothesised.
+
+**What automation cannot substitute for, precisely.** The remaining question is
+what chatgpt.com's OWN handler does, and it is not answerable this way for one
+reason: the real handler only exists on a page that only renders for a
+signed-in user. Route interception necessarily replaces the site's script with
+ours. Loading the real page needs credentials; the composer does not exist
+without them. **The manual step is: sign in, switch to a Japanese/Chinese/Korean
+IME, type a message, and press Enter to commit a candidate - then look at
+whether the message was sent.** If it was, the site does not consult
+`isComposing` and this is a live leak for IME users. Nothing short of that
+answers it, because everything short of it substitutes our script for theirs.
+
+### Gap 3 - the submit backstop, built and verified by breaking it first
+
+Before: the extension listened for `click` and `keydown` and nothing else,
+verified by enumerating every `addEventListener` in `packages/extension/src`.
+The probe demonstrated the consequence: `form.requestSubmit()` reached the page
+carrying an unmasked IBAN, in the same run where a plain Enter was intercepted.
+
+`SubmitIntent.kind` gains `'submit'`, all three adapters register a
+capture-phase `submit` listener, and `captureReplay` replays with
+`form.requestSubmit(submitter)` - carrying the original submitter so the site
+sees the same button, and re-entering under the PassThrough armed by
+`release()`.
+
+**PassThrough was NOT touched.** Its header calls it "the most dangerous object
+in the extension" and its one-shot behaviour is deliberate; loosening it to
+make a replay tidier is precisely the fail-open-by-convenience it exists to
+prevent.
+
+After: `requestSubmit()` is intercepted. Break-then-fix, in a real browser,
+with the positive control passing in both runs.
+
+**A defect the new tests caught in the new code.** The first version asked only
+`editableWithinRegion(form)` - and a site SEARCH BOX passed it, because
+`input[type="search"]` satisfies the composer invariants perfectly well. The
+backstop would have gated an unrelated form and blocked the page. It now
+anchors on `this.getComposer()` and requires `form.contains(composer.node)`:
+the only test that cannot drift from what the gate actually protects.
+
+### What the backstop does NOT close, and why
+
+**`form.submit()` is architecturally out of reach.** It is specified to submit
+WITHOUT firing a submit event - confirmed by observation, not by citing the
+spec: the probe attaches its own capture-phase spy and sees nothing. No
+listener architecture can catch it. The only mechanism that could is patching
+`HTMLFormElement.prototype.submit` in the PAGE world, which needs script
+injection - `web_accessible_resources` and a main-world script - that this
+extension deliberately does not have and whose absence is part of its
+permission claim. **Documented as a permanent limitation, not a to-do.**
+
+**A click on a control the extension does not recognise** stays open, and
+exploring the fix produced the most useful finding of this batch.
+
+The obvious design is: when NO send control resolves, treat a click on a
+composer-region control as a possible send. **That design is wrong, and the
+codebase already says why.** `chatgpt.ts:65-68`: the send selector "excludes
+the stop control: stopping a stream is not a send, and intercepting it would
+block the user from interrupting a response". And `chatgpt.ts:85-87`: send and
+stop are "the two states of the same slot ... while a response is streaming
+and no send button exists".
+
+So **"no send control resolves" is not an error state - it is every moment a
+response is streaming**, and a widening keyed on it would intercept the STOP
+button and prevent the user from interrupting a reply. The fix must key on "no
+SUBMIT control resolves, send or stop", which is per-adapter work, and its
+regression surface is exactly the streaming state - which cannot be reached
+without a signed-in session. **Still M11, now with a design constraint rather
+than a vague worry.**
+
+The probe pins all of this. Routes 4 and 5 are reported as KNOWN OPEN and do
+not fail the run; a reopening of route 2 does. Route 4 (a working send button
+present, site sends from elsewhere) is also the control for any future fix: it
+must catch route 5 without starting to catch route 4.
+
 ## Status after M10
 
 **M10 IS CLOSED, with two items explicitly left open** (below). The extension
@@ -5831,34 +5968,45 @@ problem. **A RELEASE BLOCKER, and it stays flagged through M11** (D53). "It
 compiles and the tests pass" is exactly the condition under which a wrong
 translation ships quietly.
 
-**OPEN 2 — a pointer send is not intercepted when the send control cannot be
-resolved** (D57). Carried in from M9 as "send-button selectors depend on an
-English aria-label". M10 MEASURED it, and both the name and the severity were
-wrong.
+**OPEN 2 — a send can still reach the site by three routes** (D57, D57a,
+D57b). Carried in from M9 as "send-button selectors depend on an English
+aria-label". M10 measured it, and both the name and the severity were wrong;
+one of the four routes has since been CLOSED and one proved impossible to
+close.
 
-It is not primarily an i18n defect. All three adapters `return` silently when a
-click does not match their send selector, so the page's own handler runs with
+| route | state |
+| --- | --- |
+| `form.requestSubmit()` / native submission | **CLOSED** by the submit backstop (D57b), verified break-then-fix in a real browser |
+| `form.submit()` | **PERMANENTLY OPEN.** Fires no submit event; no listener can see it. Closing it needs main-world script injection this extension deliberately cannot do |
+| a click on a control the selector does not recognise | OPEN. The obvious fix would intercept the STOP button, because "no send control resolves" is also every moment a response is streaming (D57b) |
+| an Enter with `isComposing` set | OPEN, and unresolved in either direction. The extension's half is settled by measurement; the site's half needs a signed-in IME session |
+
+It is not primarily an i18n defect. All three adapters `return` silently when
+a click does not match their send selector, so the page's own handler runs with
 the user's ORIGINAL text — a fail-OPEN path, with no other net behind it, and
-`healthCheck` blocks nothing. Locale is one route into that state; Gemini's
-ambiguity path (`gemini.ts:762`, where two candidates return an EMPTY list) and
-any ordinary markup change are others. A third route is an icon inside a nested
-shadow root within the button, which `closest` cannot see past (D57a). And the
-Enter path is NOT the safe harbour D57 first claimed: every adapter drops an
-Enter with `isComposing` set, which can only be true for an IME user - Japanese,
-Chinese, Korean (D57a).
+`healthCheck` blocks nothing.
 
-Measured live 2026-09-02: **there is no leak today.** Gemini resolves through a
-locale-independent clause in Turkish; ChatGPT has no English clause at all;
-Claude's sit behind two locale-independent ones. What the measurement did show
-is an ASYMMETRY — on Gemini an English user has two anchors and everyone else
-has one, and that one is a CSS class, the tier SPEC ranks least durable.
+Measured live 2026-09-02: **no locale-driven leak today.** Gemini resolves
+through a locale-independent clause in Turkish; ChatGPT has no English clause
+at all; Claude's sit behind two. What the measurement did show is an ASYMMETRY
+— on Gemini an English user has two anchors and everyone else has one, and that
+one is a CSS class, the tier SPEC ranks least durable.
 
-CARRIED to M11 rather than fixed, because the fix's dangerous failure mode is
-spurious firing during page load, and that can only be verified against
-signed-in sessions on two of the three sites. Landed instead, both zero-risk:
-`scripts/probe-send-locale.py` (the measurement) and
-`test/unrecognised-send-control.test.ts` (the gap pinned in executable form,
-written so its assertions FAIL when the fix lands).
+Everything closeable by a listener has now been closed. What remains open
+remains open for a stated reason, not for want of effort:
+
+- **`form.submit()`** cannot be caught by any listener. Permanent, and a
+  consequence of refusing main-world script injection.
+- **The unrecognised-control click** cannot be fixed the obvious way, because
+  "no send control resolves" is also every moment a response is streaming, and
+  a widening keyed on it would intercept the STOP button (D57b).
+- **The `isComposing` Enter** is settled on the extension's side and unsettled
+  on the site's, and settling the site's side needs a signed-in IME session.
+
+Landed for it: `scripts/probe-send-locale.py` (the locale measurement),
+`scripts/probe-submit-routes.py` (all five routes, in a real browser, now a
+regression gate), `test/unrecognised-send-control.test.ts` and
+`test/submit-backstop.test.ts`.
 
 **OPEN 3 — "screen-reader tested" is half done** (D56). The accessibility tree
 is audited in both pages and both colour schemes; nobody has used these pages

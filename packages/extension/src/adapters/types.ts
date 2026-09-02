@@ -176,7 +176,20 @@ export type WriteResult =
  * usable as a check ON getComposer() rather than a restatement of it.
  */
 export interface SubmitIntent {
-  readonly kind: 'key' | 'button';
+  /**
+   * `submit` is the BACKSTOP, not a third equal path.
+   *
+   * `key` and `button` intercept the two ways a person sends. `submit` catches
+   * a form submission that neither saw - `form.requestSubmit()` from page
+   * script, or a native submission by a control the send selector does not
+   * recognise. It is deliberately last: when the click path fires it calls
+   * `stopPropagation`, so the site never submits and no submit event exists to
+   * catch.
+   *
+   * It cannot catch `form.submit()`, which fires NO submit event at all. See
+   * ARCHITECTURE.md D57b.
+   */
+  readonly kind: 'key' | 'button' | 'submit';
   readonly event: Event;
   /** The editable node this event would actually submit, or null if undecidable. */
   readonly originComposer: HTMLElement | null;

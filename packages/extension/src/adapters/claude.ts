@@ -41,6 +41,7 @@ import { readEditableText, writeEditableText } from './text.js';
 import type { InputWitness } from './binding.js';
 import {
   isAdmissibleComposer,
+  originComposerOfSubmitEvent,
   originComposerOfButtonEvent,
   originComposerOfKeyEvent,
   recordIntent,
@@ -384,11 +385,50 @@ export class ClaudeAdapter implements SiteAdapter {
     // Capture phase, so the extension sees the event before the page's own
     // handler does. A bubble-phase listener would run after the site had
     // already sent the message.
+    
+    /**
+     * THE BACKSTOP. A form submission neither other path saw.
+     *
+     * Reached by `form.requestSubmit()` from page script, and by a native
+     * submission from a control the send selector does not recognise. NOT
+     * reached in the ordinary case: the click path calls `stopPropagation`, so
+     * the site never gets to submit and no submit event is ever dispatched.
+     *
+     * It cannot catch `form.submit()`, which by specification fires no submit
+     * event at all - no listener anywhere can (D57b).
+     */
+    const onFormSubmit = (event: Event): void => {
+      const form = event.target;
+      if (!(form instanceof HTMLFormElement)) return;
+      // THE FORM MUST CONTAIN *THE* COMPOSER, not merely something editable.
+      //
+      // The first version asked `editableWithinRegion(form)` alone, and a site
+      // SEARCH BOX passed it - `input[type="search"]` satisfies the composer
+      // invariants perfectly well. That would have gated an unrelated form and
+      // blocked the page. Anchoring on the adapter's own resolved composer is
+      // the only test that cannot drift from what the gate actually protects.
+      const resolved = this.getComposer();
+      if (!resolved.ok || !form.contains(resolved.value.node)) return;
+      const origin = originComposerOfSubmitEvent(form);
+      if (origin === null) return;
+      callback({
+        kind: 'submit',
+        event,
+        originComposer: origin,
+        suppress: () => {
+          event.preventDefault();
+          event.stopPropagation();
+        },
+      });
+    };
+
     this.document.addEventListener('keydown', onKeyDown, { capture: true });
     this.document.addEventListener('click', onClick, { capture: true });
+    this.document.addEventListener('submit', onFormSubmit, { capture: true });
     return () => {
       this.document.removeEventListener('keydown', onKeyDown, { capture: true });
       this.document.removeEventListener('click', onClick, { capture: true });
+      this.document.removeEventListener('submit', onFormSubmit, { capture: true });
     };
   }
 

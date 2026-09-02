@@ -43,6 +43,8 @@ export const FR: Catalogue = {
   'panel.degraded.noReason':
     "L'extension a signalé un problème sans préciser lequel.",
 
+  // Layout direction, not a translation. See catalogue.ts.
+  'ui.dir': 'ltr',
   'popup.title': 'PrivacyShield',
   'popup.tab.status': 'État',
   'popup.tab.quickRedact': 'Masquage rapide',

@@ -50,8 +50,31 @@ export function uiLocale(): string {
  * and wrong for every Arabic-speaking user, who would have got a
  * left-to-right panel welded in place by our own stylesheet.
  */
-export function isRtl(locale: string = uiLocale()): boolean {
-  const primary = locale.toLowerCase().split(/[-_]/u)[0] ?? '';
+export function isRtl(locale?: string): boolean {
+  // Direction comes from the CATALOGUE THAT LOADED, not from the browser's
+  // preference. The two diverge because of the review gate (i18n/reviewed.ts):
+  // an unreviewed locale is dropped and chrome falls back to English, so a
+  // browser set to Arabic renders English strings. Before this, isRtl() asked
+  // getUILanguage(), said `rtl`, and produced ENGLISH TEXT WELDED INTO AN RTL
+  // LAYOUT - measured on the options page, not hypothesised.
+  //
+  // `@@bidi_dir` is not the fix: it follows the UI language too. An ordinary
+  // message key goes through chrome's normal fallback, so it follows the words.
+  //
+  // An explicit argument still wins, for the playground and for tests.
+  if (locale === undefined) {
+    try {
+      // `ui.dir` and NOT `@@bidi_dir`: the predefined message follows the
+      // browser UI language, which is the wrong question here. See the note on
+      // the key in catalogue.ts.
+      const dir = chrome.i18n.getMessage('ui_dir');
+      if (dir === 'rtl') return true;
+      if (dir === 'ltr') return false;
+    } catch {
+      // Not in an extension context. Fall through to the language tag.
+    }
+  }
+  const primary = (locale ?? uiLocale()).toLowerCase().split(/[-_]/u)[0] ?? '';
   return RTL_LANGUAGES.has(primary);
 }
 

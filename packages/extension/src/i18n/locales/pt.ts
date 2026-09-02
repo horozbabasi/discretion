@@ -41,6 +41,8 @@ export const PT: Catalogue = {
   'panel.degraded.couldNotFind': 'Não encontrado: $1.',
   'panel.degraded.noReason': 'A extensão relatou um problema sem dizer qual era.',
 
+  // Layout direction, not a translation. See catalogue.ts.
+  'ui.dir': 'ltr',
   'popup.title': 'PrivacyShield',
   'popup.tab.status': 'Status',
   'popup.tab.quickRedact': 'Mascaramento rápido',

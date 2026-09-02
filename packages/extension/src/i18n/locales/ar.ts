@@ -84,6 +84,8 @@ export const AR: Catalogue = {
   'panel.degraded.couldNotFind': 'تعذّر العثور على: $1.',
   'panel.degraded.noReason': 'أبلغت الإضافة عن مشكلة دون أن تحدد ما هي.',
 
+  // Layout direction, not a translation. See catalogue.ts.
+  'ui.dir': 'rtl',
   'popup.title': 'PrivacyShield',
   'popup.tab.status': 'الحالة',
   'popup.tab.quickRedact': 'إخفاء سريع',

@@ -77,7 +77,7 @@ fi
 
 step "the built package is complete"
 for f in manifest.json content.js service-worker.js offscreen.js popup.html options.html \
-         pages.css _locales/en/messages.json _locales/ar/messages.json \
+         pages.css _locales/en/messages.json \
          "models/jiting/xlm-roberta-base-ner-hrl_onnx/onnx/model_quantized.onnx"; do
   if [ -s "packages/extension/build/$f" ]; then ok "$f"; else fail "missing or empty: $f"; fi
 done

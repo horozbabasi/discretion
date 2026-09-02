@@ -54,6 +54,7 @@ def main() -> int:
     out_dir = Path(args.out) if args.out else Path(tempfile.mkdtemp(prefix="ps-options-"))
     out_dir.mkdir(parents=True, exist_ok=True)
     failures: list[str] = []
+    not_run: list[str] = []
     profile = Path(tempfile.mkdtemp(prefix="ps-profile-"))
 
     with sync_playwright() as p:
@@ -204,35 +205,83 @@ def main() -> int:
             ok("it was not stored")
 
         print("\n-- localisation --")
+        # THE REVIEW GATE CHANGES WHAT THIS CAN ASSERT. A locale now ships
+        # only once a speaker has signed off its safety-critical strings;
+        # everything unreviewed is dropped and chrome.i18n falls back to
+        # English. So asking for --locale ar renders an ENGLISH page, and the
+        # old assertions ("dir must be rtl", "the title must not be English")
+        # would fail on a correct build.
+        #
+        # Deleting them would be worse: they are the only browser-level check
+        # that RTL layout and translation loading work at all. The shipped set
+        # is read from the build instead, and the checks report NOT RUN when
+        # their subject is absent - a missing check must not read as a passing
+        # one.
+        shipped = {d.name for d in (BUILD / "_locales").iterdir() if d.is_dir()}
+        requested = args.locale.replace("-", "_")
+        locale_shipped = requested in shipped or requested.split("_")[0] in shipped
+
         html_dir = page.get_attribute("html", "dir") or ""
-        expect_rtl = args.locale.split("-")[0] in {"ar", "he", "fa", "ur"}
-        want = "rtl" if expect_rtl else "ltr"
-        if html_dir != want:
-            failures.append(f"dir is {html_dir!r}, expected {want!r}")
-            fail(f"dir={html_dir!r}")
-        else:
-            ok(f"dir={html_dir}")
         title = page.inner_text("#title").strip()
+        print(f"  shipped locales: {sorted(shipped)}")
         print(f"  title: {title!r}")
-        if args.locale != "en" and title == "PrivacyShield settings":
-            failures.append(f"locale {args.locale} rendered the English title")
-            fail("no translation applied")
-        elif len(title) == 0:
+
+        if len(title) == 0:
             failures.append("the title is empty")
             fail("empty title")
         else:
             ok("title has text")
 
+        if not locale_shipped:
+            not_run.append(
+                f"RTL layout and translation loading for {args.locale!r} - that locale is "
+                f"not in the build (unreviewed, see docs/translation-review/), so the page "
+                f"correctly fell back to English"
+            )
+            # What CAN still be checked: the fallback must be coherent. English
+            # text in an RTL layout was a real defect this found - isRtl() read
+            # the browser UI language rather than the locale that loaded.
+            if html_dir != "ltr":
+                failures.append(f"fell back to English but dir={html_dir!r}, not ltr")
+                fail(f"dir={html_dir!r} with English text - direction is not following the words")
+            else:
+                ok("English fallback renders ltr, so direction follows the loaded locale")
+        else:
+            expect_rtl = args.locale.split("-")[0] in {"ar", "he", "fa", "ur"}
+            want = "rtl" if expect_rtl else "ltr"
+            if html_dir != want:
+                failures.append(f"dir is {html_dir!r}, expected {want!r}")
+                fail(f"dir={html_dir!r}")
+            else:
+                ok(f"dir={html_dir}")
+            if args.locale != "en" and title == "PrivacyShield settings":
+                failures.append(f"locale {args.locale} rendered the English title")
+                fail("no translation applied")
+            else:
+                ok("a translated title was rendered")
+
         page.screenshot(path=str(out_dir / f"options-{args.locale}.png"), full_page=True)
         context.close()
 
     print(f"\nscreenshots: {out_dir}")
+    if not_run:
+        # M10's convention, added after a run printed "All popup checks passed"
+        # while a requested check was silently absent. A skipped check has to
+        # be visible, or a shrinking suite looks like a passing one.
+        print()
+        print(f"NOT RUN ({len(not_run)}):")
+        for skipped in not_run:
+            print(f"  - {skipped}")
     if failures:
         print(f"\nFAILED ({len(failures)}):")
         for failure in failures:
             print(f"  - {failure}")
         return 1
-    print("\nAll options checks passed.")
+    print()
+    # The summary line carries the caveat: a reader who sees only the last
+    # line must not read a partial run as a complete one.
+    print("All options checks passed." if not not_run
+          else f"All options checks that RAN passed - {len(not_run)} not run, listed above.")
     return 0
 
 

@@ -47,6 +47,8 @@ export const TR: Catalogue = {
   'panel.degraded.couldNotFind': 'Bulunamadı: $1.',
   'panel.degraded.noReason': 'Uzantı bir sorun bildirdi ama ne olduğunu söylemedi.',
 
+  // Layout direction, not a translation. See catalogue.ts.
+  'ui.dir': 'ltr',
   'popup.title': 'PrivacyShield',
   'popup.tab.status': 'Durum',
   'popup.tab.quickRedact': 'Hızlı maskeleme',

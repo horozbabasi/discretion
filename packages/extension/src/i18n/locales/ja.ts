@@ -44,6 +44,8 @@ export const JA: Catalogue = {
   'panel.degraded.couldNotFind': '見つかりません: $1。',
   'panel.degraded.noReason': '拡張機能が問題を報告しましたが、内容は不明です。',
 
+  // Layout direction, not a translation. See catalogue.ts.
+  'ui.dir': 'ltr',
   'popup.title': 'PrivacyShield',
   'popup.tab.status': 'ステータス',
   'popup.tab.quickRedact': 'クイックマスク',

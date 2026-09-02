@@ -36,6 +36,12 @@ import { TR, TR_ENTITIES } from './tr.js';
 // catalogues and the flattener that turns them into messages.json.
 export { toMessages } from '../toMessages.js';
 
+// The review gate travels with the catalogues for the same reason: the build
+// bundles this one module and needs both the translations and the rule about
+// which of them may ship.
+export { reviewStateOf, safetyCriticalDigest, SAFETY_CRITICAL_KEYS, REVIEW_SIGNOFFS } from '../reviewed.js';
+export type { ReviewSignoff, ReviewState } from '../reviewed.js';
+
 export interface Locale {
   /** The `_locales/` directory name, which is also the chrome.i18n locale. */
   readonly dir: string;

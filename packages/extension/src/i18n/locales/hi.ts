@@ -42,6 +42,8 @@ export const HI: Catalogue = {
   'panel.degraded.noReason':
     'एक्सटेंशन ने समस्या बताई, पर यह नहीं बताया कि समस्या क्या है।',
 
+  // Layout direction, not a translation. See catalogue.ts.
+  'ui.dir': 'ltr',
   'popup.title': 'PrivacyShield',
   'popup.tab.status': 'स्थिति',
   'popup.tab.quickRedact': 'तुरंत छिपाएँ',

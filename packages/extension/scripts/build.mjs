@@ -158,21 +158,42 @@ await build({
     rollupOptions: { external: [] },
   },
 });
-const { LOCALES, toMessages } = await import(pathToFileURL(LOCALES_TMP).href);
+const { LOCALES, toMessages, reviewStateOf } = await import(pathToFileURL(LOCALES_TMP).href);
 rmSync(LOCALES_TMP, { force: true });
 
 // The flattening itself lives in src/i18n/toMessages.ts, where it is
 // typechecked and unit-tested. All that belongs here is the file writing.
 const localesRoot = join(OUT, '_locales');
 rmSync(localesRoot, { recursive: true, force: true });
-const localesWritten = LOCALES.map((locale) => {
-  const messages = toMessages(locale.catalogue, locale.entities);
-  const dir = join(localesRoot, locale.dir);
-  mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, 'messages.json'), `${JSON.stringify(messages, null, 2)}
+// THE REVIEW GATE. A locale ships only if a speaker has signed off its
+// safety-critical strings AND the digest still matches what they read. See
+// src/i18n/reviewed.ts for why an unreviewed locale is dropped rather than
+// shipped: chrome.i18n falls back to English, and an English panel is honest
+// where a confidently mistranslated "Mask this" is not.
+const localeDecisions = LOCALES.map((locale) => ({
+  locale,
+  state: reviewStateOf(locale.dir, locale.catalogue),
+}));
+const dropped = localeDecisions.filter((d) => !d.state.shipped);
+
+const localesWritten = localeDecisions
+  .filter((d) => d.state.shipped)
+  .map(({ locale }) => {
+    const messages = toMessages(locale.catalogue, locale.entities);
+    const dir = join(localesRoot, locale.dir);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, 'messages.json'), `${JSON.stringify(messages, null, 2)}
 `, 'utf8');
-  return { dir: locale.dir, keys: Object.keys(messages).length };
-});
+    return { dir: locale.dir, keys: Object.keys(messages).length };
+  });
+
+if (dropped.length > 0) {
+  // Loud, and on every build. A dropped locale is a shipped decision, not a
+  // detail: users of those languages get an English UI until someone reads
+  // the translation.
+  console.log(`  UNREVIEWED, NOT SHIPPED: ${dropped.map((d) => `${d.locale.dir} (${d.state.reason})`).join(', ')}`);
+  console.log('  -> see docs/translation-review/ ; these locales fall back to English');
+}
 
 const manifest = JSON.parse(readFileSync(join(ROOT, 'src', 'manifest.json'), 'utf8'));
 // The store listing is localised through the same catalogues as the UI. Chrome
@@ -239,7 +260,14 @@ const required = [
   'options.js',
   'pages.css',
   '_locales/en/messages.json',
-  '_locales/ar/messages.json',
+  // Every locale the REVIEW GATE let through, derived rather than listed.
+  // This used to name `ar` outright, as a stand-in for "an RTL locale
+  // shipped". Once unreviewed locales began being dropped that assertion
+  // failed on a correct build - the right kind of failure to get from a
+  // hardcoded expectation. The fix is to check what the gate decided, not to
+  // delete the check: a locale that passed review and then failed to WRITE is
+  // still a broken build.
+  ...localesWritten.map((l) => `_locales/${l.dir}/messages.json`),
 ];
 const missing = required.filter((f) => {
   try {

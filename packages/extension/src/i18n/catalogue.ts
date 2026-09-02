@@ -113,6 +113,25 @@ export const EN = {
   'panel.degraded.noReason': 'The extension reported a problem without saying what it was.',
 
   // ── the popup ──
+  /**
+   * Layout direction of the catalogue that actually loaded: 'ltr' or 'rtl'.
+   *
+   * NOT A TRANSLATION - a control value, and the only key here that a reviewer
+   * should not reword.
+   *
+   * It exists because `chrome.i18n.getMessage('@@bidi_dir')` answers the wrong
+   * question. `@@bidi_dir` follows the BROWSER UI LANGUAGE, so a browser set to
+   * Arabic reports 'rtl' even when `_locales/ar` was not shipped and every
+   * string on the page came from `_locales/en` - English text welded into an
+   * RTL layout. Measured, not assumed: that is exactly what the options page
+   * rendered once the review gate began dropping unreviewed locales.
+   *
+   * An ordinary message key goes through chrome's normal lookup, which falls
+   * back to `default_locale` along with everything else, so direction follows
+   * the WORDS the reader is actually seeing.
+   */
+  'ui.dir': 'ltr',
+
   'popup.title': 'PrivacyShield',
   'popup.tab.status': 'Status',
   'popup.tab.quickRedact': 'Quick Redact',

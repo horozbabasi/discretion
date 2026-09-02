@@ -281,100 +281,85 @@ finding:
 
 ## Current verification status
 
-**All three adapters VERIFIED-WORKING live, 2026-08-29.** Dated per D35: a
-Claim B result is evidence about the day it was taken, and "verified" decays.
+**Mixed, and the mix is the point.** Dated per D35: a Claim B result is
+evidence about the day it was taken, and "verified" decays.
 
-| | Claim A (logic) | Claim B (live) | Verified in state | Date |
-| --- | --- | --- | --- | --- |
-| Claude | verified — 20 fixture tests | **WORKING** | composer idle | 2026-08-29 |
-| ChatGPT | verified — 23 fixture tests | **WORKING** | composer **idle, not generating** | 2026-08-29 |
-| Gemini | verified — 40 fixture tests | **WORKING** | composer **non-empty** | 2026-08-29 |
+| | Claim A (logic) | Claim B (live) | Method | State verified in | Date |
+| --- | --- | --- | --- | --- | --- |
+| Claude | verified — 20 fixture tests | **FAILING** | human, real account | empty chat, and populated | 2026-09-02 |
+| ChatGPT | verified — 23 fixture tests | **WORKING, end to end** | human, real account | populated, real send | 2026-09-02 |
+| Gemini | verified — 40 fixture tests | **WORKING, end to end** | harness | prefilled composer | 2026-09-02 |
 
-**The state each was verified in is part of the result, not a footnote.** Two
-of the three report DEGRADED in states where an element is *correctly* absent:
+### The three methods are not equivalent evidence
 
-- **ChatGPT** mid-generation — the composer is disabled, so `isEditableSurface`
-  rejects it.
-- **Gemini** with an **empty composer** — no send control is rendered at all.
-  An empty composer is the default state of every page load, so Gemini reports
-  DEGRADED to every user until they type.
+- **Harness** (`scripts/verify-live-site.py`) — repeatable on demand, exit code
+  0, and it re-runs whenever anyone wants it. Gemini only: it is the one site
+  that serves a real editor without login.
+- **Human, real account** — a person with real credentials, on the real site,
+  looking at the screen. Not repeatable by CI, and a point-in-time observation
+  rather than a standing check. It is the STRONGEST evidence available for a
+  site that cannot be automated, and it is the only kind available for Claude
+  and ChatGPT.
+- Automating the two logged-in sites was attempted and **abandoned
+  deliberately**, not because it was hard. claude.ai serves a Cloudflare
+  interstitial ("Performing security verification… protect against malicious
+  bots") in front of login to an automation-launched browser. Getting an
+  automated session past that means making automation look like something it
+  is not, which is the wrong kind of fix; ARCHITECTURE.md D49 records the
+  reasoning.
 
-Neither is an adapter defect. Both are the health model lacking the distinction
-between *"I cannot find this element"* and *"this element is not applicable in
-the current state"* — ARCHITECTURE.md D34v, an M9 blocker.
+### ChatGPT — CONFIRMED WORKING END TO END, 2026-09-02
 
-### Gemini — four wrong diagnoses, and what actually resolved it
+The strongest result this project has. On the real site, in a real account:
+the paste guard fired, the review panel showed exposure 51/100 with the IBAN
+validated at 95%, "Protect and send" was clicked, and **the masked surrogate
+was released into a real sent message**. `GB54BLXX98986991734550` is in the
+conversation; `GB33BUKB20201555555555` never reached the page.
 
-Recorded because the sequence is worth more than the outcome. **The adapter was
-correct throughout; no selector, `CONTROL_SELECTOR` or walk change was ever
-needed.**
+That is every step of the gate — intercept, review, mask, certify, verified
+write, release — observed working against a real ProseMirror composer with a
+real send. It also closes D43a for ChatGPT: the write survived ProseMirror's
+reconciliation well enough to be sent.
 
-| # | Diagnosis | Why it was wrong |
-| --- | --- | --- |
-| 1 | stale marker selectors | markers were fine — the element was absent |
-| 2 | wrong region; walk stopped at the tools menu | region was fine — the element was absent |
-| 3 | icon is `arrow_upward`, not `send` | true, and irrelevant — no control existed to carry it |
-| 4 | not exposed as a control by the site | landing-page state only; on a conversation page it is a normal control |
+### Claude — CONFIRMED LIVE DEFECT, 2026-09-02
 
-Diagnoses 1 and 2 were corrected by adding instrument visibility. **3 and 4
-were not** — they were made with an instrument that could already see
-everything it needed. What was missing was the **page state**: every reading had
-been taken on an empty composer, the one state in which Gemini renders no send
-control.
+Two failures, both **fail-closed**: nothing was sent either time, and no value
+leaked. This is the machinery working; the adapter is what is broken.
 
-**The rule this produces: before diagnosing an absent element, establish that
-the element should be present in the state you are looking at.** Four rounds
-went to answering *"why can we not find it"* when *"is it there at all"* had
-never been asked.
+**1. Fresh empty chat — the composer does not resolve at all.**
+`Could not find: composer`. Every candidate failed the SAME invariant:
 
-### Earlier Gemini readings — PRE-FIX, INVALID, kept deliberately
+```
+attribute/claude/composer-role-textbox : not-aria-hidden
+class/claude/composer-prosemirror      : not-aria-hidden
+```
 
-Two readings preceded the one above. Both are wrong, and both are kept because
-**the record of what a bad instrument reported is what makes the fix legible.**
+So candidates ARE found — the selectors match elements — and are then rejected
+because the element sits inside an `aria-hidden="true"` subtree. The invariant
+is a blunt `element.closest('[aria-hidden="true"]') === null`, written to
+reject inert duplicates, and on the current claude.ai it is rejecting the real
+composer.
 
-| Reading | Reported | Why invalid |
-| --- | --- | --- |
-| 1st (2026-08-28) | composer `not-found`, all 5 strategies 0, send-button 0 | Taken at `document_idle`, before the Angular app painted. The diagnostic emitted only on a change of `health.ok`, so this shell snapshot then stood forever. |
-| 2nd (2026-08-28) | 0 shadow roots, 0 iframes, `mat-icon` likely-closed, every editable probe 0 except `textarea`=1, **`button`=0** | Same un-painted page. `button: 0` on a chat UI was the tell, and it was what exposed the defect. |
-| 3rd (2026-08-29) | composer resolves; `READING: withheld — page had not painted` printed **alongside** 6 buttons, a rich-textarea, 34 custom elements | The paint gate used an invented 400-element floor as a proxy and contradicted its own probe data. The composer/strategy rows are valid; **the READING line and everything downstream of it are not**. |
-| 4th (2026-08-29) | `READING: ...no strategy matched one. THE SELECTORS ARE STALE` on a page where the composer **had resolved** | The READING line was keyed on the editable PROBE, never on the resolver, so it fired generically on any health failure. Health had failed for the **send control**; the composer was fine. The probe and editable tables are valid; **the READING line is not**. |
+**2. Populated retry — detection worked, the SEND was refused.**
+The paste guard fired and the panel showed exposure 51/100 with the IBAN
+validated, so `getComposer()` resolved. The send was then refused with:
 
-**The 3rd and 4th readings disagreed with each other about the same unchanged
-composer.** That disagreement is what exposed D34g — and it is the reason
-readings are kept rather than deleted.
+> The submit event did not resolve to exactly one editable element, so which
+> text is about to be sent cannot be established.
 
-The second reading produced a confident, specific and completely wrong
-conclusion — that Gemini had migrated to a native textarea. It is the clearest
-evidence in this repository for why a reading must carry its conditions:
-nothing in that output said "this page had not painted", so nothing stopped it
-being believed.
+That is `verifyBinding`'s `undecidable`, meaning `originComposerOfKeyEvent`
+found no editable on the key event's composed path — a DIFFERENT failure from
+(1), on a page state where resolution had already succeeded.
 
-Both defects are fixed. Readings now carry `readyState`, elapsed time, attempt
-number and DOM element count; below 400 elements the block refuses to draw a
-conclusion; re-checks run at 400 ms → 12 s; and the console re-emits on a change
-of *verdict* rather than only of `health.ok`.
+**These are distinct from D43a.** D43a is about whether a real editor accepts
+and keeps the masked write. Neither Claude failure reaches the write: one
+cannot find the composer, the other cannot bind the submit to it. D43a remains
+untested for Claude because the run never gets that far.
 
-### ChatGPT — earlier readings, retained as D34i evidence
-
-Two earlier painted readings showed the composer failing. Both are now
-understood as the composer in a **disabled** state, not as selector rot:
-
-| | Reading A | Reading B | Idle reading |
-| --- | --- | --- | --- |
-| composer | visible contenteditable, failing no invariants | no contenteditable; 4 surfaces, all file inputs + a **DISABLED** textarea | **RESOLVED** by `chatgpt/composer-id` |
-| strategies | 0 | `composer-in-composer-form` matched 1, admitted 0 | **all four match** |
-| health | failing | failing | **ok, no failures** |
-
-`isEditableSurface` returns false for a disabled textarea, so the `editable`
-invariant rejects it. That is why B showed *found-and-rejected* rather than
-*not-found* — and **selector rot cannot produce `matched 1`**.
-
-**Why the disabled state only ever appeared right after a page load:** the
-re-checks run 400 ms → 12 s from load and then hand over to a 15-second poll. A
-generation starting after that window is observed only if a poll happens to land
-inside it. Generations last seconds. See ARCHITECTURE.md D34i-a — the health
-model cannot currently observe the state the composer spends most of its time
-in.
+**Not diagnosed from a fixture.** Both need the real DOM, and the fixtures
+cannot supply it — `composer.html` is a snapshot that still passes its 20
+tests, which is precisely the point: the fixture and the live site have
+diverged and only the live site says so.
 
 ## The fixture boundary — what two live failures proved
 

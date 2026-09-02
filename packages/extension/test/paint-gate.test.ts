@@ -53,10 +53,12 @@ describe('paint gate', () => {
         {
           tag: 'div', type: null, visible: true, editable: true, disabled: false,
           readOnly: false, textLength: 0, attributes: [], ancestors: [], failsInvariants: [],
+          ariaHiddenAncestor: null,
         },
         {
           tag: 'textarea', type: null, visible: false, editable: true, disabled: false,
           readOnly: false, textLength: 0, attributes: [], ancestors: [], failsInvariants: [],
+          ariaHiddenAncestor: null,
         },
       ],
     });
@@ -101,6 +103,7 @@ describe('paint gate', () => {
             {
               tag: 'textarea', type: null, visible: true, editable: true, disabled: false,
               readOnly: false, textLength: 0, attributes: [], ancestors: [], failsInvariants: [],
+          ariaHiddenAncestor: null,
             },
           ],
         }),

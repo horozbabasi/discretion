@@ -154,9 +154,50 @@ export class InputWitness {
   }
 }
 
+/**
+ * One entry of a submit event's composed path, described structurally.
+ *
+ * Tags, attribute NAMES and a yes/no - never text, never attribute values.
+ * The same rule the rest of the diagnostics follow, for the same reason: this
+ * reaches a console and a bug report.
+ */
+export interface SubmitPathEntry {
+  readonly tag: string;
+  readonly attributes: readonly string[];
+  readonly editable: boolean;
+}
+
+let lastPath: readonly SubmitPathEntry[] = [];
+let lastPathAt = 0;
+
+/**
+ * The composed path of the most recent submit attempt.
+ *
+ * Exists because `undecidable` - "the submit event did not resolve to exactly
+ * one editable element" - is a refusal with no evidence attached. It says the
+ * path held no editable and nothing about what it DID hold, which is the only
+ * thing that would let anyone write the fix. Live on claude.ai, 2026-09-02,
+ * that refusal appeared on a page where `getComposer()` had already succeeded,
+ * and there was no way to see why.
+ *
+ * Bounded, structural, and overwritten each attempt: it is a snapshot for the
+ * next diagnostic, not a log.
+ */
+export function lastSubmitPath(): { entries: readonly SubmitPathEntry[]; atMs: number } {
+  return { entries: lastPath, atMs: lastPathAt };
+}
+
 /** The nearest editable element on an event's composed path, if any. */
 function editableOnPath(event: Event): HTMLElement | null {
-  for (const node of event.composedPath()) {
+  const path = event.composedPath();
+  lastPathAt = Date.now();
+  lastPath = path.slice(0, 14).map((node) => ({
+    tag: node instanceof Element ? node.tagName.toLowerCase() : String((node as object).constructor.name),
+    attributes: node instanceof Element ? Array.from(node.attributes).map((a) => a.name) : [],
+    editable: isEditableSurface(node as Node),
+  }));
+
+  for (const node of path) {
     if (isEditableSurface(node as Node)) return node as HTMLElement;
   }
   return null;

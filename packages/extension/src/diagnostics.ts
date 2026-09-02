@@ -98,6 +98,20 @@ export interface EditableCandidate {
   readonly ancestors: readonly string[];
   /** Composer invariants this candidate fails, if any. */
   readonly failsInvariants: readonly string[];
+  /**
+   * The nearest ancestor carrying `aria-hidden="true"`, if any.
+   *
+   * `not-aria-hidden` is the invariant that rejected EVERY candidate on the
+   * live claude.ai, and the reading said only that it failed. Which ancestor
+   * carries the attribute, and what that ancestor is, is the difference
+   * between "the site marks its composer inert" and "our check is walking too
+   * far up" - and nothing in the previous output distinguished them.
+   */
+  readonly ariaHiddenAncestor: {
+    readonly tag: string;
+    readonly depth: number;
+    readonly attributes: readonly string[];
+  } | null;
 }
 
 export interface EnvironmentForensics {
@@ -377,6 +391,20 @@ function ancestorChain(element: Element): string[] {
  * This is what answers "is that lone textarea actually the composer, or a
  * hidden form field?" - a hidden field and a real composer both count as 1.
  */
+/** Which ancestor makes this element aria-hidden, and how far up it is. */
+function describeAriaHiddenAncestor(
+  element: Element,
+): { tag: string; depth: number; attributes: readonly string[] } | null {
+  let depth = 0;
+  for (let node: Element | null = element; node !== null; node = node.parentElement) {
+    if (node.getAttribute('aria-hidden') === 'true') {
+      return { tag: node.tagName.toLowerCase(), depth, attributes: attributeNames(node) };
+    }
+    depth += 1;
+  }
+  return null;
+}
+
 function collectEditableCandidates(doc: Document): EditableCandidate[] {
   const found = deepQueryAll<HTMLElement>(doc, 'textarea, input, [contenteditable]');
   return found.slice(0, 12).map((element) => {
@@ -398,6 +426,7 @@ function collectEditableCandidates(doc: Document): EditableCandidate[] {
       failsInvariants: (COMPOSER_INVARIANTS as readonly Invariant<Element>[])
         .filter((inv) => !inv.holds(element))
         .map((inv) => inv.id),
+      ariaHiddenAncestor: describeAriaHiddenAncestor(element),
     };
   });
 }

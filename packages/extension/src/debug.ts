@@ -19,6 +19,8 @@
  * this module only formats what it is given.
  */
 
+import { lastSubmitPath } from './adapters/index.js';
+import type { SubmitPathEntry } from './adapters/index.js';
 import type { AdapterDiagnostic, EnvironmentForensics } from './diagnostics.js';
 
 const STORAGE_KEY = 'debugLogging';
@@ -418,10 +420,66 @@ function renderForensics(f: EnvironmentForensics, diagnostic: AdapterDiagnostic)
         ancestors: c.ancestors.slice(0, 4).join(' < '),
         attributes: c.attributes.join(' '),
         failsInvariants: c.failsInvariants.join(', '),
+        ariaHiddenBy: c.ariaHiddenAncestor
+          ? `${c.ariaHiddenAncestor.tag} +${String(c.ariaHiddenAncestor.depth)}`
+          : '',
       })),
     );
+
+    // Printed SEPARATELY and loudly, because it is the difference between two
+    // opposite conclusions. `not-aria-hidden` failing on every candidate can
+    // mean the site marks its composer inert, or that our check walks too far
+    // up and catches a wrapper that hides nothing. The reading that only says
+    // "not-aria-hidden" cannot distinguish them, and that is the reading the
+    // live claude.ai failure produced.
+    const hidden = f.editableCandidates.filter((c) => c.ariaHiddenAncestor !== null);
+    if (hidden.length > 0) {
+      console.warn(
+        `${String(hidden.length)} editable(s) sit inside an aria-hidden="true" subtree. ` +
+          'The ancestor that carries it, and its own attributes:',
+      );
+      console.table(
+        hidden.map((c) => ({
+          editable: c.tag,
+          hiddenBy: c.ariaHiddenAncestor?.tag ?? '',
+          levelsUp: c.ariaHiddenAncestor?.depth ?? 0,
+          ancestorAttributes: (c.ariaHiddenAncestor?.attributes ?? []).join(' '),
+        })),
+      );
+      console.warn(
+        'If levelsUp is 0 the element itself is marked hidden. If it is large, ' +
+          'the attribute is on a distant wrapper and the invariant is very likely ' +
+          'rejecting a live composer rather than an inert duplicate.',
+      );
+    }
   } else {
     console.warn('NO editable surface anywhere, light DOM or shadow.');
+  }
+
+  // The last submit attempt, if there has been one this session.
+  const submit = lastSubmitPath();
+  if (submit.entries.length > 0) {
+    const editableOnPath = submit.entries.filter((e: SubmitPathEntry) => e.editable).length;
+    console.log(
+      `last submit attempt: ${String(submit.entries.length)} node(s) on the composed path, ` +
+        `${String(editableOnPath)} editable`,
+    );
+    console.table(
+      submit.entries.map((e: SubmitPathEntry, i: number) => ({
+        depth: i,
+        tag: e.tag,
+        editable: e.editable,
+        attributes: e.attributes.join(' '),
+      })),
+    );
+    if (editableOnPath === 0) {
+      console.warn(
+        'NO editable on the submit path. That is what produces "the submit event did ' +
+          'not resolve to exactly one editable element" - the send is refused because ' +
+          'which text is about to be sent cannot be established. The table above is ' +
+          'what the event actually passed through.',
+      );
+    }
   }
 
   if (f.controlCandidates.length > 0) {

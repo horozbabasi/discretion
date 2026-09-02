@@ -6181,6 +6181,73 @@ regression.
 how long it takes and not what it finds. The detection numbers above stand
 regardless.
 
+## Status after M11
+
+**M11's deliverables are complete**, with one measured caveat and the same two
+release blockers M10 handed forward. SPEC's M11: "Full eval run, performance
+benchmarks, documentation, store listing draft, production build verified
+loading unpacked in Chrome. README/docs cover the exposure model, Quick Redact,
+Local Insights, and all non-goals with reasoning."
+
+| deliverable | state |
+| --- | --- |
+| Full eval run | **DONE.** Stage 1+2, 2,600 documents, 6,645 entities, NER gates pass. Reproduces every M8 per-type figure to the decimal |
+| Performance benchmarks | **RE-RUN, NOT REPUBLISHED.** The machine canary reported `degraded` at 2.72× baseline during the run, so the M9 figures stand and the re-run is recorded as non-comparable rather than as a regression (D58) |
+| Documentation | **DONE.** README rewritten from the M3 placeholder it had been since M3 |
+| Store listing draft | **DONE**, with its three blockers named rather than discovered at submission |
+| Production build loads unpacked | **DONE**, and further: the whole fresh-clone chain passes |
+
+### What the numbers say now
+
+| | |
+| --- | --- |
+| tests | 1,271 across 81 files |
+| detectors | 113, over 35 entity types (34 with corpus coverage) |
+| eval corpus | 2,600 documents, 6,645 ground-truth entities, 25 languages, seeded |
+| identifier types at 100% F1 | 14 of 34 |
+| worst type that ships | `GENERIC_SECRET` — 55.4% recall after fusion, published rather than smoothed |
+| NER per-language F1 | 82.0 (ja) to 96.4 (uk); no language below 82 |
+| calibration | ECE 2.63%, against 12.33% raw |
+| package | ~364 MB, of which 265.8 MiB is model weights |
+| latency | p50 10.6 ms without NER, 255.8 ms with — the M9 figures, machine verified healthy at the time |
+
+### Still open, unchanged in substance
+
+1. **The eight non-English catalogues are machine-translated and unreviewed.**
+   Still a release blocker, and now also a store-submission blocker, because a
+   listing is per-locale (D53).
+2. **Three send routes remain open**, one of them permanently: `form.submit()`
+   fires no event any listener can see. The other two are the unrecognised
+   control — whose obvious fix would intercept the STOP button — and the
+   `isComposing` Enter, settled on this side and needing a signed-in IME
+   session to settle on the site's (D57, D57a, D57b).
+3. **"Screen-reader tested" is half done** — the tree is audited, no one has
+   used the pages with NVDA, VoiceOver or Orca (D56).
+4. **D27a stays open**, and M11 neither closed it nor confirmed the canary
+   detects it (D58).
+5. From M8, untouched by anything since: `TAX_ID` recall 91.2%, one
+   over-confident calibration bucket, thin mid-range calibration, and the p50
+   budget missed by 5.8 ms under favourable conditions.
+
+### The shape of what went wrong, one milestone later
+
+M9 recorded that nearly every defect it found was a check that looked like it
+held. M10 reproduced that five times. M11 found three more, and the pattern has
+shifted in a way worth naming:
+
+- **A discrepancy-explaining script that invented a discrepancy.** Written to
+  reconcile 3,170 against 2,991, it read the GT column as FP and reported a
+  2,238 gap. Caught only because the number was implausible.
+- **A toggle nothing could have caught.** The options page offered
+  `DATE_OF_BIRTH`, which no detector produces. Every test agreed with the code
+  that 35 was the right number; it was found by COUNTING while writing prose.
+- **A 3× latency regression that was not one.** The canary caught it, which is
+  the first of these that existing machinery caught rather than a person
+  noticing.
+
+The first two are the old shape. The third is the machinery working, which is
+what the last three milestones of building checks was for.
+
 ## Standing contracts (established in M1)
 
 - **Offset map:** `offsetMap[i]` is the original index of the cluster that

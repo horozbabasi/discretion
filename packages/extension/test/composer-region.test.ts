@@ -186,3 +186,78 @@ describe('the walk reports every hop, not just its verdict', () => {
     expect(serialised).not.toContain('absolute -z-10');
   });
 });
+
+describe('a composer in a distant branch is still found', () => {
+  /** Composer and button in SEPARATE branches, meeting only `depth` hops up. */
+  function splitTree(depth: number): { from: HTMLElement; composer: HTMLElement } {
+    const root = document.createElement('div');
+    root.id = 'common';
+    let a: HTMLElement = root;
+    let b: HTMLElement = root;
+    for (let i = 0; i < depth; i += 1) {
+      const x = document.createElement('div');
+      a.append(x);
+      a = x;
+      const y = document.createElement('div');
+      b.append(y);
+      b = y;
+    }
+    const composer = document.createElement('div');
+    composer.setAttribute('contenteditable', 'true');
+    composer.setAttribute('role', 'textbox');
+    composer.className = 'ProseMirror';
+    a.append(composer);
+    const button = document.createElement('button');
+    button.setAttribute('aria-label', 'Send message');
+    const icon = document.createElement('span');
+    button.append(icon);
+    b.append(button);
+    document.body.append(root);
+    giveEverythingLayout();
+    // Clicks originate inside the button, not on it.
+    return { from: icon, composer };
+  }
+
+  it('finds the common ancestor 12 hops up, where 8 could not', () => {
+    // The live claude.ai shape: composer never seen during an 8-hop climb, and
+    // present in the common ancestor all along.
+    const { from, composer } = splitTree(11);
+    const region = composerRegionOf(from);
+    expect(region).not.toBeNull();
+    expect((region as Element).id).toBe('common');
+    expect(editableWithinRegion(region as Element)).toBe(composer);
+    expect(lastComposerRegionWalk()?.outcome).toBe('found');
+  });
+
+  it('recognises the send button while standing on it', () => {
+    // The descendant-only test was false ON the button and inside it, burning
+    // three hops before the walk had cleared the control.
+    const { from } = splitTree(2);
+    composerRegionOf(from);
+    const steps = lastComposerRegionWalk()?.steps ?? [];
+    const onButton = steps.find((s) => s.tag === 'button');
+    expect(onButton?.hasSendButton).toBe(true);
+  });
+
+  it('returns the TIGHTEST container, not the whole page', () => {
+    // The bound is a loop backstop now; tightness comes from stopping at the
+    // first ancestor holding both.
+    const { from } = splitTree(3);
+    const region = composerRegionOf(from);
+    expect((region as Element).id).toBe('common');
+    expect((region as Element).tagName).not.toBe('BODY');
+  });
+
+  it('still refuses when the tightest container holds TWO composers', () => {
+    // Fail-closed now rests on the uniqueness test rather than on a hop count
+    // that also happened to break the feature.
+    const { from } = splitTree(4);
+    const second = document.createElement('div');
+    second.setAttribute('contenteditable', 'true');
+    second.setAttribute('role', 'textbox');
+    document.getElementById('common')?.append(second);
+    giveEverythingLayout();
+    const region = composerRegionOf(from);
+    expect(editableWithinRegion(region as Element)).toBeNull();
+  });
+});

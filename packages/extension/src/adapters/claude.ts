@@ -181,7 +181,11 @@ export function composerRegionOf(from: Element): Element | null {
   const steps: RegionWalkStep[] = [];
 
   while (node !== null && hops < REGION_HOP_LIMIT) {
-    const hasButton = node.querySelector(SEND_BUTTON_SELECTOR) !== null;
+    // `matches` OR `querySelector`. The descendant-only test was false while
+    // standing ON the send button and on the two nodes inside it that a click
+    // actually originates from, spending three hops of the budget before the
+    // walk had cleared the button.
+    const hasButton = node.matches(SEND_BUTTON_SELECTOR) || node.querySelector(SEND_BUTTON_SELECTOR) !== null;
     const hasComposer = containsAdmissibleComposer(node);
     // EVERY HOP, not just the verdict. The two conditions have to become true
     // at the SAME ancestor for a region to exist, and knowing the hop at which
@@ -241,14 +245,36 @@ function containsAdmissibleComposer(container: Element): boolean {
 }
 
 /**
- * How far up from a send button the region may be.
+ * A pathological-DOM backstop, NOT the thing that keeps the region tight.
  *
- * NOT raised as part of the fix above, deliberately. The stopping condition
- * was wrong, and raising a bound at the same time would make it impossible to
- * tell which change did the work - standing rule 8. `lastRegionWalk` reports
- * `hop-limit` if this turns out to be the next constraint, with the number.
+ * ─────────────────────────────────────────────────────────────────────────
+ * The bound used to be 8, and it was doing the wrong job. Measured on the live
+ * claude.ai: the send button and the composer share no ancestor within 8 hops,
+ * so `hasAdmissibleComposer` was false at every hop of the climb and the walk
+ * returned null - which is why every button send was refused as `undecidable`
+ * on a page where the composer resolved perfectly from three other strategies.
+ *
+ * Reproduced offline by construction: with the two in separate branches
+ * meeting 12 hops up, the walk reports exactly the live shape - hop-limit,
+ * composer never seen - while `querySelectorAll` on the common ancestor finds
+ * it immediately. The composer was always reachable by climbing; the walk
+ * stopped short.
+ *
+ * WHAT KEEPS THE REGION TIGHT IS THE STOPPING CONDITION, NOT THIS NUMBER. The
+ * walk halts at the FIRST ancestor holding both a send button and an
+ * admissible composer, so it returns the tightest such container that exists.
+ * The old comment feared "a region spanning the whole page would make
+ * editableWithinRegion's uniqueness test meaningless" - but a page-spanning
+ * region can only be returned when that genuinely IS the tightest ancestor
+ * containing both, and `editableWithinRegion` still refuses if more than one
+ * admissible composer is inside it. Fail-closed is preserved by the uniqueness
+ * test, which is where it belongs, rather than by a number that also happened
+ * to break the feature.
+ *
+ * 64 is a loop backstop for a pathological DOM, not a design parameter.
+ * ─────────────────────────────────────────────────────────────────────────
  */
-const REGION_HOP_LIMIT = 8;
+const REGION_HOP_LIMIT = 64;
 
 /** One ancestor considered by the region walk. Structure only. */
 export interface RegionWalkStep {

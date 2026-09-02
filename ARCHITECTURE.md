@@ -5002,6 +5002,60 @@ good one is what it is for. The 2500 ms grace period (D49) governs the PANEL,
 which is what the user sees. The two are driven by different code paths -
 `renderDiagnostic` on a verdict change, `detection.refresh()` for the surface -
 and only the second should be quiet about a page still assembling itself.
+### D51 - The region walk stopped three hops short, and the bound was doing the wrong job (M9)
+
+Every button send on claude.ai was refused as `undecidable`, on pages where
+the composer resolved cleanly from three other strategies. In-the-moment
+instrumentation (D50b) produced the decisive reading:
+
+    button:no-region x3, "the region uniqueness test NEVER RAN"
+    hasAdmissibleComposer: false at ALL 8 hops
+    hasSendButton: false, false, false, then true from hop 3
+
+**The hypothesis that reading suggests is wrong, and was disproved by
+construction rather than argument.** "False the entire climb" reads like the
+composer being a SIBLING or COUSIN that climbing can never reach - so a tree
+was built with the composer in a completely separate branch, meeting the button
+only 12 hops up. The walk reported exactly the live shape (hop-limit, composer
+never seen) while `querySelectorAll` on the common ancestor found it
+immediately.
+
+`querySelectorAll` on an ancestor covers EVERY descendant, including branches
+that are siblings lower down, and any two connected nodes share an ancestor. So
+climbing always reaches the composer eventually. It was never unreachable; the
+walk stopped short.
+
+**Two causes, both fixed, and only one of them was the bound.**
+
+1. `hasSendButton` used `querySelector` alone, which searches DESCENDANTS. It
+   was false while standing ON the send button and on the nodes inside it that
+   a click actually originates from - three hops of an eight-hop budget spent
+   before the walk had cleared the control. Now `matches() || querySelector()`.
+
+2. The bound was 8 and the two elements share no ancestor within it.
+
+**The bound is no longer what keeps the region tight, and that is the real
+change.** The walk halts at the FIRST ancestor holding both a send button and
+an admissible composer, so it returns the tightest such container that exists.
+The old comment feared "a region spanning the whole page would make
+editableWithinRegion's uniqueness test meaningless" - but a page-spanning
+region can only be returned when that genuinely IS the tightest ancestor
+containing both, and `editableWithinRegion` still refuses when more than one
+admissible composer is inside it. Fail-closed now rests on the uniqueness test,
+which is where it belongs, instead of on a number that also happened to break
+the feature. 64 is a loop backstop for a pathological DOM, not a design
+parameter.
+
+**Verified by breaking it.** With the bound put back to 8, the distant-branch
+test fails with exactly the live symptom - region null. Restored, it finds the
+common ancestor and the uniqueness test returns the composer. A separate test
+pins that two admissible composers in the tightest container still refuse, so
+the guarantee the bound was mistakenly carrying is demonstrably carried
+elsewhere.
+
+**Not yet confirmed live.** This is the fix the evidence names; whether
+claude.ai now completes a send is a separate claim, and it is the user's next
+reproduction that establishes it.
 
 ## Standing contracts (established in M1)
 

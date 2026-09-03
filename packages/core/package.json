@@ -1,6 +1,6 @@
 {
   "name": "@discretion/core",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "description": "Local-first detection and masking of PII, credentials and secrets in text. No network access, no DOM, no Node built-ins.",
   "keywords": [
@@ -50,7 +50,7 @@
     "provenance": true
   },
   "dependencies": {
-    "@discretion/data": "0.1.0",
+    "@discretion/data": "0.1.1",
     "libphonenumber-js": "^1.13.11"
   },
   "peerDependencies": {

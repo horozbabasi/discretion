@@ -11,6 +11,25 @@ one.**
 
 Nothing yet.
 
+## [0.1.1] — provenance republish
+
+**No code change. `0.1.1` is byte-identical to `0.1.0`.**
+
+Published because `0.1.0`'s provenance attestation references a commit that no
+longer exists. The repository's history was rewritten to strip a
+`Co-Authored-By` trailer from all 161 commits, which changed every commit SHA.
+The SLSA attestations for `0.1.0` name `d315abc` (core) and `2d09fb3` (data),
+and neither is reachable from the rewritten history.
+
+Nothing about `0.1.0` is unsafe: its tarball, signature and Sigstore
+transparency-log entries all remain valid. What broke is the link back to
+source — and for a package whose stated claim is that it can be audited, a
+provenance record pointing at a missing commit is worth a version number to
+fix.
+
+**Prefer `0.1.1`.** Use `0.1.0` only if you have a reason to, and know that
+verifying its provenance against this repository will fail.
+
 ## [0.1.0] — first published release
 
 The engine has existed and been evaluated since well before this version; what

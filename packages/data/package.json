@@ -1,6 +1,6 @@
 {
   "name": "@discretion/data",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "description": "Generated data tables for @discretion/core: Unicode confusables, trigger lexicons, gazetteers, severity weights, and the fitted calibration model.",
   "keywords": [

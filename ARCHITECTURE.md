@@ -6934,6 +6934,67 @@ If this matters commercially, the actions are a USPTO TESS and EUIPO eSearch
 search on "discretion" and "discreet" in class 9 (software) and class 42
 (SaaS), and, if anything turns up, counsel. None of that was done.
 
+### D66 - History rewritten, and 0.1.1 republished so provenance still resolves
+
+The repository's history was rewritten to remove a `Co-Authored-By` trailer
+from every commit. It appeared on 161 of 162 commits, back to the first, so
+this was a full-history rewrite and **every commit SHA changed**.
+
+#### The consequence that was not obvious
+
+npm provenance attestations name a commit. Checked rather than assumed, by
+reading the published attestations back off the registry:
+
+```
+@discretion/core@0.1.0  -> gitCommit d315abc9...  (refs/tags/v0.1.0)
+@discretion/data@0.1.0  -> gitCommit 2d09fb30...  (refs/tags/v0.1.0)
+```
+
+After the rewrite neither commit exists in this repository. **0.1.0's
+provenance now points at nothing.**
+
+Nothing about 0.1.0 became unsafe - its tarball, its signature and its Sigstore
+transparency-log entries are all still valid. What broke is the link back to
+source, which for a package whose stated claim is that it can be audited is the
+part that matters. `publish.yml` refuses a local publish path precisely so that
+this link exists.
+
+#### Why 0.1.1 rather than living with it
+
+Four options were weighed: force-push and accept the dangling link; force-push
+and republish; rewrite only the commits after the attested ones (which would
+have left 160 commits untouched); or abandon the rewrite.
+
+Republishing was chosen because it is the only one that ends with **both**
+things correct. It costs a version number, which is cheap, and it leaves a
+public record of why - which is better than a silently dangling attestation
+that someone discovers while trying to verify the package.
+
+**0.1.1 is byte-identical to 0.1.0.** The CHANGELOG says so plainly and tells
+readers to prefer it. 0.1.0 stays on npm, because unpublishing would break
+anyone who already installed it and would not repair anything.
+
+#### What the mechanics taught
+
+- `git commit --amend -S` was in the plan and would have failed on every
+  commit: no `user.signingkey`, no `commit.gpgsign`, no GPG secret key, and all
+  162 existing commits unsigned. The flag was dropped; signing was never the
+  goal.
+- 161 interactive `edit` stops is not a procedure. `git filter-branch
+  --msg-filter` did it deterministically, and the trees were then diffed
+  against the pre-rewrite state to confirm **only messages changed**.
+- Backup refs created with `git branch`/`git tag` were themselves rewritten,
+  because the filter ran with `-- --all`. The real escape hatch was
+  `refs/original/`, which filter-branch writes itself. Worth knowing before
+  relying on a backup that the operation can eat.
+
+#### The exact-pin trap
+
+`@discretion/core` pins `@discretion/data` at an exact version. Bumping core to
+0.1.1 without bumping the pin would have shipped 0.1.1 core against 0.1.0 data
+- the precise drift the exact pin exists to prevent, introduced by the fix for
+something else. Both were bumped together.
+
 ## Status after M11
 
 **M11's deliverables are complete**, with one measured caveat and the same two

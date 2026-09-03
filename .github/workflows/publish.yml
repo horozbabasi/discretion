@@ -109,9 +109,40 @@ jobs:
       - run: npm ci
       - run: npm run build:ts
 
+      # Is a version already on the registry? Asked ANONYMOUSLY over plain HTTP,
+      # because that is the question that matters - can a consumer resolve it -
+      # and because it needs no token. `npm view` here would read the .npmrc
+      # setup-node wrote, which references NODE_AUTH_TOKEN and fails without it.
+      #
+      # That is not hypothetical: the first run of this job used `npm view`
+      # without that variable and with `>/dev/null 2>&1`, so thirty consecutive
+      # AUTH failures were reported as "not yet visible" - slow propagation -
+      # while the package had in fact been live the whole time.
+      - name: registry helper
+        run: |
+          cat > /tmp/on-registry.sh <<'SH'
+          #!/usr/bin/env bash
+          # on-registry <name> <version> -> exit 0 if that exact version exists
+          url="https://registry.npmjs.org/$(printf '%s' "$1" | sed 's|/|%2F|')/$2"
+          code=$(curl -s -o /tmp/reg.out -w '%{http_code}' "$url")
+          [ "$code" = "200" ]
+          SH
+          chmod +x /tmp/on-registry.sh
+
       # data first: core pins it at an exact version and cannot install without it.
+      #
+      # SKIPPED IF ALREADY PUBLISHED, so a job that failed after data but before
+      # core can be re-run and finish the release. npm rejects re-publishing an
+      # existing version, which would otherwise fail the re-run before core was
+      # ever reached.
       - name: publish @discretion/data
-        run: npm publish --workspace @discretion/data --provenance --access public
+        run: |
+          version=$(node -p "require('./packages/data/package.json').version")
+          if /tmp/on-registry.sh @discretion/data "$version"; then
+            echo "@discretion/data@$version is already published; skipping"
+          else
+            npm publish --workspace @discretion/data --provenance --access public
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -119,29 +150,41 @@ jobs:
         run: |
           version=$(node -p "require('./packages/data/package.json').version")
           for attempt in $(seq 1 30); do
-            if npm view "@discretion/data@$version" version >/dev/null 2>&1; then
+            if /tmp/on-registry.sh @discretion/data "$version"; then
               echo "@discretion/data@$version is live"
               exit 0
             fi
-            echo "attempt $attempt: not yet visible, waiting"
+            echo "attempt $attempt: not resolvable yet (last registry body:)"
+            head -c 200 /tmp/reg.out; echo
             sleep 10
           done
           echo "::error::@discretion/data@$version never became resolvable"
           exit 1
 
       - name: publish @discretion/core
-        run: npm publish --workspace @discretion/core --provenance --access public
+        run: |
+          version=$(node -p "require('./packages/core/package.json').version")
+          if /tmp/on-registry.sh @discretion/core "$version"; then
+            echo "@discretion/core@$version is already published; skipping"
+          else
+            npm publish --workspace @discretion/core --provenance --access public
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: confirm provenance was attached
         run: |
           version=$(node -p "require('./packages/core/package.json').version")
-          # A publish that silently lost its attestation would look identical
-          # to a successful one from the log alone.
-          if npm view "@discretion/core@$version" --json | grep -q '"attestations"'; then
-            echo "provenance attestation present"
-          else
-            echo "::error::published without provenance"
-            exit 1
-          fi
+          # A publish that silently lost its attestation would look identical to
+          # a successful one from the log alone. Read anonymously, the way anyone
+          # auditing the package would.
+          for pkg in data core; do
+            v=$(node -p "require('./packages/$pkg/package.json').version")
+            url="https://registry.npmjs.org/@discretion%2F$pkg/$v"
+            if curl -s "$url" | grep -q '"attestations"'; then
+              echo "@discretion/$pkg@$v: provenance attestation present"
+            else
+              echo "::error::@discretion/$pkg@$v published WITHOUT provenance"
+              exit 1
+            fi
+          done

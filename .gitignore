@@ -62,3 +62,7 @@ probe*.log
 # write-back check (ARCHITECTURE.md D43a). Never committed.
 packages/extension/.live-profile/
 live.log
+
+# Store submission packages. Built by scripts/make-store-zip.sh from build/,
+# which is itself generated. ~235 MB, almost all model weights - never commit.
+packages/extension/*.zip

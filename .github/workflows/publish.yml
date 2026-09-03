@@ -178,13 +178,28 @@ jobs:
           # A publish that silently lost its attestation would look identical to
           # a successful one from the log alone. Read anonymously, the way anyone
           # auditing the package would.
+          # RETRIED, because this raced the registry the first time it ran.
+          # `data` is checked after its own wait loop and passed; `core` was
+          # checked microseconds after publishing and was reported as
+          # "published WITHOUT provenance" - a serious-sounding claim about a
+          # package that in fact had a valid attestation the whole time.
+          #
+          # Same lesson as the wait loop above: a check that cannot distinguish
+          # "not there" from "not there YET" will eventually assert the wrong
+          # one, and this one asserts it about the package's trust story.
           for pkg in data core; do
             v=$(node -p "require('./packages/$pkg/package.json').version")
             url="https://registry.npmjs.org/@discretion%2F$pkg/$v"
-            if curl -s "$url" | grep -q '"attestations"'; then
+            found=""
+            for attempt in $(seq 1 20); do
+              if curl -s "$url" | grep -q '"attestations"'; then found=yes; break; fi
+              echo "  @discretion/$pkg@$v: no attestation yet (attempt $attempt)"
+              sleep 10
+            done
+            if [ -n "$found" ]; then
               echo "@discretion/$pkg@$v: provenance attestation present"
             else
-              echo "::error::@discretion/$pkg@$v published WITHOUT provenance"
+              echo "::error::@discretion/$pkg@$v still has no attestation after 200s"
               exit 1
             fi
           done

@@ -25,7 +25,10 @@ human click.
 **Verified about the package**, because each is a silent failure at the far end
 of a submission:
 
-- built from the commit tagged `v0.1.0` (`d315abc`), working tree clean
+- built from `59090cf` on `main`, working tree clean. **Not from the `v0.1.0`
+  tag**: the repository history was rewritten after that tag was cut, so the
+  commit it originally pointed at no longer exists. The extension code is
+  unchanged - only commit SHAs and one renamed documentation file moved.
 - `manifest.json` is at the **archive root**, and **no entry uses a backslash**
   — checked, because PowerShell's zip writers produce backslash separators,
   which the ZIP spec forbids

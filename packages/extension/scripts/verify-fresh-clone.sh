@@ -24,6 +24,14 @@ fail() { printf '  FAIL  %s\n' "$1"; FAILURES=$((FAILURES+1)); }
 ok()   { printf '  ok    %s\n' "$1"; }
 FAILURES=0
 
+# Windows calls it npm.cmd; everywhere else it is npm. Resolved once, for the
+# same reason verify-standalone-consumer.sh does: a hardcoded npm.cmd there
+# broke this repo's first CI run, and this script had the identical latent
+# bug. The repo is public now, so a Linux contributor would have hit it.
+NPM_BIN=""; for c in npm.cmd npm; do command -v "$c" >/dev/null 2>&1 && { NPM_BIN="$c"; break; }; done
+if [ -z "$NPM_BIN" ]; then printf "no npm on PATH
+"; exit 2; fi
+
 # IS THE REPOSITORY PUBLIC? Asked separately, and first, because the answer
 # changes what the rest of this script proves.
 #
@@ -64,7 +72,7 @@ if [ -d .hf-cache ]; then fail ".hf-cache exists in a fresh clone"; else ok "no 
 if [ -d node_modules ]; then fail "node_modules exists in a fresh clone"; else ok "no node_modules"; fi
 
 step "npm ci"
-if npm.cmd ci >"$WORK/npm-ci.log" 2>&1; then
+if "$NPM_BIN" ci >"$WORK/npm-ci.log" 2>&1; then
   ok "dependencies installed"
 else
   fail "npm ci failed (see $WORK/npm-ci.log)"; tail -15 "$WORK/npm-ci.log"; exit 1
@@ -74,7 +82,7 @@ fi
 # package with no model would ship an extension whose Stage 2 fails closed on
 # every message - the worst outcome, because it looks installed.
 step "build WITHOUT the model must fail, and say what is missing"
-if npm.cmd run ext:build >"$WORK/build-nomodel.log" 2>&1; then
+if "$NPM_BIN" run ext:build >"$WORK/build-nomodel.log" 2>&1; then
   if grep -qi "WARNING.*not bundled\|ext:fetch-model" "$WORK/build-nomodel.log"; then
     ok "build warned about the missing model and named the fix"
     grep -i "ext:fetch-model" "$WORK/build-nomodel.log" | head -2 | sed 's/^/        /'
@@ -86,7 +94,7 @@ else
 fi
 
 step "npm run ext:fetch-model"
-if npm.cmd run ext:fetch-model >"$WORK/fetch.log" 2>&1; then
+if "$NPM_BIN" run ext:fetch-model >"$WORK/fetch.log" 2>&1; then
   ok "model fetched and digests verified"
   grep -iE "verified|sha256|ok" "$WORK/fetch.log" | tail -3 | sed 's/^/        /'
 else
@@ -94,7 +102,7 @@ else
 fi
 
 step "npm run build"
-if npm.cmd run build >"$WORK/build.log" 2>&1; then
+if "$NPM_BIN" run build >"$WORK/build.log" 2>&1; then
   ok "build succeeded"
   grep -E "TOTAL|_locales:" "$WORK/build.log" | sed 's/^/        /'
 else

@@ -30,6 +30,13 @@ step() { printf '\n=== %s ===\n' "$1"; }
 ok()   { printf '  ok    %s\n' "$1"; }
 fail() { printf '  FAIL  %s\n' "$1"; FAILURES=$((FAILURES+1)); }
 
+# npm and npx are `npm.cmd`/`npx.cmd` on Windows and `npm`/`npx` elsewhere.
+# Resolved ONCE here rather than guessed at each call site: the previous
+# version hardcoded `npx.cmd`, which does not exist on the Linux CI runner.
+NPM_BIN=""; for c in npm.cmd npm; do command -v "$c" >/dev/null 2>&1 && { NPM_BIN="$c"; break; }; done
+NPX_BIN=""; for c in npx.cmd npx; do command -v "$c" >/dev/null 2>&1 && { NPX_BIN="$c"; break; }; done
+if [ -z "$NPM_BIN" ]; then printf "no npm on PATH\n"; exit 2; fi
+
 cleanup() {
   if [ "$KEEP" = "1" ]; then printf '\nwork dir kept: %s\n' "$WORK"
   else rm -rf "$WORK"; fi
@@ -39,7 +46,7 @@ trap cleanup EXIT
 cd "$REPO" || exit 1
 
 step "build, so the tarballs contain current output"
-if npm.cmd run build:ts >"$WORK/build.log" 2>&1 || npm run build:ts >"$WORK/build.log" 2>&1; then
+if "$NPM_BIN" run build:ts >"$WORK/build.log" 2>&1; then
   ok "build:ts"
 else
   fail "build:ts failed"; tail -15 "$WORK/build.log"; exit 1
@@ -48,8 +55,7 @@ fi
 step "pack both packages"
 mkdir -p "$WORK/tarballs"
 for pkg in data core; do
-  if (npm.cmd pack --workspace "@discretion/$pkg" --pack-destination "$WORK/tarballs" \
-      || npm pack --workspace "@discretion/$pkg" --pack-destination "$WORK/tarballs") \
+  if "$NPM_BIN" pack --workspace "@discretion/$pkg" --pack-destination "$WORK/tarballs" \
       >>"$WORK/pack.log" 2>&1; then
     ok "packed @discretion/$pkg"
   else
@@ -80,8 +86,7 @@ case "$CONSUMER" in
 esac
 
 step "npm install the tarballs, as a stranger would"
-if (npm.cmd install --no-audit --no-fund "$DATA_TGZ" "$CORE_TGZ" \
-    || npm install --no-audit --no-fund "$DATA_TGZ" "$CORE_TGZ") \
+if "$NPM_BIN" install --no-audit --no-fund "$DATA_TGZ" "$CORE_TGZ" \
     >"$WORK/install.log" 2>&1; then
   ok "installed from tarballs"
 else
@@ -180,11 +185,19 @@ export async function run(text: string): Promise<readonly ProtectedEntity[]> {
   return result.entities;
 }
 TS
-if (npm.cmd install --no-audit --no-fund --no-save typescript >/dev/null 2>&1 \
-    || npm install --no-audit --no-fund --no-save typescript >/dev/null 2>&1) &&
-   npx.cmd tsc --noEmit --strict --module nodenext --moduleResolution nodenext \
-     --target es2022 types-check.ts >"$WORK/tsc.out" 2>&1; then
-  ok "a strict TypeScript consumer compiles against the published types"
+# A MISSING TOOL IS NOT A TYPE ERROR. The previous version conflated them:
+# on the first CI run `npx.cmd` was not found and the script reported "the
+# published types do not typecheck for a consumer" - a substantive claim
+# about the package - when tsc had never run. Each branch below says which
+# of the two happened.
+if [ -z "$NPX_BIN" ]; then
+  fail "no npx on PATH, so the TypeScript check DID NOT RUN (not a result about the types)"
+elif ! "$NPM_BIN" install --no-audit --no-fund --no-save typescript >"$WORK/tsc-install.log" 2>&1; then
+  fail "could not install typescript, so the TypeScript check DID NOT RUN (not a result about the types)"
+  tail -5 "$WORK/tsc-install.log" | sed 's/^/          /'
+elif "$NPX_BIN" tsc --noEmit --strict --module nodenext --moduleResolution nodenext \
+       --target es2022 types-check.ts >"$WORK/tsc.out" 2>&1; then
+  ok "a strict TypeScript consumer compiles against the published types ($NPX_BIN)"
 else
   fail "the published types do not typecheck for a consumer"
   sed 's/^/          /' "$WORK/tsc.out" | tail -12

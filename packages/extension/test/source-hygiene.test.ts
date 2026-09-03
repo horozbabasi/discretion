@@ -100,7 +100,7 @@ describe('the source tree', () => {
 
 describe('nothing machine-specific ships in a public repository', () => {
   // Added when the repo was about to be made public. Two absolute paths from
-  // one developer's home directory had reached committed files - in CLAUDE.md
+  // one developer's home directory had reached committed files - in DEVELOPMENT.md
   // as environment notes, and in bench/wasm-latency/ as hardcoded constants
   // that ALSO made those benchmarks unrunnable by anyone else.
   //

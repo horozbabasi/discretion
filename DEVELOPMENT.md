@@ -1,12 +1,12 @@
-# CLAUDE.md
+# Development notes
 
 ## Orientation
 
-discretion is a browser extension that detects and redacts sensitive information (PII, credentials, secrets) in text before it reaches AI chat interfaces (ChatGPT, Claude, Gemini). Everything runs client-side in the browser — no backend, no server-side detection, no telemetry.
+Discretion is a browser extension that detects and redacts sensitive information (PII, credentials, secrets) in text before it reaches AI chat interfaces (ChatGPT, Claude, Gemini). Everything runs client-side in the browser — no backend, no server-side detection, no telemetry.
 
 - **SPEC.md** is authoritative for design. Read it before starting any milestone.
 - **ARCHITECTURE.md** records decisions made while implementing SPEC.md and the reasoning behind them — append to it, don't just read it.
-- **CLAUDE.md** (this file) is working conventions only. It does not restate SPEC.md.
+- **DEVELOPMENT.md** (this file) is working conventions only. It does not restate SPEC.md.
 
 **Milestones are built strictly one at a time**, tests passing, before the next starts. **M1-M12 COMPLETE - the SPEC's milestone list is finished.** The extension protects, has a popup, an options page, nine locales, an accessibility audit, a submit backstop, a written README and a store-listing draft; a fresh clone builds and loads it. `packages/core` is now a publishable standalone library with a one-call `protect()` entry point, a pinned public surface, generated API docs, a provenance publish workflow, and an acceptance test that installs the real tarball into an empty project outside the repo and runs the documented examples against it. **NOTHING HAS BEEN PUBLISHED TO npm, and nothing has been submitted to the Chrome Web Store.** Verified 2026-09-02: **1,297 tests / 84 files**, typecheck (source AND test files), lint, build, `ext:build`, `verify-loads.py`, `verify-options.py` and `verify-standalone-consumer.sh` all clean, each confirmed by its own exit code.
 
@@ -61,7 +61,7 @@ Diagnostic: **Ctrl+Alt+Shift+P** re-runs it in a state that does not survive a r
 
 Milestones run M1–M12: a post-M5 scope amendment (ARCHITECTURE.md D15) added M12 (post-launch npm publication of core) and new deliverables to M6–M11. `npm.cmd run eval` regenerates the Stage 1 baseline; add `-- --ner jiting/xlm-roberta-base-ner-hrl_onnx --dtype q8` for the combined Stage 1+2 run with NER gate enforcement (model cached in gitignored `.hf-cache/`). `npm.cmd run web:dev` serves the playground at http://localhost:5173.
 
-## Environment (this machine)
+## Environment
 
 - Node and `gh` are installed outside the usual locations but are already on PATH, so invoke them by name. (Paths omitted: this file is public.)
 - PowerShell execution policy blocks `.ps1` wrappers. Use `npm.cmd` / `npx.cmd`, not bare `npm`/`npx`.
@@ -116,14 +116,6 @@ Commands, from repo root:
 - **Never composite the panel over anything resembling one of the three sites.** The panel screenshot is cropped to the panel for that reason: a capture of a fixture served from `chatgpt.com` would be a fabricated record of the product running where it did not.
 - **Live-site probes use `.live-profile`, which the user logs into BY HAND** via `login-profile.py`. No script types, reads or stores a credential, and none may attempt a bot challenge. The profile is gitignored - never commit session data.
 - **Run `probe-ime-live.py` with `--control`.** Without it, "nothing was sent" is indistinguishable from "nothing could have been sent", which is exactly how it once reported a pass against the logged-out landing page.
-
-## Skills in `.claude/skills/`
-
-Developer-local tooling: `.claude/` is gitignored and not part of the repo (ARCHITECTURE.md D6), so a fresh clone will not have these. Where present, use each only in its stated scope, not incidentally:
-
-- **`clean-code`** — active on all code work, every milestone.
-- **`frontend-design`** — M5 playground, M9 review panel, M10 popup/options only.
-- **`webapp-testing`** — M5 onward, once there's a browser surface to test.
 
 ## Scope amendments (post-M5 — SPEC.md, ARCHITECTURE.md D15)
 

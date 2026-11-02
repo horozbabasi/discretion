@@ -8,7 +8,7 @@ Discretion is a browser extension that detects and redacts sensitive information
 - **ARCHITECTURE.md** records decisions made while implementing SPEC.md and the reasoning behind them — append to it, don't just read it.
 - **DEVELOPMENT.md** (this file) is working conventions only. It does not restate SPEC.md.
 
-Milestones are built one at a time, and tests have to pass before the next one starts. M1–M12 are done. The extension works on all three sites and has a popup, an options page, a submit backstop and an accessibility audit, and a fresh clone builds and loads it. `@discretion/core` and `@discretion/data` 0.1.1 are on npm, published with provenance by `.github/workflows/publish.yml`. The extension isn't on the Chrome Web Store: the listing and package are ready (`STORE-LISTING.md`, `packages/extension/SUBMISSION.md`) but haven't been submitted. Last recorded run (2026-09-03): 1,312 tests in 85 files, no typecheck or lint errors.
+Milestones are built one at a time, and tests have to pass before the next one starts. M1 to M12 are done. The extension works on all three sites and has a popup, an options page, a submit backstop and an accessibility audit, and a fresh clone builds and loads it. `@discretion/core` and `@discretion/data` 0.1.1 are on npm, published with provenance by `.github/workflows/publish.yml`. The extension isn't on the Chrome Web Store: the listing and package are ready (`STORE-LISTING.md`, `packages/extension/SUBMISSION.md`) but haven't been submitted. Last recorded run (2026-09-03): 1,312 tests in 85 files, no typecheck or lint errors.
 
 ### Open items
 

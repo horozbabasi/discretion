@@ -9,6 +9,10 @@ pinned by `packages/core/test/spec-conformance.test.ts`, which quotes the
 governing SPEC.md rule in each test so drift fails the build; later decisions
 name the suite that pins them inline.
 
+The "Status after …" sections are snapshots from when they were written.
+Later changes are noted inline where it matters; the README has the current
+state.
+
 ## Ratified decisions
 
 ### D1 — ZWNJ (U+200C) is preserved between joining-script text
@@ -6940,6 +6944,10 @@ The repository's history was rewritten to remove a `Co-Authored-By` trailer
 from every commit. It appeared on 161 of 162 commits, back to the first, so
 this was a full-history rewrite and **every commit SHA changed**.
 
+The trailer was the `Co-Authored-By: Claude` line Claude Code adds to its
+commits. The README's "How this was built" section explains why it was removed
+and how the project was built.
+
 #### The consequence that was not obvious
 
 npm provenance attestations name a commit. Checked rather than assumed, by
@@ -7135,6 +7143,7 @@ Unchanged in substance from M11 except where noted.
    not.
 
 2. **Three send routes remain open**, one permanently. Unchanged.
+   _Update: two now; D63 closed the `isComposing` route._
 
 3. **"Screen-reader tested" is half done.** Unchanged. Confirmed at M12 that
    no shipping document claims accessibility, so there is nothing to retract -
@@ -7148,11 +7157,16 @@ Unchanged in substance from M11 except where noted.
    the provenance attestation. The `workflow_dispatch` input defaults to a dry
    run for that reason, and the first real tag should be treated as a test of
    the workflow and not only of the release.
+   _Update: it has since published 0.1.0 and 0.1.1 with provenance. The
+   provenance check now retries for up to 200 s while the registry catches up
+   (`.github/workflows/publish.yml`)._
 
 6. **The package name is coupled to an unsettled product name.** Renaming an
    unpublished package is free; npm has no rename afterwards, only
    deprecate-and-republish. The product-name question therefore has to be
    settled BEFORE the first publish, not before the first release.
+   _Update: the name is now Discretion (D64), published as `@discretion/core`
+   and `@discretion/data`. The trademark still isn't cleared (D65)._
 
 7. From M8, untouched: `TAX_ID` recall 91.2%, one over-confident calibration
    bucket, thin mid-range calibration, and the p50 budget missed by 5.8 ms

@@ -40,12 +40,35 @@ not something an individual can install.
 a page whose layout it no longer recognises all block the send and say so. It
 never treats "could not look" as "found nothing".
 
-## Install
+## Status
 
-**From the Chrome Web Store** — not yet published. See `STORE-LISTING.md` for
-the submission draft and the blockers still in front of it.
+As of September 2026, the extension is at 0.1.0 and the npm packages are at
+0.1.1.
 
-**Unpacked, from source:**
+- The extension works on ChatGPT, Claude and Gemini. It isn't on the Chrome
+  Web Store, so you have to build it from source. It was tested end to end on
+  all three sites in early September 2026: Gemini with an automated harness,
+  ChatGPT and Claude by hand on real accounts.
+- The popup and options page work: per-site toggle, Quick Redact, Local
+  Insights, sensitivity levels, per-type toggles and custom patterns.
+- `@discretion/core` and `@discretion/data` are on npm. 0.1.1 has the same
+  code as 0.1.0 and was only republished so its provenance points to a commit
+  that still exists (see the [changelog](packages/core/CHANGELOG.md)).
+- The playground runs locally, so you can try detection and masking without
+  installing the extension.
+- The Chrome Web Store listing and package are ready
+  ([STORE-LISTING.md](STORE-LISTING.md),
+  [SUBMISSION.md](packages/extension/SUBMISSION.md)) but haven't been
+  submitted.
+- The UI is English only for now. Eight more languages are translated but
+  won't ship until a native speaker reviews them (see [Languages](#languages)).
+
+## Install and run
+
+### Extension
+
+You'll need Node.js (the repo pins 24.18.0 in `.nvmrc`), Chrome 116 or newer,
+and space for a ~280 MB model download.
 
 ```sh
 git clone https://github.com/horozbabasi/discretion
@@ -55,11 +78,36 @@ npm run ext:fetch-model    # ~280 MB, verified against recorded SHA-256 digests
 npm run build
 ```
 
-Then `chrome://extensions` → Developer mode → Load unpacked →
-`packages/extension/build`.
+Then open `chrome://extensions`, turn on Developer mode, click "Load unpacked"
+and select `packages/extension/build`. On Windows, if PowerShell blocks `npm`,
+use `npm.cmd` instead.
 
-The download is large and that is a deliberate trade — see
+After that, just use ChatGPT, Claude or Gemini as usual. If a message contains
+something sensitive, a review panel opens before it's sent. Choose what to
+mask, and the message goes out with stand-in values. The toolbar popup has the
+per-site toggle, Quick Redact and Local Insights; everything else is on the
+options page ([Configuration](#configuration)).
+
+Unpacked extensions don't update automatically. To update, `git pull`, run the
+steps above again from `npm ci`, then hit reload on `chrome://extensions`.
+
+The download is big because the model runs on your machine; see
 [Size](#size-and-why).
+
+### Playground
+
+```sh
+npm ci
+npm run web:dev    # http://localhost:5173
+```
+
+### As a library
+
+```sh
+npm install @discretion/core
+```
+
+See [Using the engine on its own](#using-the-engine-on-its-own).
 
 ## Supported sites
 
@@ -67,10 +115,9 @@ The download is large and that is a deliberate trade — see
 `host_permissions`, and nothing else. Quick Redact covers every other
 destination without widening that list, which is the point.
 
-## What it does NOT protect
+## Known limitations
 
-Stated before the feature list, because a security tool that oversells itself
-is worse than one that does not exist.
+### What it doesn't protect
 
 - **Attachments.** Files, images and screenshots are not inspected.
 - **Other applications.** Anything you send from your email client or Slack is
@@ -81,11 +128,66 @@ is worse than one that does not exist.
   is printed here rather than rounded away. Read the review panel.
 - **The sites themselves.** This protects what you send *to* them; it is not a
   defence against the service you are deliberately talking to.
-- **Four send routes**, of which one is permanently open: a form submitted by
-  `form.submit()` from page script fires no event any listener can see. See
-  ARCHITECTURE.md D57b.
+- **Two send paths.** If page script submits a form with `form.submit()`, no
+  event fires, so the extension never sees it. Clicks on a send button the
+  site adapter doesn't recognise aren't checked either. See ARCHITECTURE.md
+  D57–D57b and D63.
 
 It is not a certified security product and carries no compliance guarantee.
+
+### Other limitations
+
+- It's not on the Chrome Web Store, so there are no automatic updates (see
+  [Install and run](#install-and-run)).
+- The UI is English only until the other eight languages are reviewed (see
+  [Languages](#languages)).
+- A site redesign can break things. Each site has an adapter that finds the
+  message box and the send button. If the adapter can't find the message box
+  anymore, sending is blocked with a warning. If the send button changes,
+  clicks on the new button aren't checked.
+- Loading the model takes 7.4–8.4 s, once. After that, checking a
+  2,000-character paste took between about 205 ms and 691 ms (p50) on a fast
+  laptop, depending on the benchmark, and nobody knows yet why the two numbers
+  differ. Expect it to be slower on an average laptop (see
+  [Performance](#performance)).
+- It takes about 364 MB once installed, almost all of it the model (see
+  [Size](#size-and-why)).
+- The accuracy numbers come from a synthetic test set, so real-world accuracy
+  will be different and probably lower (see
+  [Detection quality](#detection-quality)).
+- The accessibility tree has been audited, but nobody has tried it with a
+  screen reader (NVDA, VoiceOver or Orca) yet.
+
+## How this was built
+
+I built Discretion with a lot of help from Claude Code, Anthropic's AI coding
+agent. The models I used over the course of the project were Claude Opus 4.8,
+Opus 5, Fable 5 and Sonnet 5.
+
+My part was picking the problem and making the product and design decisions,
+such as dropping the original homomorphic encryption design in favour of local
+masking, making it a consumer browser extension instead of an enterprise tool,
+and choosing the name. For each milestone I wrote a rough but working
+first version of the code, and I did the hands-on testing on the live sites
+with my own accounts.
+
+Claude Code debugged and enhanced that code at every milestone, and wrote most
+of the documentation (including the decision log in ARCHITECTURE.md), the
+commit messages and the machine translations.
+
+### Why the commits don't credit Claude
+
+By default, Claude Code adds a `Co-Authored-By: Claude` line to every commit it
+makes, and 161 of the first 162 commits had one. In September 2026 I rewrote
+the history to remove them. I see AI models as tools and assistants, not
+authors. The creative work and a considerable share of the labour were mine,
+and I didn't think Claude should get authorship credit for the project. Newer
+commits don't have the line either, including ones made with Claude Code, so
+this section is where that help is disclosed instead.
+
+Rewriting the history changed every commit ID, which is why both npm packages
+were republished as 0.1.1
+([ARCHITECTURE.md D66](ARCHITECTURE.md#d66---history-rewritten-and-011-republished-so-provenance-still-resolves)).
 
 ## How it works
 
@@ -280,7 +382,7 @@ Each message gets a 0–100 score, shown on the review panel and aggregated in
 the popup. It is not a count: it weights each finding by the severity of its
 type, so one private key outranks five postal codes, and it saturates rather
 than growing without bound. Severity weights and their rationale are a data
-file in `packages/core`, and a property test pins monotonicity — adding a
+file in `packages/data`, and a property test pins monotonicity — adding a
 finding can never lower the score.
 
 The popup reports a session **peak** and **mean**. Never a sum: the score is
@@ -333,15 +435,19 @@ surprise write.
 The popup additionally has a **per-site toggle**, which takes effect in an open
 tab without a reload.
 
-## Nine languages
+## Languages
 
-The UI is available in English, Spanish, German, French, Portuguese, Turkish,
-Japanese, Hindi and Arabic, with right-to-left layout.
+There are translations for English, Spanish, German, French, Portuguese,
+Turkish, Japanese, Hindi and Arabic (with right-to-left layout), but only
+English ships right now.
 
-> **The eight non-English catalogues are machine-translated and have not been
-> reviewed by a native speaker.** Structure is enforced by tests — placeholder
-> budgets, plural categories, no copy-pasted English — but structure is not
-> meaning. This is a release blocker, recorded as one, not a nicety.
+The eight non-English translations are machine-generated and haven't been
+reviewed by a native speaker. Tests check the structure (placeholders, plural
+forms, no leftover English), but they can't tell whether a translation
+actually means the right thing. So each language stays out of the build until
+a native speaker checks its 21 safety-critical strings (review sheets are in
+[`docs/translation-review/`](docs/translation-review/)). Until then, a browser
+set to one of those languages gets the English UI.
 
 Plurals go through `Intl.PluralRules` rather than a one/other pair: Arabic has
 six categories and uses every one, Japanese has one, and Turkish does not mark
@@ -353,323 +459,35 @@ SPEC.md sets the budget as **p50 under 250 ms and p95 under 600 ms for a
 2000-character input on a mid-range laptop, excluding model warmup**, and
 requires the measured numbers to be published here.
 
-Measured on an Intel Core Ultra 7 258V (8 logical cores, 31 GB RAM), Node
-24.18.0 on Windows, over 200 inputs of exactly 2000 characters built from the
-eval corpus, with 30 warmup iterations discarded:
-
-| path | p50 | p95 | p99 | budget |
-| --- | ---: | ---: | ---: | --- |
-| Stages 0–3 (pattern, gazetteer, context) | **10.6 ms** | **13.1 ms** | 15.1 ms | within, by ~20× |
-| Stages 0–3 + Stage 2 NER | **255.8 ms** | **354.9 ms** | 601.6 ms | **p50 missed — see below** |
-
-Reproduce with `node packages/eval/dist/bench/latency.js --samples 200
---ner jiting/xlm-roberta-base-ner-hrl_onnx --dtype q8`.
-
-> **These M9 figures still stand, and an M11 re-run did not replace them.** The
-> re-run measured 30.6 ms and 769.7 ms — and the machine canary
-> (`node bench/check-canary.mjs`) reported `degraded` at 2.72× its calibrated
-> baseline at the same time, so the numbers are not comparable to the ones
-> above rather than a regression against them. Run the canary before trusting
-> any latency figure from this repository, including these. See ARCHITECTURE.md
-> D27b and D58.
-
-### The p50 miss, and which way the error runs
-
-The combined path misses the p50 budget by 5.8 ms as measured — but 2.3% is
-the *floor* on the miss, not its size. **Two known factors both push the
-production number higher than this**, and neither is speculative:
-
-1. **The hardware is above the reference point.** SPEC says "mid-range
-   laptop". This was measured on an Intel Core Ultra 7 258V — Lunar Lake,
-   2024, the second-highest tier in Intel's mobile Core Ultra line, the part
-   used in premium thin-and-lights. A genuinely mid-range machine (a Core
-   Ultra 5, or any older generation) is slower. By how much is not measured
-   here and is not guessed at.
-2. **The runtime is the faster one.** These numbers are onnxruntime-node on
-   native CPU. The extension runs onnxruntime-web on WASM. M9 has since
-   measured that, and the gap is not marginal: 691 ms against 255.8 ms on the
-   same machine and the same input. See below.
-
-So the honest statement is: **the p50 budget is missed under conditions
-favourable on both axes.** The measured 5.8 ms gap is a lower bound, and the
-production gap is larger by an amount this project has not yet measured.
-Reporting it as "a 2.3% miss" would understate it.
-
-p95 is 354.9 ms against 600 ms on this runtime, but that margin does not
-survive the runtime change: **on the runtime that actually ships, BOTH
-percentiles miss.** See the browser measurement below. No figure in this
-document should be read as "p95 is within budget".
-
-The cost is the NER model, not the rest of the pipeline: Stages 0–3 alone
-finish in about a twentieth of the budget.
-
-The mechanism is chunking. Stage 2 windows input at 400 characters, a bound
-set at M6 by the model's 512-token limit under the worst case of one token per
-character (CJK). A 2000-character input is therefore about six inference
-windows. For Latin-script text 400 characters is far below 512 tokens, so most
-windows are underfilled and the input pays for more inferences than it needs.
-Widening the window was expected to be a straightforward win; M9 measured it
-across four sizes and found it is a tradeoff rather than a win, which is why
-the window stayed at 400. See "The windowing tradeoff" below.
-
-Two things this number is **not**:
-
-- It is not the browser number. These are onnxruntime-node on CPU. The
-  extension runs onnxruntime-web on WASM, and the two differ by a lot; the
-  next section measures the one that ships.
-- It is not what the user waits for while typing. SPEC puts NER inference in a
-  dedicated Web Worker, so the main-thread row governs UI responsiveness, and
-  detection is debounced and cached by content hash as the user types.
-
-### What actually ships: the browser measurement (M9)
-
-**onnxruntime-node cannot measure the shipped configuration, even in
-principle.** The Node build of Transformers.js offers `dml`, `webgpu` and `cpu`
-execution providers and has no WASM provider at all. Every number in the table
-above is therefore native CPU, which the extension never uses. Measuring the
-real thing needs a real browser, so the benchmark in `bench/wasm-latency/` runs
-the identical workload — same model, same q8 weights, same 2000-character
-inputs, same machine, warmup discarded — under Edge with cross-origin isolation
-enabled so WASM threading is actually available (8 threads).
-
-Two paths are measured, because they pull the window size in opposite
-directions and a single figure hides that:
-
-- **Cold** — a full 2000-character document with nothing cached. What a paste
-  costs. This is the path SPEC's budget is written against.
-- **Incremental** — one character edited, every unchanged chunk served from
-  the content-hash cache. The interactive steady state while typing.
-
-Three consecutive sweeps; each cell shows all three runs, so the run-to-run
-spread is visible rather than hidden behind a tilde.
-
-| window | chunks | cold p50 (3 runs) | cold p95 | incremental p50 | incremental p95 |
-| ---: | ---: | ---: | ---: | ---: | ---: |
-| 400 (shipped) | 7 | 562 / 887 / **691** | 620 / 1053 / 751 | 79 / 124 / **112** | 165 / 299 / 237 |
-| 600 | 4 | 423 / 743 / **549** | 512 / 878 / 611 | 118 / 168 / **156** | 203 / 383 / 335 |
-| 800 | 3 | 401 / 660 / **532** | 442 / 873 / 624 | 142 / 220 / **192** | 272 / 476 / 385 |
-| 1200 | 2 | 385 / 627 / **501** | 434 / 1090 / 607 | 210 / 310 / **286** | 388 / 649 / 601 |
-
-Bold is the median of the three runs. **Measurement conditions**, recorded by
-the harness on every run: Intel Core Ultra 7 258V, Windows, Edge headless, on
-battery at 76%, `% Processor Performance` 81–85%, CPU otherwise idle.
-
-**The run-to-run spread is ±29%** on the window-400 cold p50 (562–887 ms across
-three runs), on an idle machine with conditions recorded. That is large enough
-that a single number misrepresents the measurement, which is why all three runs
-are shown in every cell rather than a median with a tilde in front of it.
-
-**A known unexplained state invalidates any figure measured while it is
-active** — see below.
-
-### The measurement conditions are part of the result
-
-An earlier version of this section published figures roughly 4–6x slower than
-these, and attributed the difference to running on battery rather than mains.
-**That attribution was wrong**, and the correction is worth stating because it
-changes how these numbers should be read.
-
-The slow figures were real and reproducible — three runs, and an A/B against a
-byte-identical older harness confirmed the benchmark code was not the cause. But
-the explanation was an inference from a single co-occurrence: the machine was
-observed on battery and observed to be slow, so battery was named as the cause.
-A later direct test refuted it — on battery at 76%, the same benchmark runs at
-691 ms, matching the earlier "mains" figure of 697 ms almost exactly. The fast
-state is the normal state; the slow runs were an anomaly whose cause was never
-captured and is still not established.
-
-The benchmark now records power line status, battery level, clock speeds, CPU
-load and `% Processor Performance` on every run, and published figures quote
-them. Those proxies are not a complete description of a machine's power state.
-They are enough to notice that two runs happened in different states, which is
-the thing that was missing.
-
-**This remains OPEN, not solved.** The slow state reproduced three consecutive
-times, so it will recur, and **any latency figure measured while it is active is
-invalid** — it is roughly 4-5x slower, far outside the ±29% normal spread.
-Anyone re-running this benchmark should compare against the conditions above
-before trusting a result. Candidates and how to tell them apart are recorded in
-ARCHITECTURE.md D27a.
-
-Full account: ARCHITECTURE.md D27 and D27a.
-
-### WebGPU was measured and rejected
-
-The model could in principle run on the GPU instead of WASM. Measured on this
-machine's real adapter (`intel / xe-2lpg`, an Arc 140V), in a headed browser so
-no software rasteriser is involved, paired back-to-back against WASM in the
-same machine state:
-
-| runtime | cold p50 @ window 400 | incremental p50 | per inference |
-| --- | ---: | ---: | ---: |
-| WASM, 8 threads | 533–691 ms | 80–112 ms | ~85 ms |
-| WebGPU, real GPU | 2931 / 2938 ms | 424–769 ms | ~420 ms |
-
-**WebGPU is 4–5x slower here, not faster.** The model ships q8-quantized, and
-onnxruntime-web's WebGPU backend has limited int8 matmul coverage — operators it
-cannot run on the GPU fall back to CPU per-operator, and each fallback costs a
-tensor round-trip across the GPU/CPU boundary. Paying GPU dispatch overhead plus
-CPU compute plus transfer cost is a straightforward way to be slower than
-well-threaded WASM SIMD.
-
-It would have been rejected even if it had won narrowly: WebGPU availability
-depends on browser, GPU, driver and enterprise policy, so it could only ever be
-an opportunistic accelerator with a WASM fallback beside it — two inference
-runtimes to ship, validate and debug. WASM is the single runtime.
-
-### Why the window stays at 400
-
-Larger windows make the cold path faster, so widening to 1200 looked like a
-straightforward win. It is not, and the reason that decides it is **correctness,
-not speed** — it would hold even if 1200 were free.
-
-**A 1200-character CJK chunk exceeds the model's 512-token limit.** Feed the
-model 1200 characters of Chinese and the input is **truncated at 512 tokens** —
-the tail is never seen, and nothing reports an error. Every entity past the cut
-goes undetected.
-
-**Measured, not inherited** (`bench/wasm-latency/tokens-per-char.mjs`, the
-shipped model's own tokenizer, 400-character samples of real prose per script):
-
-| script | tokens/char | tokens at a 1200-char window | chars that fit in 512 tokens |
-| --- | ---: | ---: | ---: |
-| Chinese (Simplified) | 0.723 | **867 - truncates** | 708 |
-| Japanese | 0.563 | **675 - truncates** | 910 |
-| Korean | 0.525 | **630 - truncates** | 975 |
-| Arabic | 0.260 | 312 | 1969 |
-| German | 0.245 | 294 | 2089 |
-| Thai | 0.225 | 270 | 2275 |
-| English / Russian | 0.220 | 264 | 2327 |
-| Hindi (Devanagari) | 0.212 | 255 | 2409 |
-
-Two corrections to what was assumed before measuring. M6's "worst case one
-token per character" is **conservative**: the true worst is 0.723 for Chinese,
-so 400 has more headroom than the bound assumed (708 characters would fit).
-And Thai and the Indic scripts are **not** in the danger set - both tokenize at
-Latin-like ratios. The problem is specifically CJK.
-
-
-That is silent under-detection for an entire class of users, in their own
-languages, while every component reports success. It is the same failure class
-as the Arabic-Indic digit bug closed at M8, where identifiers written in
-non-ASCII digits matched no detector at all and the pipeline reported a clean
-document. **A global 1200 is a bug, not a tradeoff.**
-
-If windowing is ever revisited it has to be **script-aware from the start** —
-the window size is a function of the tokenizer's behaviour on the input's
-script, and the only safe global value is the one that holds for the worst
-script. The table also shows what a script-aware design could safely do: about
-700 characters for Chinese against about 2300 for Latin. The cold-path win is
-available, but only per script, never as a global bump.
-
-The latency tradeoff is real too, and it points the same way:
-
-- **Cold and incremental want opposite sizes.** 400 -> 1200 buys 190 ms on a
-  cold paste (691 -> 501) and costs 174 ms on every debounced keystroke burst
-  (112 -> 286). Larger windows are more efficient per character — fewer
-  inferences, overhead amortised — but incremental cost is per *window*, so a
-  bigger window redoes more characters per edit. The cold gain is 1.38x; the
-  incremental loss is 2.55x.
-- **Two window sizes would cost the entire cache.** The content-hash cache is
-  keyed on chunk text, so 400-char and 1200-char chunks are disjoint
-  populations. A document using both would get *zero* reuse across them: the
-  first keystroke after a paste would re-infer everything. Avoiding that needs
-  a per-document pinned window — a mode that must be correct every time or the
-  result is worse than either option alone.
-
-An edit inside the 96-character overlap invalidates two chunks rather than one;
-measured, that happens on 27% of edits at window 400 and 7% at 1200.
-
-Full reasoning: ARCHITECTURE.md D28.
-
-### Two requirements, measured separately
-
-SPEC states two different performance requirements, and they are easy to
-conflate. They are kept apart here because conflating them would let the
-easier one launder the harder one's result.
-
-**The budget (SPEC line 238):** *"p50 under 250ms and p95 under 600ms for a
-2000-character input on a mid-range laptop, excluding model warmup."* A
-2000-character input is the **cold path**: nothing cached, every chunk
-inferred.
-
-| | median of 3 runs | all 3 runs | budget | |
-| --- | ---: | :--- | ---: | --- |
-| cold p50 | 691 ms | 562 / 887 / 691 | 250 ms | **missed, 2.8x over** |
-| cold p95 | 751 ms | 620 / 1053 / 751 | 600 ms | **missed, 1.25x over** |
-
-**Both percentiles miss.** Conditions: Intel Core Ultra 7 258V, Edge headless,
-battery 76%, `% Processor Performance` 81–85%, CPU idle. The run spread on the
-p50 is **±29%** (562–887 ms) on an otherwise idle machine with conditions
-recorded, so the median alone misrepresents this measurement — every place the
-figure appears states the spread with it.
-
-**The interactive requirement (SPEC line 241):** *"Incremental detection as the
-user types, debounced, with results cached by content hash so pressing send is
-instant."* A separate requirement about the steady state while typing, which
-the incremental measurement speaks to.
-
-| | median of 3 runs | all 3 runs | |
-| --- | ---: | :--- | --- |
-| incremental p50 | 112 ms | 79 / 124 / 112 | one or two chunks re-inferred per edit |
-| incremental p95 | 237 ms | 165 / 299 / 237 | |
-
-Same conditions and the same caveat: the spread is wide relative to the median.
-At 112 ms an edit is re-analysed well inside a debounce interval, so this
-requirement is met on the measured machine. SPEC attaches no number to
-"instant", so this is reported as a measurement rather than scored against a
-threshold.
-
-**The interactive number does not convert the budget miss into a pass.** The
-budget is stated against a 2000-character input, and that is the cold path.
-Measuring the interactive path instead and reporting the better number would be
-answering a different question from the one SPEC asked.
-
-### Pasting pays the full cold cost
-
-Worth stating plainly, because the phrase "cached by content hash" invites the
-opposite assumption: **the cache is cold for every chunk after a paste.** The
-cache is keyed on chunk text, so pasted content — which by definition has never
-been seen before — produces no cache hits at all. Not fewer hits: none.
-
-So paste-then-send pays the full cold cost, and paste-then-send is one of the
-most common real flows this extension exists for: someone pastes a log, a
-config file, or an email thread, and presses send. That path is the paste
-guard's path, and it is the one the budget's 691 ms describes.
-
-The incremental figures apply to sustained typing, where each edit invalidates
-one or two chunks out of seven. They do not apply to the first send after a
-paste.
-
-### The budget miss is reported, not resolved
-
-**This is published as a miss rather than treated as a target to move.** SPEC
-line 242 authorises exactly that: *"If a budget is missed, say so and explain
-why rather than removing the target."*
-
-The reason is a design decision that is not up for renegotiation: **NER runs on
-the blocking path, by design.** Making it advisory — showing results after the
-send, or sending if inference has not finished — would meet the budget
-immediately and destroy the guarantee.
-
-NER is the only detector for an entire entity class. Stage 1 validates
-identifiers by checksum and the gazetteers cover known names and places;
-neither catches an ordinary private individual's name, which is the most common
-PII in chat prose and the thing this product exists to protect. Advisory NER
-would block on a famous name and pass the name of the person actually at risk.
-Nor can it be made coherent: results after send mean the data has already left,
-and send-if-not-finished makes the leak a race on typing speed.
-
-Fail-closed is not a latency tradeoff. The full reasoning is ARCHITECTURE.md
-D25; the power-state finding is D27; the window decision is D28.
-
-### Not comparable: the eval's per-document latency
-
-`packages/eval/reports/` reports p50 115 ms per document, which measures a
-different thing — the corpus's documents are p50 164 and p95 347 characters,
-far shorter than the 2000-character benchmark input, and that figure includes
-NER. The two numbers should not be read against each other or against the
-budget; only the table above is measured as SPEC specifies.
+All numbers below come from the development laptop (Intel Core Ultra 7 258V).
+It's faster than the mid-range laptop the budget assumes, so expect slower
+results on typical hardware.
+
+| path | p50 | p95 | source |
+| --- | ---: | ---: | --- |
+| Stages 0–3, no model (Node, native CPU) | 10.6 ms | 13.1 ms | `packages/eval` latency bench |
+| Stages 0–3 + NER (Node, native CPU) | 255.8 ms | 354.9 ms | `packages/eval` latency bench |
+| Extension: cold check of 2,000 characters | ~205 ms | ~452 ms | ARCHITECTURE.md D41f |
+| Extension: re-check after one edit | ~104 ms | ~213 ms | ARCHITECTURE.md D41f |
+| Extension: model load (once) | 7.4–8.4 s | – | ARCHITECTURE.md D41f |
+
+The budget isn't counted as met yet. The Node run misses the p50 target by
+5.8 ms. The extension run is faster, but it's also about 3× faster than the
+same workload in the in-page benchmark, and nobody has found out why, so it
+isn't treated as a pass. Pasting is the slow case, since none of the pasted
+text is cached yet.
+
+NER runs before the message is sent even though it's the slowest step. Running
+it afterwards would let people's names through, and those are the most common
+personal data in chat messages (D25).
+
+Before trusting any latency number in this repo, run
+`node bench/check-canary.mjs`. The machine sometimes gets into an unexplained
+slow state, and numbers taken during it aren't valid (D27a).
+
+The full write-up (browser runtimes, why WebGPU was dropped, why the NER window
+stays at 400 characters, and the budget analysis) is in
+[BENCHMARKS.md](BENCHMARKS.md#latency-against-the-spec-budget).
 
 ## Non-goals — decided, not open
 
@@ -687,10 +505,9 @@ later by deliberate decision; **rejected** means permanent.
 
 | | |
 | --- | --- |
-| **Next** | Native review of the eight machine-translated locales — a release blocker. A privacy-policy URL and the remaining store assets. |
-| **Then** | The three send routes still open (ARCHITECTURE.md D57b), of which the unrecognised-control one needs care: the obvious fix would intercept the *stop* button, because "no send control resolves" is also every moment a response is streaming. |
+| **Next** | Native-speaker review of the eight machine-translated languages so they can ship. |
+| **Then** | The unrecognised-button send path (ARCHITECTURE.md D57b). The obvious fix would also catch the *stop* button, because "no send button found" is also true the whole time a response is streaming, so it needs care. The `form.submit()` path can't be closed without injecting script into the page's main world, which this extension won't do. |
 | **Then** | `GENERIC_SECRET` recall, the weakest published number in the project. |
-| **Then** | First npm publish of `packages/core`. The package is ready and the workflow is written, but it has never run, and the product name has to be settled first: renaming an unpublished package is free and npm has no rename afterwards. |
 
 ## Using the engine on its own
 
@@ -712,9 +529,10 @@ Full guide, including the fail-closed contract a caller has to honour:
 [`packages/core/README.md`](packages/core/README.md). Generated API reference:
 [`docs/api/`](docs/api/). Version policy: [`VERSIONING.md`](VERSIONING.md).
 
-**Not yet on npm.** `npm run verify:consumer` packs the real tarballs, installs
-them into an empty project outside this repository, and runs the documented
-examples against them.
+It's on npm: `npm install @discretion/core`.
+`npm run verify:consumer` packs the real tarballs, installs them into an empty
+project outside this repository, and runs the documented examples against
+them.
 
 ## Reading the repository
 
@@ -726,7 +544,8 @@ examples against them.
 | `SECURITY.md` | The guarantees, how to verify each yourself, and the disclosure process. |
 | `PERMISSIONS.md` | One justification per permission, written when the reasoning was fresh. |
 | `ADAPTER-VERIFICATION.md` | What the offline fixtures can and cannot tell you about a live site. |
-| `STORE-LISTING.md` | Submission draft, and the blockers in front of it. |
+| `DEVELOPMENT.md` | Conventions, open issues and known pitfalls for working on the code. |
+| `STORE-LISTING.md` | Draft Chrome Web Store listing (not submitted). |
 
 ## Development
 
@@ -793,9 +612,9 @@ into the shipped ones; the two tables above give both.
 
 ## Licensing
 
-MIT — see [LICENSE](LICENSE). The workspace packages are marked
-`"private": true` because they are not published to npm, which is independent
-of the project's license.
+MIT — see [LICENSE](LICENSE). `@discretion/core` and `@discretion/data` are
+published to npm. The other workspace packages are marked `"private": true`
+because they aren't published; that has nothing to do with the license.
 
 The bundled Unicode data is redistributed under the Unicode License v3; the
 required copyright and permission notice is reproduced in

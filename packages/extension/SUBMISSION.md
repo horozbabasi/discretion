@@ -1,5 +1,9 @@
 # Chrome Web Store submission package — Discretion v0.1.0
 
+> **Status:** not submitted. Nothing has been uploaded to the Chrome Web Store.
+> For now, Discretion is installed from source (see the
+> [README](../../README.md#install-and-run)).
+
 Everything needed for the dashboard, in the order the dashboard asks for it.
 The listing text itself lives in [`../../STORE-LISTING.md`](../../STORE-LISTING.md);
 this file is the operational checklist and the manual walkthrough.

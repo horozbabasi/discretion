@@ -16,8 +16,11 @@ Nothing yet.
 **No code change. `0.1.1` is byte-identical to `0.1.0`.**
 
 Published because `0.1.0`'s provenance attestation references a commit that no
-longer exists. The repository's history was rewritten to strip a
-`Co-Authored-By` trailer from all 161 commits, which changed every commit SHA.
+longer exists. The repository's history was rewritten to remove the
+`Co-Authored-By: Claude` trailer that Claude Code adds to its commits (161 of
+162 commits had it; see
+[How this was built](https://github.com/horozbabasi/discretion#how-this-was-built)).
+That changed every commit SHA.
 The SLSA attestations for `0.1.0` name `d315abc` (core) and `2d09fb3` (data),
 and neither is reachable from the rewritten history.
 

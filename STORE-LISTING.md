@@ -1,11 +1,15 @@
 # Chrome Web Store listing — draft
 
+> **Status:** not submitted. Discretion isn't on the Chrome Web Store; for now
+> it's installed from source (see the [README](README.md#install-and-run)).
+> This draft is kept for reference.
+
 Everything a submission needs, in the fields the dashboard asks for. Numbers
 here are measured and cross-referenced to where they were measured; nothing is
 rounded in the product's favour.
 
-Written to be **submittable as-is except for the three blockers listed at the
-bottom**, which are real and must not be quietly skipped.
+It's ready to submit as is. The blockers at the bottom are either resolved or
+marked non-blocking; if one comes back, deal with it before submitting.
 
 ---
 
